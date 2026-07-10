@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1-alpha] - 2026-07-10
+### Added
+- **Launcher Icons & App Customizations**
+  - Integrated custom launcher icons for Android (all mipmap densities) and iOS (`AppIcon.appiconset`) from the uploaded resources.
+  - Configured Android resources with `colors.xml` to define the `#F8FAFC` background.
+  - Updated Android `launch_background.xml` (default and API 21+) to draw the launcher icon centered on `#F8FAFC` to prevent flash of blank white page.
+  - Replaced the default blank iOS `LaunchImage` files with the high-resolution brand logo to ensure a smooth transition from iOS launch storyboard to Flutter.
+
 ## [0.2.0-alpha] - 2026-07-10
 ### Added
 - **Phase 1 Splash Screen**
