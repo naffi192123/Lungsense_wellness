@@ -1,0 +1,28 @@
+# Tasks Checklist - LungSense Wellness
+
+- [x] **Phase 0: Core Initialization**
+  - [x] Initialize Git and `.gitignore`
+  - [x] Setup Flutter project skeleton
+  - [x] Configure dependencies (`flutter_bloc`, `get_it`, `go_router`, `hive_flutter`, `fpdart`)
+  - [x] Create core design system (`AppColors`, `AppTextTheme`, `AppTheme`)
+  - [x] Configure base routing (`AppRouter`)
+  - [x] Setup DI container (`injection_container.dart`)
+  - [x] Establish error handling system (`Failure`, `Exception`, `UseCase`)
+  - [x] Write project documentation structure
+- [ ] **Phase 1: Splash Screen**
+  - [ ] Implement splash presentation widget
+  - [ ] Implement initial routing check (redirect to login/dashboard)
+- [ ] **Phase 2: Authentication**
+  - [ ] Login screen
+  - [ ] Registration screen
+  - [ ] Forgot password screen
+- [ ] **Phase 3: Profile Setup**
+- [ ] **Phase 4: Dashboard**
+- [ ] **Phase 5: Daily Check-In**
+- [ ] **Phase 6: Respiratory Recording**
+- [ ] **Phase 7: Lung Wellness Score**
+- [ ] **Phase 8: History**
+- [ ] **Phase 9: Analytics**
+- [ ] **Phase 10: Profile**
+- [ ] **Phase 11: Settings**
+- [ ] **Phase 12: Production Polish**
