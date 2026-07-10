@@ -9,9 +9,9 @@
   - [x] Setup DI container (`injection_container.dart`)
   - [x] Establish error handling system (`Failure`, `Exception`, `UseCase`)
   - [x] Write project documentation structure
-- [ ] **Phase 1: Splash Screen**
-  - [ ] Implement splash presentation widget
-  - [ ] Implement initial routing check (redirect to login/dashboard)
+- [x] **Phase 1: Splash Screen**
+  - [x] Implement splash presentation widget
+  - [x] Implement initial routing check (redirect to login/dashboard)
 - [ ] **Phase 2: Authentication**
   - [ ] Login screen
   - [ ] Registration screen
