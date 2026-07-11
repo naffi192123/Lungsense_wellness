@@ -2,9 +2,9 @@
 
 | Phase | Milestone | Focus Area | Status |
 | :--- | :--- | :--- | :--- |
-| **Phase 0** | Core setup | Git, Clean Architecture Folders, Router, DI, Theme, Initial Docs | **In Progress** |
-| **Phase 1** | Splash Screen | Branded transition screen with logic | Pending |
-| **Phase 2** | Authentication | Login, Registration, Password Recovery | Pending |
+| **Phase 0** | Core setup | Git, Clean Architecture Folders, Router, DI, Theme, Initial Docs | Completed |
+| **Phase 1** | Splash Screen | Branded transition screen with logic | Completed |
+| **Phase 2** | Authentication | Login, Registration, Password Recovery | Completed |
 | **Phase 3** | Profile Setup | User data collection & onboarding | Pending |
 | **Phase 4** | Dashboard | Home overview, wellness metrics widgets | Pending |
 | **Phase 5** | Daily Check-In | Symptoms tracker, questionnaire | Pending |

@@ -2,11 +2,11 @@
 
 | Metric | Status / Value |
 | :--- | :--- |
-| **Current Phase** | Phase 1: Splash Screen |
-| **Current Milestone** | Complete branded Splash Screen with automatic navigation logic |
-| **Completed Steps** | Phase 0 setup (Git, routing, theme, DI), Assets registration, SplashBloc logic, SplashPage custom layout, Widget & BLoC unit testing, Custom launcher icons integration (Android/iOS), Native splash transition colors & logo centering |
-| **In Progress** | Waiting for user approval on Phase 1 execution |
-| **Next Step** | Phase 2: Authentication |
-| **Latest Commit** | `feat(arch): initialize Phase 0 core architecture...` |
+| **Current Phase** | Phase 2: Authentication |
+| **Current Milestone** | Complete Supabase Authentication (Login, Register, Password Recovery) |
+| **Completed Steps** | Phase 0 & 1 setups, copy horizontal logo, add `supabase_flutter` dependency, initialize Supabase on startup, create remote auth data source, repository implementations, Auth UseCases, AuthBloc, LoginPage, RegisterPage with real-time password strength checker, ForgotPasswordPage, routing updates, widget and unit tests |
+| **In Progress** | Waiting for user approval on Phase 2 execution |
+| **Next Step** | Phase 3: Profile Setup |
+| **Latest Commit** | `feat(icons): add custom app launcher icons...` |
 | **Current Branch** | `master` |
-| **Last Updated** | 2026-07-10 |
+| **Last Updated** | 2026-07-11 |

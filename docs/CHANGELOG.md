@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0-alpha] - 2026-07-11
+### Added
+- **Phase 2 Authentication (Supabase)**
+  - Added `supabase_flutter` dependency and initialized it during app boot via `supabase_secrets.dart` credentials.
+  - Registered `AuthRemoteDataSource`, `AuthRepository`, use cases (`Login`, `Register`, `Logout`, `ResetPassword`, `GetCurrentUser`), and `AuthBloc` inside `injection_container.dart`.
+  - Implemented `LoginPage` replicating mockup elements (tabs, email/password fields, "Forgot?" link, Google Sign-in stub, and card layout).
+  - Implemented `RegisterPage` adding real-time validation indicator ticks (min 8 chars, uppercase, digits, symbols) as the user types.
+  - Implemented `ForgotPasswordPage` allowing password recovery request linkages.
+  - Refactored `SplashPage` and `SplashBloc` to verify user sessions on startup and redirect appropriately.
+  - Rewrote widget test suites to mock dependency configurations and verify auth route mappings.
+
 ## [0.2.1-alpha] - 2026-07-10
 ### Added
 - **Launcher Icons & App Customizations**

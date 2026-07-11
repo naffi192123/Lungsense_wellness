@@ -1,24 +1,75 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:lungsense_wellness/features/splash/presentation/bloc/splash_bloc.dart';
+import 'package:lungsense_wellness/features/splash/presentation/bloc/splash_event.dart';
+import 'package:lungsense_wellness/features/splash/presentation/bloc/splash_state.dart';
+import 'package:lungsense_wellness/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:lungsense_wellness/features/auth/presentation/bloc/auth_state.dart';
 import 'package:lungsense_wellness/main.dart';
 
-void main() {
-  testWidgets('App renders SplashPage and transitions to Login after delay', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const LungSenseApp());
-    await tester.pump(); // Trigger initial build
+class MockSplashBloc extends Mock implements SplashBloc {}
+class MockAuthBloc extends Mock implements AuthBloc {}
 
-    // Verify that the Splash screen feature labels are displayed
+void main() {
+  late MockSplashBloc mockSplashBloc;
+  late MockAuthBloc mockAuthBloc;
+  late StreamController<SplashState> splashStateController;
+  late StreamController<AuthState> authStateController;
+
+  setUp(() {
+    mockSplashBloc = MockSplashBloc();
+    mockAuthBloc = MockAuthBloc();
+    splashStateController = StreamController<SplashState>.broadcast();
+    authStateController = StreamController<AuthState>.broadcast();
+
+    // Register mocks in GetIt to bypass real Hive and Supabase network initialization
+    final sl = GetIt.instance;
+    sl.reset();
+    sl.registerFactory<SplashBloc>(() => mockSplashBloc);
+    sl.registerFactory<AuthBloc>(() => mockAuthBloc);
+
+    // Stub BLoC close method to prevent Null is not a subtype of Future<void> exceptions during teardown
+    when(() => mockSplashBloc.close()).thenAnswer((_) async {});
+    when(() => mockAuthBloc.close()).thenAnswer((_) async {});
+  });
+
+  tearDown(() {
+    splashStateController.close();
+    authStateController.close();
+    GetIt.instance.reset();
+  });
+
+  testWidgets('App renders SplashPage and transitions to Login after state update', (WidgetTester tester) async {
+    // Stub initial states
+    when(() => mockSplashBloc.state).thenReturn(const SplashInitial());
+    when(() => mockSplashBloc.stream).thenAnswer((_) => splashStateController.stream);
+
+    when(() => mockAuthBloc.state).thenReturn(const AuthInitial());
+    when(() => mockAuthBloc.stream).thenAnswer((_) => authStateController.stream);
+
+    // Build our app and trigger a frame
+    await tester.pumpWidget(const LungSenseApp());
+    await tester.pump();
+
+    // Verify SplashPage features render successfully
     expect(find.text('Daily Tracking'), findsOneWidget);
     expect(find.text('Lung Score'), findsOneWidget);
     expect(find.text('Smart Insights'), findsOneWidget);
     expect(find.text('Powered by'), findsOneWidget);
 
-    // Fast-forward the virtual test clock by 3 seconds to complete the splash timer
-    await tester.pump(const Duration(seconds: 3));
-    // Let GoRouter complete its transition frames
+    // Simulate SplashBloc emitting navigation state
+    when(() => mockSplashBloc.state).thenReturn(const SplashNavigateToLogin());
+    splashStateController.add(const SplashNavigateToLogin());
+
+    // Trigger navigation frames
     await tester.pumpAndSettle();
 
-    // Verify that it navigated successfully to the Login screen placeholder
-    expect(find.text('Login Screen Placeholder (Phase 2)'), findsOneWidget);
+    // Verify successful routing transition to LoginPage
+    expect(find.text('Login'), findsWidgets);
+    expect(find.text('Email Address'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 }

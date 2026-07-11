@@ -1,5 +1,36 @@
 # Session Log - LungSense Wellness
 
+## Session: 2026-07-11
+
+### Today's Work
+- Copied horizontal logo transparent background asset into `assets/images/`.
+- Configured and fetched Supabase dependency (`supabase_flutter`).
+- Created credentials configuration in `lib/core/secrets/supabase_secrets.dart`.
+- Initialized Supabase inside `main.dart` at boot.
+- Registered remote data source, repositories, use cases, and blocs for authentication in dependency injection container.
+- Designed `LoginPage`, `RegisterPage`, and `ForgotPasswordPage` UI layouts matching mockup requirements.
+- Implemented real-time password strength regex checks on registration page.
+- Refactored `SplashPage` and `SplashBloc` to check session state on start.
+- Created and successfully passed unit and widget tests for the authentication flows.
+
+### Files Changed
+- `pubspec.yaml`
+- `lib/main.dart`
+- `lib/core/router/app_router.dart`
+- `lib/core/di/injection_container.dart`
+- `lib/core/secrets/supabase_secrets.dart`
+- `lib/features/splash/presentation/bloc/*`
+- `lib/features/splash/presentation/pages/splash_page.dart`
+- `lib/features/auth/*`
+- `test/widget_test.dart`
+- `test/features/splash/presentation/bloc/splash_bloc_test.dart`
+- `docs/*`
+
+### Decisions Made
+- Exposed Supabase credentials inside `supabase_secrets.dart` which is kept clean and isolated from code logic.
+- Managed page transitions using `GoRouter` declarative path definitions.
+- Refactored widget tests to stub `close()` of BLoCs to prevent mock teardown errors.
+
 ## Session: 2026-07-10
 
 ### Today's Work

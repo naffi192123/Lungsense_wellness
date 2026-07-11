@@ -12,10 +12,10 @@
 - [x] **Phase 1: Splash Screen**
   - [x] Implement splash presentation widget
   - [x] Implement initial routing check (redirect to login/dashboard)
-- [ ] **Phase 2: Authentication**
-  - [ ] Login screen
-  - [ ] Registration screen
-  - [ ] Forgot password screen
+- [x] **Phase 2: Authentication**
+  - [x] Login screen
+  - [x] Registration screen
+  - [x] Forgot password screen
 - [ ] **Phase 3: Profile Setup**
 - [ ] **Phase 4: Dashboard**
 - [ ] **Phase 5: Daily Check-In**

@@ -27,8 +27,9 @@ class _SplashPageState extends State<SplashPage> {
     return BlocListener<SplashBloc, SplashState>(
       listener: (context, state) {
         if (state is SplashNavigateToLogin) {
-          // Navigate to the login page (Phase 2 placeholder)
           context.go('/login');
+        } else if (state is SplashNavigateToDashboard) {
+          context.go('/dashboard');
         }
       },
       child: Scaffold(

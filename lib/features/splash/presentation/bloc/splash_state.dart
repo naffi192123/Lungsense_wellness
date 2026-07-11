@@ -22,3 +22,8 @@ class SplashLoading extends SplashState {
 class SplashNavigateToLogin extends SplashState {
   const SplashNavigateToLogin();
 }
+
+/// Emitted when loading is complete and session is active, navigating to Dashboard.
+class SplashNavigateToDashboard extends SplashState {
+  const SplashNavigateToDashboard();
+}
