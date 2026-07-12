@@ -27,6 +27,12 @@ abstract class AuthRemoteDataSource {
 
   /// Gets current active session user.
   Future<UserModel?> getCurrentUser();
+
+  /// Stream of user session state.
+  Stream<UserModel?> get userStream;
+
+  /// Performs Google Sign-In redirect.
+  Future<void> signInWithGoogle();
 }
 
 /// Remote DataSource implementation executing client API transactions.
@@ -111,6 +117,31 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return null;
       }
       return UserModel.fromSupabase(user);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Stream<UserModel?> get userStream {
+    return client.auth.onAuthStateChange.map((data) {
+      final user = data.session?.user;
+      if (user == null) {
+        return null;
+      }
+      return UserModel.fromSupabase(user);
+    });
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    try {
+      await client.auth.signInWithOAuth(
+        supabase.OAuthProvider.google,
+        redirectTo: 'io.supabase.lungsense://login-callback/',
+      );
+    } on supabase.AuthException catch (e) {
+      throw AuthException(e.message, code: e.statusCode);
     } catch (e) {
       throw ServerException(e.toString());
     }

@@ -264,12 +264,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget _buildGoogleButton(BuildContext context) {
     return OutlinedButton(
       onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Supabase OAuth Google registration initiated.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        context.read<AuthBloc>().add(const AuthGoogleSignInEvent());
       },
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.text,

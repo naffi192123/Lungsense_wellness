@@ -209,13 +209,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildGoogleButton(BuildContext context) {
     return OutlinedButton(
       onPressed: () {
-        // OAuth Continue with Google Mockup notification
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Supabase OAuth Google login initiated.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        context.read<AuthBloc>().add(const AuthGoogleSignInEvent());
       },
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.text,

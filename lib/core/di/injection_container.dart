@@ -9,6 +9,8 @@ import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/register_usecase.dart';
 import '../../features/auth/domain/usecases/reset_password_usecase.dart';
+import '../../features/auth/domain/usecases/google_sign_in_usecase.dart';
+import '../../features/auth/domain/usecases/observe_user_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/splash/presentation/bloc/splash_bloc.dart';
 
@@ -47,6 +49,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
+  sl.registerLazySingleton(() => GoogleSignInUseCase(sl()));
+  sl.registerLazySingleton(() => ObserveUserUseCase(sl()));
 
   // Blocs
   sl.registerFactory(
@@ -59,6 +63,8 @@ Future<void> initDependencies() async {
       resetPasswordUseCase: sl(),
       logoutUseCase: sl(),
       getCurrentUserUseCase: sl(),
+      googleSignInUseCase: sl(),
+      observeUserUseCase: sl(),
     ),
   );
 }

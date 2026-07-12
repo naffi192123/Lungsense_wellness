@@ -10,8 +10,11 @@ All notable changes to this project will be documented in this file.
   - Implemented `LoginPage` replicating mockup elements (tabs, email/password fields, "Forgot?" link, Google Sign-in stub, and card layout).
   - Implemented `RegisterPage` adding real-time validation indicator ticks (min 8 chars, uppercase, digits, symbols) as the user types.
   - Implemented `ForgotPasswordPage` allowing password recovery request linkages.
+  - Completed Google Sign-In OAuth flow routing with `signInWithGoogle` and registered the new `GoogleSignInUseCase` and `ObserveUserUseCase` streams.
+  - Implemented reactive `AuthUserChangedEvent` session update checks listening directly to Supabase auth changes.
+  - Created a temporary `DashboardPage` featuring a session detail welcome card and a test Logout button.
   - Refactored `SplashPage` and `SplashBloc` to verify user sessions on startup and redirect appropriately.
-  - Rewrote widget test suites to mock dependency configurations and verify auth route mappings.
+  - Added a dedicated unit test suite for `AuthBloc` verifying state mappings under stream events.
 
 ## [0.2.1-alpha] - 2026-07-10
 ### Added

@@ -8,6 +8,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 
 /// Central routing management using GoRouter.
 abstract class AppRouter {
@@ -63,10 +64,9 @@ abstract class AppRouter {
       GoRoute(
         path: dashboardPath,
         name: dashboardName,
-        builder: (context, state) => const Scaffold(
-          body: Center(
-            child: Text('Dashboard Screen Placeholder (Phase 4)'),
-          ),
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<AuthBloc>(),
+          child: const DashboardPage(),
         ),
       ),
     ],

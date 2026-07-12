@@ -28,4 +28,10 @@ abstract class AuthRepository {
 
   /// Retrieves the current authenticated user session if present.
   Future<Either<Failure, UserEntity?>> getCurrentUser();
+
+  /// Reactive stream of user authentication status changes.
+  Stream<UserEntity?> get userStream;
+
+  /// Performs Google OAuth redirection flow.
+  Future<Either<Failure, void>> signInWithGoogle();
 }

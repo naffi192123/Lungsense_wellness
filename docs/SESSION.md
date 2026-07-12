@@ -1,5 +1,35 @@
 # Session Log - LungSense Wellness
 
+## Session: 2026-07-12
+
+### Today's Work
+- Implemented Google Sign-In redirect flow in data datasource, repositories, and presentation screens.
+- Created `GoogleSignInUseCase` and `ObserveUserUseCase` UseCases.
+- Refactored `AuthBloc` constructor to reactively listen to session changes via `ObserveUserUseCase` and automatically yield `AuthAuthenticated`.
+- Created temporary `DashboardPage` featuring welcome details and a Logout button.
+- Updated `AppRouter` routing definitions to map to the new `DashboardPage`.
+- Added a dedicated unit test suite in `test/features/auth/presentation/bloc/auth_bloc_test.dart` to verify all state transitions, and confirmed all tests pass successfully.
+
+### Files Changed
+- `lib/features/auth/domain/repositories/auth_repository.dart`
+- `lib/features/auth/domain/usecases/google_sign_in_usecase.dart`
+- `lib/features/auth/domain/usecases/observe_user_usecase.dart`
+- `lib/features/auth/data/datasources/auth_remote_data_source.dart`
+- `lib/features/auth/data/repositories/auth_repository_impl.dart`
+- `lib/features/auth/presentation/bloc/auth_bloc.dart`
+- `lib/features/auth/presentation/bloc/auth_event.dart`
+- `lib/features/auth/presentation/pages/login_page.dart`
+- `lib/features/auth/presentation/pages/register_page.dart`
+- `lib/features/dashboard/presentation/pages/dashboard_page.dart`
+- `lib/core/router/app_router.dart`
+- `lib/core/di/injection_container.dart`
+- `test/features/auth/presentation/bloc/auth_bloc_test.dart`
+- `docs/*`
+
+### Decisions Made
+- Chose to use reactive subscription listening to auth changes inside `AuthBloc` to handle redirection callbacks cleanly without UI polling.
+- Moved `_AuthUserChangedEvent` to a public event `AuthUserChangedEvent` to bypass Dart library scope compilation warnings.
+
 ## Session: 2026-07-11
 
 ### Today's Work

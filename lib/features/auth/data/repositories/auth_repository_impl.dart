@@ -95,4 +95,21 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Stream<UserEntity?> get userStream => remoteDataSource.userStream;
+
+  @override
+  Future<Either<Failure, void>> signInWithGoogle() async {
+    try {
+      await remoteDataSource.signInWithGoogle();
+      return const Right(null);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message, code: e.code));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, code: e.code));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }
