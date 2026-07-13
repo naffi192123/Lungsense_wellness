@@ -1,5 +1,46 @@
 # Session Log - LungSense Wellness
 
+## Session: 2026-07-13
+
+### Today's Work
+- Configured local storage Box dependencies inside dependency locator.
+- Created `OnboardingData` Domain entities, `OnboardingModel` data models, and Onboarding Repository interfaces.
+- Developed UseCases for onboarding saving, dynamic condition fetching, profile completion check, and local draft caching.
+- Created `OnboardingBloc` coordinating real-time BMI calculations, draft caching on page step-ups, and Supabase upserts.
+- Designed `EmailVerificationPage` locking unverified users.
+- Designed `OnboardingPage` multi-step wizard matching reference mockups.
+- Refactored `SplashBloc` checks for authentication, email confirmation, and profile completion states.
+- Developed comprehensive unit tests verifying onboarding steps, BMI calculations, and splash redirects.
+
+### Files Changed
+- `lib/core/constants/app_constants.dart`
+- `lib/core/di/injection_container.dart`
+- `lib/core/router/app_router.dart`
+- `lib/features/auth/domain/entities/user_entity.dart`
+- `lib/features/auth/data/models/user_model.dart`
+- `lib/features/auth/data/datasources/auth_remote_data_source.dart`
+- `lib/features/auth/presentation/pages/email_verification_page.dart`
+- `lib/features/splash/presentation/bloc/splash_bloc.dart`
+- `lib/features/splash/presentation/bloc/splash_state.dart`
+- `lib/features/splash/presentation/pages/splash_page.dart`
+- `lib/features/onboarding/domain/entities/*`
+- `lib/features/onboarding/domain/repositories/*`
+- `lib/features/onboarding/domain/usecases/*`
+- `lib/features/onboarding/data/models/*`
+- `lib/features/onboarding/data/datasources/*`
+- `lib/features/onboarding/data/repositories/*`
+- `lib/features/onboarding/presentation/bloc/*`
+- `lib/features/onboarding/presentation/pages/*`
+- `test/features/onboarding/presentation/bloc/onboarding_bloc_test.dart`
+- `test/features/splash/presentation/bloc/splash_bloc_test.dart`
+- `test/widget_test.dart`
+- `docs/*`
+
+### Decisions Made
+- Added `isEmailVerified` into `UserEntity` and resolved it dynamically from `emailConfirmedAt != null` in `UserModel.fromSupabase`.
+- Forced session refresh within `AuthRemoteDataSource.getCurrentUser` to get the latest status when the user taps check status on the verification page.
+- Calculated BMI reactively inside `OnboardingBloc` on `OnboardingUpdateDataEvent` to keep math out of the UI widgets.
+
 ## Session: 2026-07-12
 
 ### Today's Work

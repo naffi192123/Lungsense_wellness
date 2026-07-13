@@ -16,7 +16,7 @@
   - [x] Login screen
   - [x] Registration screen
   - [x] Forgot password screen
-- [ ] **Phase 3: Profile Setup**
+- [x] **Phase 3: Profile Setup**
 - [ ] **Phase 4: Dashboard**
 - [ ] **Phase 5: Daily Check-In**
 - [ ] **Phase 6: Respiratory Recording**

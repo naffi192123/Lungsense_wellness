@@ -30,6 +30,10 @@ class _SplashPageState extends State<SplashPage> {
           context.go('/login');
         } else if (state is SplashNavigateToDashboard) {
           context.go('/dashboard');
+        } else if (state is SplashNavigateToVerification) {
+          context.go('/email-verification');
+        } else if (state is SplashNavigateToOnboarding) {
+          context.go('/onboarding');
         }
       },
       child: Scaffold(

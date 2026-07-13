@@ -5,7 +5,7 @@
 | **Phase 0** | Core setup | Git, Clean Architecture Folders, Router, DI, Theme, Initial Docs | Completed |
 | **Phase 1** | Splash Screen | Branded transition screen with logic | Completed |
 | **Phase 2** | Authentication | Login, Registration, Password Recovery | Completed |
-| **Phase 3** | Profile Setup | User data collection & onboarding | Pending |
+| **Phase 3** | Profile Setup | User data collection & onboarding | Completed |
 | **Phase 4** | Dashboard | Home overview, wellness metrics widgets | Pending |
 | **Phase 5** | Daily Check-In | Symptoms tracker, questionnaire | Pending |
 | **Phase 6** | Respiratory Recording | Audio recording (cough, chest sounds) | Pending |

@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../constants/app_constants.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -13,6 +14,17 @@ import '../../features/auth/domain/usecases/google_sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/observe_user_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/splash/presentation/bloc/splash_bloc.dart';
+import '../../features/onboarding/data/datasources/onboarding_local_data_source.dart';
+import '../../features/onboarding/data/datasources/onboarding_remote_data_source.dart';
+import '../../features/onboarding/data/repositories/onboarding_repository_impl.dart';
+import '../../features/onboarding/domain/repositories/onboarding_repository.dart';
+import '../../features/onboarding/domain/usecases/clear_onboarding_draft_usecase.dart';
+import '../../features/onboarding/domain/usecases/fetch_conditions_usecase.dart';
+import '../../features/onboarding/domain/usecases/check_profile_completed_usecase.dart';
+import '../../features/onboarding/domain/usecases/load_onboarding_draft_usecase.dart';
+import '../../features/onboarding/domain/usecases/save_onboarding_draft_usecase.dart';
+import '../../features/onboarding/domain/usecases/save_onboarding_usecase.dart';
+import '../../features/onboarding/presentation/bloc/onboarding_bloc.dart';
 
 /// Service Locator instance.
 final sl = GetIt.instance;
@@ -25,6 +37,8 @@ Future<void> initDependencies() async {
   // ==========================================
   // Initialize Hive
   await Hive.initFlutter();
+  final preferencesBox = await Hive.openBox(AppConstants.userPreferencesBox);
+  sl.registerLazySingleton<Box>(() => preferencesBox);
   
   // Register Supabase Client
   sl.registerLazySingleton<supabase.SupabaseClient>(() => supabase.Supabase.instance.client);
@@ -52,9 +66,31 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GoogleSignInUseCase(sl()));
   sl.registerLazySingleton(() => ObserveUserUseCase(sl()));
 
+  // ==========================================
+  // Features Layer - Onboarding
+  // ==========================================
+  // DataSources
+  sl.registerLazySingleton<OnboardingLocalDataSource>(() => OnboardingLocalDataSourceImpl(sl()));
+  sl.registerLazySingleton<OnboardingRemoteDataSource>(() => OnboardingRemoteDataSourceImpl(sl()));
+
+  // Repositories
+  sl.registerLazySingleton<OnboardingRepository>(() => OnboardingRepositoryImpl(
+        remoteDataSource: sl(),
+        localDataSource: sl(),
+        supabaseClient: sl(),
+      ));
+
+  // UseCases
+  sl.registerLazySingleton(() => SaveOnboardingUseCase(sl()));
+  sl.registerLazySingleton(() => FetchConditionsUseCase(sl()));
+  sl.registerLazySingleton(() => CheckProfileCompletedUseCase(sl()));
+  sl.registerLazySingleton(() => SaveOnboardingDraftUseCase(sl()));
+  sl.registerLazySingleton(() => LoadOnboardingDraftUseCase(sl()));
+  sl.registerLazySingleton(() => ClearOnboardingDraftUseCase(sl()));
+
   // Blocs
   sl.registerFactory(
-    () => SplashBloc(sl()),
+    () => SplashBloc(sl(), sl()),
   );
   sl.registerFactory(
     () => AuthBloc(
@@ -65,6 +101,15 @@ Future<void> initDependencies() async {
       getCurrentUserUseCase: sl(),
       googleSignInUseCase: sl(),
       observeUserUseCase: sl(),
+    ),
+  );
+  sl.registerFactory(
+    () => OnboardingBloc(
+      saveOnboardingUseCase: sl(),
+      fetchConditionsUseCase: sl(),
+      saveOnboardingDraftUseCase: sl(),
+      loadOnboardingDraftUseCase: sl(),
+      clearOnboardingDraftUseCase: sl(),
     ),
   );
 }

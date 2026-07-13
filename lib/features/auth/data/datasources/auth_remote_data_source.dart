@@ -112,13 +112,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserModel?> getCurrentUser() async {
     try {
-      final user = client.auth.currentUser;
+      final sessionResponse = await client.auth.refreshSession();
+      final user = sessionResponse.user;
       if (user == null) {
         return null;
       }
       return UserModel.fromSupabase(user);
     } catch (e) {
-      throw ServerException(e.toString());
+      final user = client.auth.currentUser;
+      if (user == null) {
+        return null;
+      }
+      return UserModel.fromSupabase(user);
     }
   }
 

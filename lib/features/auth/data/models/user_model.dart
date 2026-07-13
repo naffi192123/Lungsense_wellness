@@ -8,6 +8,7 @@ class UserModel extends UserEntity {
     required super.id,
     required super.email,
     super.name,
+    super.isEmailVerified = false,
   });
 
   /// Factory method to map a Supabase SDK [supabase.User] to our [UserModel].
@@ -18,6 +19,7 @@ class UserModel extends UserEntity {
       id: user.id,
       email: user.email ?? '',
       name: displayName,
+      isEmailVerified: user.emailConfirmedAt != null,
     );
   }
 }

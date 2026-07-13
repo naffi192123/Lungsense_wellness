@@ -27,3 +27,13 @@ class SplashNavigateToLogin extends SplashState {
 class SplashNavigateToDashboard extends SplashState {
   const SplashNavigateToDashboard();
 }
+
+/// Emitted when the user is logged in but their email is not verified yet.
+class SplashNavigateToVerification extends SplashState {
+  const SplashNavigateToVerification();
+}
+
+/// Emitted when the user is authenticated but has not finished profile onboarding.
+class SplashNavigateToOnboarding extends SplashState {
+  const SplashNavigateToOnboarding();
+}

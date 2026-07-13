@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lungsense_wellness/features/splash/presentation/bloc/splash_bloc.dart';
-import 'package:lungsense_wellness/features/splash/presentation/bloc/splash_event.dart';
 import 'package:lungsense_wellness/features/splash/presentation/bloc/splash_state.dart';
 import 'package:lungsense_wellness/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:lungsense_wellness/features/auth/presentation/bloc/auth_state.dart';

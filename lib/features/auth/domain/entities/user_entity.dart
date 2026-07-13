@@ -11,12 +11,16 @@ class UserEntity extends Equatable {
   /// Optional display name.
   final String? name;
 
+  /// Verification status of the user's email address.
+  final bool isEmailVerified;
+
   const UserEntity({
     required this.id,
     required this.email,
     this.name,
+    this.isEmailVerified = false,
   });
 
   @override
-  List<Object?> get props => [id, email, name];
+  List<Object?> get props => [id, email, name, isEmailVerified];
 }

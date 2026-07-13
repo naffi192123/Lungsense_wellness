@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0-alpha] - 2026-07-13
+### Added
+- **Phase 3 User Onboarding (Profile Setup)**
+  - Configured `userPreferencesBox` for local caching and registered `OnboardingLocalDataSource` and `OnboardingRemoteDataSource` in dependency injection.
+  - Implemented `OnboardingData` aggregated entity, model maps, use cases (`SaveOnboarding`, `FetchConditions`, `CheckProfileCompleted`, `SaveDraft`, `LoadDraft`, `ClearDraft`), and `OnboardingBloc`.
+  - Built `OnboardingPage` step-by-step forms collecting Basic Info, Lifestyle, and Respiratory health:
+    - Added real-time BMI calculations in Step 1.
+    - Added placeholder properties for Sleep, Water, and Exercise in Step 2.
+    - Added dynamic medical condition chip selectors in Step 3 loading from Supabase.
+  - Built `EmailVerificationPage` restricting access to unverified users and providing status updates.
+  - Refactored `SplashBloc` checks for authentication, email confirmation, and profile completion states.
+  - Wrote comprehensive BLoC unit tests in `onboarding_bloc_test.dart` and `splash_bloc_test.dart`.
+
 ## [0.3.0-alpha] - 2026-07-11
 ### Added
 - **Phase 2 Authentication (Supabase)**
