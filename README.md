@@ -1,6 +1,6 @@
 # LungSense Wellness
 
-LungSense Wellness is a premium, feature-rich Flutter application designed to track and improve respiratory wellness through daily symptom logging, local audio recording, AI acoustic signature analysis simulation, and profile management synced with Supabase.
+LungSense Wellness is an application designed to track respiratory wellness through daily symptom logging, local audio recording, acoustic signature analysis simulation, and profile management.
 
 > [!IMPORTANT]
 > **Not a Medical Diagnosis Tool**: This application is strictly designed for lifestyle improvement, healthy habits reinforcement, and wellness tracking. It does not provide medical diagnoses or replace professional healthcare consultations.
@@ -14,7 +14,7 @@ LungSense Wellness is a premium, feature-rich Flutter application designed to tr
 - **Interactive Dashboard**: Health indicator metrics grid (Cough status, lifestyle rating, trend), daily respiratory tips card, quick action buttons, recent activity logs, and a bottom navigation menu.
 - **Symptom Tracker (Daily Log)**: Inputs for Cough severity, Breathlessness, Fever, Wheezing, Chest pain, Smoking status, exercise, hydration (+/- buttons), and sleep metrics.
 - **Respiratory Recorder**: Clean UI matching ref mockups to record cough or breathing logs, play back recordings, delete audio, or simulate device file uploads.
-- **Acoustic Reports**: Radial progress metrics dial (Lungs Health Score), sound wave energy timelines, and AI wellness tips.
+- **Acoustic Reports**: Radial progress metrics dial (Lungs Health Score), sound wave energy timelines, and wellness tips.
 
 ---
 
