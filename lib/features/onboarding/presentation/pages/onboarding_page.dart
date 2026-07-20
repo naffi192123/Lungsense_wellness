@@ -77,7 +77,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (data.weight > 0 && _weightController.text != data.weight.toString()) {
       _weightController.text = data.weight.toString();
     }
-    _selectedGender = data.gender;
+    _selectedGender = data.gender.toLowerCase();
 
     if (_occupationController.text != data.occupation) {
       _occupationController.text = data.occupation;
@@ -411,17 +411,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
           _buildLabel('Gender'),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedGender.isEmpty ? null : _selectedGender,
+            value: _selectedGender.isEmpty ? null : _selectedGender.toLowerCase(),
             hint: const Text('Select'),
             decoration: const InputDecoration(
               contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             ),
-            items: ['Male', 'Female', 'Other'].map((String gender) {
-              return DropdownMenuItem<String>(
-                value: gender,
-                child: Text(gender),
-              );
-            }).toList(),
+            items: const [
+              DropdownMenuItem<String>(value: 'male', child: Text('Male')),
+              DropdownMenuItem<String>(value: 'female', child: Text('Female')),
+              DropdownMenuItem<String>(value: 'other', child: Text('Other')),
+              DropdownMenuItem<String>(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+            ],
             onChanged: (val) {
               setState(() {
                 _selectedGender = val ?? '';

@@ -16,13 +16,26 @@
   - [x] Login screen
   - [x] Registration screen
   - [x] Forgot password screen
-- [x] **Phase 3: Profile Setup**
-- [ ] **Phase 4: Dashboard**
-- [ ] **Phase 5: Daily Check-In**
-- [ ] **Phase 6: Respiratory Recording**
-- [ ] **Phase 7: Lung Wellness Score**
-- [ ] **Phase 8: History**
-- [ ] **Phase 9: Analytics**
-- [ ] **Phase 10: Profile**
+  - [x] Google Sign-in flow implementation
+- [x] **Phase 3: Profile Setup (Onboarding)**
+  - [x] Dynamic condition fetching chips
+  - [x] BMI calculations
+  - [x] Local draft caching & step-wizard pages
+- [x] **Phase 4: Dashboard**
+  - [x] Home screen welcome banner, quick action grids, daily tips card
+- [x] **Phase 5: Daily Check-In**
+  - [x] Sliders for Cough/Breathlessness, Hydration buttons, sleep options
+- [x] **Phase 6: Respiratory Recording**
+  - [x] Dual tab selector layout (Cough / Breathing)
+  - [x] Playback controls wave, deletion options, device mock uploads
+- [x] **Phase 7: Lung Wellness Score**
+  - [x] Local WellnessRepository caching logs & recordings
+- [x] **Phase 8: History**
+  - [x] Segments for history logs, timelines, tag chips
+- [x] **Phase 9: Analytics**
+  - [x] Clean screen placeholders
+- [x] **Phase 10: Profile Setup**
+  - [x] Dynamic fetch profile name from user_profiles table in Supabase
+  - [x] Pruned Achievements/Settings blocks
 - [ ] **Phase 11: Settings**
 - [ ] **Phase 12: Production Polish**

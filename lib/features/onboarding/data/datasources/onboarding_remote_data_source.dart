@@ -49,9 +49,9 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
         'user_id': userId,
         'full_name': model.fullName,
         'date_of_birth': model.dateOfBirth,
-        'gender': model.gender,
-        'height': model.height,
-        'weight': model.weight,
+        'gender': model.gender.toLowerCase(),
+        'height_cm': model.height,
+        'weight_kg': model.weight,
         'bmi': model.bmi,
         'profile_completed': true,
         'updated_at': DateTime.now().toIso8601String(),
@@ -72,7 +72,7 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
       await client.from('respiratory_profiles').upsert({
         'user_id': userId,
         'smoking_status': model.smokingStatus,
-        'other_notes': model.otherNotes,
+        'notes': model.otherNotes,
         'updated_at': DateTime.now().toIso8601String(),
       });
 

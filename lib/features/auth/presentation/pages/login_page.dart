@@ -5,6 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/usecase/usecase.dart';
+import '../../../onboarding/domain/usecases/check_profile_completed_usecase.dart';
 
 /// The email/password login interface aligned with user mockups.
 class LoginPage extends StatefulWidget {
@@ -73,8 +76,22 @@ class _LoginPageState extends State<LoginPage> {
                     BlocConsumer<AuthBloc, AuthState>(
                       listener: (context, state) {
                         if (state is AuthAuthenticated) {
-                          // Redirect to Dashboard (Phase 4 placeholder)
-                          context.go('/dashboard');
+                          if (!state.user.isEmailVerified) {
+                            context.go('/email-verification');
+                            return;
+                          }
+                          sl<CheckProfileCompletedUseCase>().call(const NoParams()).then((result) {
+                            result.fold(
+                              (failure) => context.go('/onboarding'),
+                              (isCompleted) {
+                                if (isCompleted) {
+                                  context.go('/dashboard');
+                                } else {
+                                  context.go('/onboarding');
+                                }
+                              },
+                            );
+                          });
                         } else if (state is AuthError) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

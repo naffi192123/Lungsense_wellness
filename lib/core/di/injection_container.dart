@@ -25,6 +25,9 @@ import '../../features/onboarding/domain/usecases/load_onboarding_draft_usecase.
 import '../../features/onboarding/domain/usecases/save_onboarding_draft_usecase.dart';
 import '../../features/onboarding/domain/usecases/save_onboarding_usecase.dart';
 import '../../features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import '../../features/onboarding/domain/repositories/wellness_repository.dart';
+import '../../features/onboarding/data/repositories/wellness_repository_impl.dart';
+import '../../features/dashboard/presentation/bloc/wellness_bloc.dart';
 
 /// Service Locator instance.
 final sl = GetIt.instance;
@@ -39,6 +42,9 @@ Future<void> initDependencies() async {
   await Hive.initFlutter();
   final preferencesBox = await Hive.openBox(AppConstants.userPreferencesBox);
   sl.registerLazySingleton<Box>(() => preferencesBox);
+  
+  final checkInBox = await Hive.openBox(AppConstants.checkInBox);
+  final recordingsBox = await Hive.openBox(AppConstants.recordingsBox);
   
   // Register Supabase Client
   sl.registerLazySingleton<supabase.SupabaseClient>(() => supabase.Supabase.instance.client);
@@ -67,7 +73,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => ObserveUserUseCase(sl()));
 
   // ==========================================
-  // Features Layer - Onboarding
+  // Features Layer - Onboarding & Wellness
   // ==========================================
   // DataSources
   sl.registerLazySingleton<OnboardingLocalDataSource>(() => OnboardingLocalDataSourceImpl(sl()));
@@ -78,6 +84,10 @@ Future<void> initDependencies() async {
         remoteDataSource: sl(),
         localDataSource: sl(),
         supabaseClient: sl(),
+      ));
+  sl.registerLazySingleton<WellnessRepository>(() => WellnessRepositoryImpl(
+        checkInBox: checkInBox,
+        recordingsBox: recordingsBox,
       ));
 
   // UseCases
@@ -110,6 +120,11 @@ Future<void> initDependencies() async {
       saveOnboardingDraftUseCase: sl(),
       loadOnboardingDraftUseCase: sl(),
       clearOnboardingDraftUseCase: sl(),
+    ),
+  );
+  sl.registerFactory(
+    () => WellnessBloc(
+      repository: sl(),
     ),
   );
 }

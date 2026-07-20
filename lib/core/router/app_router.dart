@@ -10,8 +10,12 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/email_verification_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import '../../features/daily_log/presentation/pages/daily_log_page.dart';
+import '../../features/recording/presentation/pages/audio_analysis_page.dart';
+import '../../features/recording/presentation/pages/record_page.dart';
 
 /// Central routing management using GoRouter.
 abstract class AppRouter {
@@ -30,6 +34,12 @@ abstract class AppRouter {
   static const String onboardingName = 'onboarding';
   static const String dashboardPath = '/dashboard';
   static const String dashboardName = 'dashboard';
+  static const String dailyLogPath = '/daily-log';
+  static const String dailyLogName = 'daily-log';
+  static const String audioAnalysisPath = '/audio-analysis';
+  static const String audioAnalysisName = 'audio-analysis';
+  static const String recordPath = '/record';
+  static const String recordName = 'record';
 
   /// GoRouter configuration.
   static final GoRouter router = GoRouter(
@@ -87,9 +97,36 @@ abstract class AppRouter {
       GoRoute(
         path: dashboardPath,
         name: dashboardName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<AuthBloc>(),
+        builder: (context, state) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<AuthBloc>()),
+            BlocProvider(create: (context) => sl<WellnessBloc>()),
+          ],
           child: const DashboardPage(),
+        ),
+      ),
+      GoRoute(
+        path: dailyLogPath,
+        name: dailyLogName,
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<WellnessBloc>(),
+          child: const DailyLogPage(),
+        ),
+      ),
+      GoRoute(
+        path: audioAnalysisPath,
+        name: audioAnalysisName,
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<WellnessBloc>(),
+          child: const AudioAnalysisPage(),
+        ),
+      ),
+      GoRoute(
+        path: recordPath,
+        name: recordName,
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<WellnessBloc>(),
+          child: const RecordPage(),
         ),
       ),
     ],

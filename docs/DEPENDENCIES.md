@@ -12,6 +12,7 @@
 | **equatable** | `^2.0.7` | Simple value equality comparison for states/entities |
 | **google_fonts** | `^6.2.0` | Inter typography rendering support |
 | **cupertino_icons** | `^1.0.8` | Premium icon assets |
+| **supabase_flutter** | `^2.8.0` | Backend Auth login, register, and tables synchronization |
 
 ## Dev Dependencies
 

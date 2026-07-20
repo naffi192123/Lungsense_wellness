@@ -2,11 +2,11 @@
 
 | Metric | Status / Value |
 | :--- | :--- |
-| **Current Phase** | Phase 3: User Profile Setup (Onboarding) |
-| **Current Milestone** | Complete Onboarding Flow |
-| **Completed Steps** | Phase 0 & 1 setups, copy horizontal logo, add `supabase_flutter` dependency, initialize Supabase on startup, create remote auth data source, repository implementations, Auth UseCases, AuthBloc, LoginPage, RegisterPage with real-time password strength checker, ForgotPasswordPage, routing updates, widget and unit tests, complete Google Sign-in redirection flow, reactive auth session listener subscription, temporary DashboardPage with logout button, local Hive draft caching, email verification locks, dynamic medical conditions chip selection, real-time BMI calculations, multi-step progress UI forms, and unit test coverage |
-| **In Progress** | Completed Phase 3 execution |
-| **Next Step** | Phase 4: Daily Wellness Tracker |
-| **Latest Commit** | `feat(onboarding): implement Phase 3 User Profile Setup` |
+| **Current Phase** | Completed core application flows (Phases 1-6, 8, 10) |
+| **Current Milestone** | Align database constraints, implement recording tab panels, remove line charts, dynamic profile name sync |
+| **Completed Steps** | Phase 0 & 1 setup, Supabase initialization, login/registration with password strength validator, Google Sign-in flow, onboarding wizard, local Hive draft caching, email verification locks, daily log symptoms tracking (cough/breathlessness sliders, hydration, sleep indicators), new record screen (Cough/Breathing modes, audio playback, delete, device upload), line chart removal from analysis reports, history timeline tab, stateful profile username synchronization via user_profiles querying, app version logs, and 100% passing test suites |
+| **In Progress** | Completed Phase 4, 5, 6, 8, 10 modifications |
+| **Next Step** | Production polish, release preparations |
+| **Latest Commit** | `feat(recording-profile): implement record screen and profile supabase sync` |
 | **Current Branch** | `master` |
-| **Last Updated** | 2026-07-13 |
+| **Last Updated** | 2026-07-20 |
