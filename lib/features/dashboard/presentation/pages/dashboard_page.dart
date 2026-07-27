@@ -95,14 +95,19 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildHomeTab() {
-    final authState = context.read<AuthBloc>().state;
+    final authState = context.watch<AuthBloc>().state;
+    final cachedName = sl<ApiClient>().userName;
     String name = 'User';
     if (authState is AuthAuthenticated) {
       if (authState.user.name != null && authState.user.name!.isNotEmpty) {
         name = authState.user.name!.split(' ').first;
+      } else if (cachedName != null && cachedName.isNotEmpty) {
+        name = cachedName.split(' ').first;
       } else {
         name = authState.user.email.split('@').first;
       }
+    } else if (cachedName != null && cachedName.isNotEmpty) {
+      name = cachedName.split(' ').first;
     }
 
     return BlocBuilder<WellnessBloc, WellnessState>(

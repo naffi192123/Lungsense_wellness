@@ -61,15 +61,18 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildProfileHeader(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    String email = 'alex.rivera@wellness.com';
-    String displayName = 'Alex Rivera';
+    final authState = context.watch<AuthBloc>().state;
+    final cachedName = sl<ApiClient>().userName;
+    final cachedEmail = sl<ApiClient>().userEmail;
+
+    String email = cachedEmail ?? 'user@example.com';
+    String displayName = (cachedName != null && cachedName.isNotEmpty) ? cachedName : 'User';
 
     if (authState is AuthAuthenticated) {
       email = authState.user.email;
       displayName = (authState.user.name != null && authState.user.name!.isNotEmpty)
           ? authState.user.name!
-          : email.split('@').first;
+          : ((cachedName != null && cachedName.isNotEmpty) ? cachedName : email.split('@').first);
     }
 
     return Column(

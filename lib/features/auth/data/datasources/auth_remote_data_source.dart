@@ -72,10 +72,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
         if (meResponse.statusCode == 200) {
           final meData = jsonDecode(meResponse.body);
+          String? name = meData['full_name'] as String?;
+
+          // Fetch profile details from /profile if full_name is null
+          if (name == null || name.isEmpty) {
+            name = await _fetchProfileName(accessToken);
+          }
+
           final userModel = UserModel(
             id: meData['id'] as String,
             email: meData['email'] as String,
-            name: meData['full_name'] as String?,
+            name: name ?? apiClient.userName,
             isEmailVerified: true,
           );
 
@@ -183,12 +190,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await apiClient.get('/auth/me');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        String? name = data['full_name'] as String?;
+
+        if (name == null || name.isEmpty) {
+          name = await _fetchProfileName(token);
+        }
+
         final userModel = UserModel(
           id: data['id'] as String,
           email: data['email'] as String,
-          name: data['full_name'] as String?,
+          name: name ?? apiClient.userName,
           isEmailVerified: true,
         );
+
+        if (userModel.name != null) {
+          await apiClient.updateUserName(userModel.name!);
+        }
+
         _userStreamController.add(userModel);
         return userModel;
       } else {
@@ -199,6 +217,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<String?> _fetchProfileName(String token) async {
+    try {
+      final res = await http.get(
+        Uri.parse('https://lungsense-wellness.onrender.com/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final fullName = data['full_name'] as String?;
+        if (fullName != null && fullName.isNotEmpty) {
+          await apiClient.updateUserName(fullName);
+          return fullName;
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   @override
