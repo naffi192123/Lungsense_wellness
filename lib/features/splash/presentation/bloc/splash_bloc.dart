@@ -25,7 +25,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     emit(const SplashLoading());
     
     // Perform branding logo display delay
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(milliseconds: 100));
     
     // Verify session
     final result = await _getCurrentUserUseCase(const NoParams());

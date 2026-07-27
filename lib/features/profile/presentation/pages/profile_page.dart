@@ -1,57 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 
 /// Page showing user settings, profile variables, and session logging out options.
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
-
-  @override
-  State<ProfilePage> createState() => _ProfilePageState();
-}
-
-class _ProfilePageState extends State<ProfilePage> {
-  String _fullName = '';
-  bool _isLoadingName = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchProfileName();
-  }
-
-  Future<void> _fetchProfileName() async {
-    try {
-      final client = supabase.Supabase.instance.client;
-      final user = client.auth.currentUser;
-      if (user != null) {
-        final res = await client
-            .from('user_profiles')
-            .select('full_name')
-            .eq('user_id', user.id)
-            .maybeSingle();
-        if (res != null && mounted) {
-          setState(() {
-            _fullName = res['full_name'] as String? ?? '';
-            _isLoadingName = false;
-          });
-          return;
-        }
-      }
-    } catch (_) {
-      // Fallback
-    }
-    if (mounted) {
-      setState(() {
-        _isLoadingName = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,16 +64,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildProfileHeader(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
     String email = 'alex.rivera@wellness.com';
-    String fallbackName = 'Alex Rivera';
+    String displayName = 'Alex Rivera';
 
     if (authState is AuthAuthenticated) {
       email = authState.user.email;
-      fallbackName = authState.user.name ?? 'Alex Rivera';
+      displayName = authState.user.name ?? 'Alex Rivera';
     }
-
-    final displayName = _isLoadingName
-        ? 'Loading...'
-        : (_fullName.isNotEmpty ? _fullName : fallbackName);
 
     return Column(
       children: [

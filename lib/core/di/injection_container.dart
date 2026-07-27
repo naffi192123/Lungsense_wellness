@@ -1,7 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
+import '../network/api_client.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -46,8 +47,9 @@ Future<void> initDependencies() async {
   final checkInBox = await Hive.openBox(AppConstants.checkInBox);
   final recordingsBox = await Hive.openBox(AppConstants.recordingsBox);
   
-  // Register Supabase Client
-  sl.registerLazySingleton<supabase.SupabaseClient>(() => supabase.Supabase.instance.client);
+  // Register http.Client and ApiClient
+  sl.registerLazySingleton<http.Client>(() => http.Client());
+  sl.registerLazySingleton<ApiClient>(() => ApiClient(sl(), sl()));
 
   // ==========================================
   // Core Layer
@@ -83,7 +85,6 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<OnboardingRepository>(() => OnboardingRepositoryImpl(
         remoteDataSource: sl(),
         localDataSource: sl(),
-        supabaseClient: sl(),
       ));
   sl.registerLazySingleton<WellnessRepository>(() => WellnessRepositoryImpl(
         checkInBox: checkInBox,

@@ -164,16 +164,6 @@ class _RegisterPageState extends State<RegisterPage> {
                               children: [
                                 // Tab header selector (Login / Register)
                                 _buildTabHeader(context),
-                                const SizedBox(height: 20),
-
-                                // Google Sign-in Mockup
-                                _buildGoogleButton(context),
-                                const SizedBox(height: 20),
-
-                                // OR Divider
-                                _buildDivider(),
-                                const SizedBox(height: 20),
-
                                 // Name Input Field
                                 _buildLabel(context, 'Name'),
                                 const SizedBox(height: 6),

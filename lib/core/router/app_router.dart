@@ -97,13 +97,17 @@ abstract class AppRouter {
       GoRoute(
         path: dashboardPath,
         name: dashboardName,
-        builder: (context, state) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (context) => sl<AuthBloc>()),
-            BlocProvider(create: (context) => sl<WellnessBloc>()),
-          ],
-          child: const DashboardPage(),
-        ),
+        builder: (context, state) {
+          final tabStr = state.uri.queryParameters['tab'];
+          final initialTab = int.tryParse(tabStr ?? '') ?? 0;
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (context) => sl<AuthBloc>()),
+              BlocProvider(create: (context) => sl<WellnessBloc>()),
+            ],
+            child: DashboardPage(initialTab: initialTab),
+          );
+        },
       ),
       GoRoute(
         path: dailyLogPath,

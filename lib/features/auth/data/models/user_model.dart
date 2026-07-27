@@ -1,8 +1,7 @@
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../../domain/entities/user_entity.dart';
 
 /// Data layer model representing a user.
-/// Inherits from [UserEntity] and provides mapping capabilities from Supabase models.
+/// Inherits from [UserEntity] and provides mapping capabilities.
 class UserModel extends UserEntity {
   const UserModel({
     required super.id,
@@ -11,15 +10,13 @@ class UserModel extends UserEntity {
     super.isEmailVerified = false,
   });
 
-  /// Factory method to map a Supabase SDK [supabase.User] to our [UserModel].
-  factory UserModel.fromSupabase(supabase.User user) {
-    final metadata = user.userMetadata;
-    final displayName = metadata?['name'] as String? ?? metadata?['full_name'] as String?;
+  /// Factory method to map a JSON map to our [UserModel].
+  factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: user.id,
-      email: user.email ?? '',
-      name: displayName,
-      isEmailVerified: user.emailConfirmedAt != null,
+      id: json['id'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      name: json['full_name'] as String?,
+      isEmailVerified: true,
     );
   }
 }

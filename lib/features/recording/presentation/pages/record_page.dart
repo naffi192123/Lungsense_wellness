@@ -490,9 +490,8 @@ class _RecordPageState extends State<RecordPage> {
       selectedItemColor: AppColors.primary,
       unselectedItemColor: AppColors.textSecondary,
       onTap: (index) {
-        if (index == 0) {
-          context.go('/dashboard');
-        }
+        if (index == 1) return; // Already on recording page
+        context.go('/dashboard?tab=$index');
       },
       items: const [
         BottomNavigationBarItem(

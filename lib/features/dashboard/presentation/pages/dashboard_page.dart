@@ -13,18 +13,20 @@ import '../../../onboarding/domain/entities/wellness_entities.dart';
 
 /// The central premium dashboard screen managing bottom navigation tabs.
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  final int initialTab;
+  const DashboardPage({super.key, this.initialTab = 0});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  int _currentTabIndex = 0;
+  late int _currentTabIndex;
 
   @override
   void initState() {
     super.initState();
+    _currentTabIndex = widget.initialTab;
     // Load local storage check-in and recording details
     context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
   }

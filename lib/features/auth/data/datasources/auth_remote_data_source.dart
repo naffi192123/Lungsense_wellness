@@ -1,16 +1,19 @@
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../models/user_model.dart';
 
 /// Remote DataSource contract to perform network authentication calls.
 abstract class AuthRemoteDataSource {
-  /// Calls Supabase sign in.
+  /// Calls FastAPI login endpoint.
   Future<UserModel> loginWithEmailAndPassword({
     required String email,
     required String password,
   });
 
-  /// Calls Supabase sign up.
+  /// Calls FastAPI registration endpoint.
   Future<UserModel> registerWithEmailAndPassword({
     required String email,
     required String password,
@@ -22,10 +25,10 @@ abstract class AuthRemoteDataSource {
     required String email,
   });
 
-  /// Signs out the user.
+  /// Signs out the user and clears stored tokens.
   Future<void> logout();
 
-  /// Gets current active session user.
+  /// Gets current active session user details.
   Future<UserModel?> getCurrentUser();
 
   /// Stream of user session state.
@@ -35,11 +38,12 @@ abstract class AuthRemoteDataSource {
   Future<void> signInWithGoogle();
 }
 
-/// Remote DataSource implementation executing client API transactions.
+/// Remote DataSource implementation executing client API transactions against FastAPI.
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final supabase.SupabaseClient client;
+  final ApiClient apiClient;
+  final StreamController<UserModel?> _userStreamController = StreamController<UserModel?>.broadcast();
 
-  AuthRemoteDataSourceImpl(this.client);
+  AuthRemoteDataSourceImpl(this.apiClient);
 
   @override
   Future<UserModel> loginWithEmailAndPassword({
@@ -47,16 +51,55 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
   }) async {
     try {
-      final response = await client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-      if (response.user == null) {
-        throw const AuthException('Sign in completed, but user details are unavailable.');
+      final response = await apiClient.post('/auth/login', body: {
+        'email': email,
+        'password': password,
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final accessToken = data['access_token'] as String;
+        final refreshToken = data['refresh_token'] as String;
+
+        // Fetch user info via /auth/me
+        final meResponse = await http.get(
+          Uri.parse('https://lungsense-wellness.onrender.com/auth/me'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+
+        if (meResponse.statusCode == 200) {
+          final meData = jsonDecode(meResponse.body);
+          final userModel = UserModel(
+            id: meData['id'] as String,
+            email: meData['email'] as String,
+            name: meData['full_name'] as String?,
+            isEmailVerified: true,
+          );
+
+          await apiClient.saveSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            userId: userModel.id,
+            email: userModel.email,
+            name: userModel.name,
+          );
+
+          _userStreamController.add(userModel);
+          return userModel;
+        } else {
+          throw const AuthException('Failed to retrieve user details.');
+        }
+      } else {
+        final data = jsonDecode(response.body);
+        final detail = data['detail'];
+        final message = detail is String ? detail : detail.toString();
+        throw AuthException(message, code: response.statusCode.toString());
       }
-      return UserModel.fromSupabase(response.user!);
-    } on supabase.AuthException catch (e) {
-      throw AuthException(e.message, code: e.statusCode);
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -69,17 +112,31 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String name,
   }) async {
     try {
-      final response = await client.auth.signUp(
-        email: email,
-        password: password,
-        data: {'name': name},
-      );
-      if (response.user == null) {
-        throw const AuthException('Registration completed, but user details are unavailable.');
+      final response = await apiClient.post('/auth/register', body: {
+        'email': email,
+        'password': password,
+        'full_name': name,
+      });
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final emailConfirmationRequired = data['email_confirmation_required'] as bool? ?? false;
+        
+        final userModel = UserModel(
+          id: '',
+          email: email,
+          name: name,
+          isEmailVerified: !emailConfirmationRequired,
+        );
+        return userModel;
+      } else {
+        final data = jsonDecode(response.body);
+        final detail = data['detail'];
+        final message = detail is String ? detail : detail.toString();
+        throw AuthException(message, code: response.statusCode.toString());
       }
-      return UserModel.fromSupabase(response.user!);
-    } on supabase.AuthException catch (e) {
-      throw AuthException(e.message, code: e.statusCode);
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -90,9 +147,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
   }) async {
     try {
-      await client.auth.resetPasswordForEmail(email);
-    } on supabase.AuthException catch (e) {
-      throw AuthException(e.message, code: e.statusCode);
+      final response = await apiClient.post('/auth/forgot-password', body: {
+        'email': email,
+      });
+      if (response.statusCode != 202) {
+        final data = jsonDecode(response.body);
+        final detail = data['detail'];
+        final message = detail is String ? detail : detail.toString();
+        throw AuthException(message, code: response.statusCode.toString());
+      }
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -101,9 +166,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> logout() async {
     try {
-      await client.auth.signOut();
-    } on supabase.AuthException catch (e) {
-      throw AuthException(e.message, code: e.statusCode);
+      await apiClient.clearSession();
+      _userStreamController.add(null);
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -112,43 +176,36 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserModel?> getCurrentUser() async {
     try {
-      final sessionResponse = await client.auth.refreshSession();
-      final user = sessionResponse.user;
-      if (user == null) {
+      final token = apiClient.accessToken;
+      if (token == null) {
         return null;
       }
-      return UserModel.fromSupabase(user);
-    } catch (e) {
-      final user = client.auth.currentUser;
-      if (user == null) {
+      final response = await apiClient.get('/auth/me');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userModel = UserModel(
+          id: data['id'] as String,
+          email: data['email'] as String,
+          name: data['full_name'] as String?,
+          isEmailVerified: true,
+        );
+        _userStreamController.add(userModel);
+        return userModel;
+      } else {
+        await apiClient.clearSession();
+        _userStreamController.add(null);
         return null;
       }
-      return UserModel.fromSupabase(user);
+    } catch (_) {
+      return null;
     }
   }
 
   @override
-  Stream<UserModel?> get userStream {
-    return client.auth.onAuthStateChange.map((data) {
-      final user = data.session?.user;
-      if (user == null) {
-        return null;
-      }
-      return UserModel.fromSupabase(user);
-    });
-  }
+  Stream<UserModel?> get userStream => _userStreamController.stream;
 
   @override
   Future<void> signInWithGoogle() async {
-    try {
-      await client.auth.signInWithOAuth(
-        supabase.OAuthProvider.google,
-        redirectTo: 'io.supabase.lungsense://login-callback/',
-      );
-    } on supabase.AuthException catch (e) {
-      throw AuthException(e.message, code: e.statusCode);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
+    throw const AuthException('Google Sign-In is not supported natively in this configuration.');
   }
 }

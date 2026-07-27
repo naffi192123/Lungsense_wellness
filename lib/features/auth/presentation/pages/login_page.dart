@@ -127,14 +127,6 @@ class _LoginPageState extends State<LoginPage> {
                                 _buildTabHeader(context),
                                 const SizedBox(height: 24),
 
-                                // Google Sign-in Mockup
-                                _buildGoogleButton(context),
-                                const SizedBox(height: 24),
-
-                                // OR Divider
-                                _buildDivider(),
-                                const SizedBox(height: 24),
-
                                 // Email Input field
                                 _buildEmailLabel(context),
                                 const SizedBox(height: 8),
