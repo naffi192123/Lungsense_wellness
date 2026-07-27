@@ -1,15 +1,11 @@
 import 'dart:convert';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../onboarding/domain/entities/wellness_entities.dart';
 import '../../domain/entities/daily_checkin_entity.dart';
 
 abstract class DailyLogRemoteDataSource {
-  Future<DailyCheckInEntity> createCheckIn({
-    required int coughSeverity,
-    required int shortnessOfBreath,
-    required int fatigueLevel,
-    String? symptomsDescription,
-  });
+  Future<DailyCheckInEntity> createCheckIn(DailyLogEntity log);
 
   Future<List<DailyCheckInEntity>> getCheckIns();
 
@@ -22,19 +18,25 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
   DailyLogRemoteDataSourceImpl(this.apiClient);
 
   @override
-  Future<DailyCheckInEntity> createCheckIn({
-    required int coughSeverity,
-    required int shortnessOfBreath,
-    required int fatigueLevel,
-    String? symptomsDescription,
-  }) async {
+  Future<DailyCheckInEntity> createCheckIn(DailyLogEntity log) async {
     try {
       final body = {
-        'cough_severity': coughSeverity,
-        'shortness_of_breath': shortnessOfBreath,
-        'fatigue_level': fatigueLevel,
-        if (symptomsDescription != null && symptomsDescription.isNotEmpty)
-          'symptoms_description': symptomsDescription,
+        'checkin_date': log.checkinDate,
+        'breathlessness': log.breathlessness.round(),
+        'activity_limitation': log.activityLimitation.round(),
+        'change_from_usual': log.changeFromUsual.round(),
+        'fever': log.fever.round(),
+        'chest_tightness': log.chestTightness.round(),
+        'chest_discomfort_breathing': log.chestDiscomfortBreathing.round(),
+        'wheezing': log.wheezing.round(),
+        'cough_severity': log.coughSeverity.round(),
+        'mucus': log.mucus.round(),
+        'sleep_disruption': log.sleepDisruption.round(),
+        'chest_pain': log.chestPain.round(),
+        'smoked_today': log.smokedToday,
+        'exercise_minutes': log.exerciseMinutes.round(),
+        'sleep_hours': log.sleepHours,
+        'water_intake_liters': log.waterIntakeLiters,
       };
 
       final response = await apiClient.post('/checkins', body: body);
@@ -43,16 +45,17 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
         final data = jsonDecode(response.body);
         return DailyCheckInEntity(
           id: data['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
-          coughSeverity: data['cough_severity'] as int? ?? coughSeverity,
-          shortnessOfBreath: data['shortness_of_breath'] as int? ?? shortnessOfBreath,
-          fatigueLevel: data['fatigue_level'] as int? ?? fatigueLevel,
-          notes: data['symptoms_description'] as String? ?? symptomsDescription,
+          coughSeverity: (data['cough_severity'] as num?)?.toInt() ?? log.coughSeverity.round(),
+          shortnessOfBreath: (data['breathlessness'] as num?)?.toInt() ?? log.breathlessness.round(),
+          fatigueLevel: (data['activity_limitation'] as num?)?.toInt() ?? log.activityLimitation.round(),
+          notes: null,
           timestamp: data['created_at'] != null ? DateTime.tryParse(data['created_at']) ?? DateTime.now() : DateTime.now(),
         );
       } else {
         final data = jsonDecode(response.body);
         final detail = data['detail'];
-        throw ServerException(detail is String ? detail : 'Failed to save daily check-in', code: response.statusCode.toString());
+        final message = detail is String ? detail : detail.toString();
+        throw ServerException(message, code: response.statusCode.toString());
       }
     } catch (e) {
       if (e is ServerException) rethrow;

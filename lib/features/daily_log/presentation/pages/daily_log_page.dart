@@ -7,7 +7,7 @@ import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_event.dart';
 import '../../../dashboard/presentation/bloc/wellness_state.dart';
 
-/// Screen collecting the user's daily check-in symptoms.
+/// Interactive Daily Log (Check-ins) screen aligned with backend JSON payload schema.
 class DailyLogPage extends StatefulWidget {
   const DailyLogPage({super.key});
 
@@ -16,34 +16,76 @@ class DailyLogPage extends StatefulWidget {
 }
 
 class _DailyLogPageState extends State<DailyLogPage> {
+  DateTime _selectedDate = DateTime.now();
+
+  double _breathlessness = 3.0;
+  double _activityLimitation = 3.0;
+  double _changeFromUsual = 3.0;
+  double _fever = 0.0;
+  double _chestTightness = 3.0;
+  double _chestDiscomfortBreathing = 3.0;
+  double _wheezing = 3.0;
   double _coughSeverity = 3.0;
-  double _breathlessness = 2.0;
-  bool _chestPain = false;
-  bool _fever = false;
-  bool _wheezing = false;
-  bool _smoking = false;
-  double _exerciseMinutes = 45.0;
-  double _hydrationLiters = 2.4;
+  double _mucus = 3.0;
+  double _sleepDisruption = 3.0;
+  double _chestPain = 0.0;
+  bool _smokedToday = false;
+  double _exerciseMinutes = 30.0;
   double _sleepHours = 7.5;
-  String _sleepQuality = 'Good';
+  double _waterIntakeLiters = 2.0;
 
   void _saveLog() {
+    final dateStr =
+        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+
     final log = DailyLogEntity(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      coughSeverity: _coughSeverity,
+      checkinDate: dateStr,
       breathlessness: _breathlessness,
-      chestPain: _chestPain,
+      activityLimitation: _activityLimitation,
+      changeFromUsual: _changeFromUsual,
       fever: _fever,
+      chestTightness: _chestTightness,
+      chestDiscomfortBreathing: _chestDiscomfortBreathing,
       wheezing: _wheezing,
-      smoking: _smoking,
+      coughSeverity: _coughSeverity,
+      mucus: _mucus,
+      sleepDisruption: _sleepDisruption,
+      chestPain: _chestPain,
+      smokedToday: _smokedToday,
       exerciseMinutes: _exerciseMinutes,
-      hydrationLiters: _hydrationLiters,
       sleepHours: _sleepHours,
-      sleepQuality: _sleepQuality,
-      timestamp: DateTime.now(),
+      waterIntakeLiters: _waterIntakeLiters,
+      timestamp: _selectedDate,
     );
-    
+
     context.read<WellnessBloc>().add(WellnessSaveDailyLogEvent(log));
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2025),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: AppColors.surface,
+              onSurface: AppColors.text,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   @override
@@ -51,7 +93,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Daily Log'),
+        title: const Text('Daily Log Check-in'),
         centerTitle: false,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.text,
@@ -66,123 +108,283 @@ class _DailyLogPageState extends State<DailyLogPage> {
           if (state.status == WellnessStatus.saveSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Daily log saved successfully!'),
+                content: Text('Daily log check-in saved successfully!'),
                 backgroundColor: AppColors.success,
               ),
             );
+            // Refresh dashboard data
+            context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
             context.go('/dashboard');
+          } else if (state.status == WellnessStatus.error && state.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to save log: ${state.errorMessage!}'),
+                backgroundColor: AppColors.error,
+              ),
+            );
           }
         },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Intro header
-              Text(
-                'How are you feeling today? Tracking your symptoms helps us monitor your respiratory health.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.5,
-                    ),
-              ),
-              const SizedBox(height: 24),
+        child: BlocBuilder<WellnessBloc, WellnessState>(
+          builder: (context, state) {
+            final isSaving = state.status == WellnessStatus.saving;
 
-              // Sliders & Forms Card
-              _buildFormSection(),
-              const SizedBox(height: 24),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Date Picker Card
+                  _buildDatePickerCard(context),
+                  const SizedBox(height: 20),
 
-              // Save Button
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.0),
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.supportingGreen],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  // Section Title: Symptoms (0-10 Sliders)
+                  _buildSectionTitle('Respiratory & Physical Symptoms (0 - 10)'),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Cough Severity',
+                    subtitle: '0 (None) to 10 (Severe)',
+                    value: _coughSeverity,
+                    icon: Icons.sick_outlined,
+                    onChanged: (val) => setState(() => _coughSeverity = val),
                   ),
-                ),
-                child: ElevatedButton(
-                  onPressed: _saveLog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: AppColors.surface,
-                    shadowColor: Colors.transparent,
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                    ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Breathlessness',
+                    subtitle: 'Shortness of breath level',
+                    value: _breathlessness,
+                    icon: Icons.air_rounded,
+                    onChanged: (val) => setState(() => _breathlessness = val),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.save_outlined, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Save Symptoms',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Chest Tightness',
+                    subtitle: 'Feeling of pressure or tightness',
+                    value: _chestTightness,
+                    icon: Icons.compress_rounded,
+                    onChanged: (val) => setState(() => _chestTightness = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Chest Discomfort Breathing',
+                    subtitle: 'Discomfort when taking deep breaths',
+                    value: _chestDiscomfortBreathing,
+                    icon: Icons.medical_services_outlined,
+                    onChanged: (val) => setState(() => _chestDiscomfortBreathing = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Wheezing',
+                    subtitle: 'High-pitched whistling sound',
+                    value: _wheezing,
+                    icon: Icons.insights_rounded,
+                    onChanged: (val) => setState(() => _wheezing = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Mucus Production',
+                    subtitle: 'Phlegm or sputum level',
+                    value: _mucus,
+                    icon: Icons.water_drop_outlined,
+                    onChanged: (val) => setState(() => _mucus = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Chest Pain',
+                    subtitle: '0 (None) to 10 (Severe Pain)',
+                    value: _chestPain,
+                    icon: Icons.heart_broken_outlined,
+                    onChanged: (val) => setState(() => _chestPain = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Fever Severity',
+                    subtitle: 'Elevated body temperature feeling',
+                    value: _fever,
+                    icon: Icons.thermostat_outlined,
+                    onChanged: (val) => setState(() => _fever = val),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section Title: Daily Impact & Disruption
+                  _buildSectionTitle('Daily Impact & Disruption'),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Activity Limitation',
+                    subtitle: 'Difficulty completing routine activities',
+                    value: _activityLimitation,
+                    icon: Icons.directions_walk_rounded,
+                    onChanged: (val) => setState(() => _activityLimitation = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Change From Usual Baseline',
+                    subtitle: 'Deviation from your normal state',
+                    value: _changeFromUsual,
+                    icon: Icons.swap_driving_apps_outlined,
+                    onChanged: (val) => setState(() => _changeFromUsual = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSliderCard(
+                    title: 'Sleep Disruption',
+                    subtitle: 'Nighttime waking due to symptoms',
+                    value: _sleepDisruption,
+                    icon: Icons.bedtime_outlined,
+                    onChanged: (val) => setState(() => _sleepDisruption = val),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section Title: Lifestyle & Habits
+                  _buildSectionTitle('Lifestyle & Metrics'),
+                  const SizedBox(height: 12),
+
+                  // Smoked Today Yes/No Radio
+                  _buildSmokingRadioCard(),
+                  const SizedBox(height: 12),
+
+                  // Exercise Minutes Counter
+                  _buildCounterCard(
+                    title: 'Exercise (Minutes)',
+                    subtitle: 'Daily physical activity duration',
+                    value: _exerciseMinutes,
+                    step: 5,
+                    min: 0,
+                    max: 1440,
+                    unit: 'mins',
+                    icon: Icons.fitness_center_rounded,
+                    onChanged: (val) => setState(() => _exerciseMinutes = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Sleep Hours Counter
+                  _buildCounterCard(
+                    title: 'Sleep (Hours)',
+                    subtitle: 'Total sleep time in last 24 hours',
+                    value: _sleepHours,
+                    step: 0.5,
+                    min: 0,
+                    max: 24,
+                    unit: 'hrs',
+                    icon: Icons.nightlight_round,
+                    onChanged: (val) => setState(() => _sleepHours = val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Water Intake Counter
+                  _buildCounterCard(
+                    title: 'Water Intake (Liters)',
+                    subtitle: 'Hydration consumed today',
+                    value: _waterIntakeLiters,
+                    step: 0.25,
+                    min: 0,
+                    max: 20,
+                    unit: 'L',
+                    icon: Icons.local_drink_rounded,
+                    onChanged: (val) => setState(() => _waterIntakeLiters = val),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Save Button
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16.0),
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.supportingGreen],
                       ),
-                    ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: isSaving ? null : _saveLog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: AppColors.surface,
+                        shadowColor: Colors.transparent,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.0),
+                        ),
+                      ),
+                      child: isSaving
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(color: AppColors.surface, strokeWidth: 2),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save_outlined, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Save Symptoms',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 16),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildFormSection() {
-    return Column(
-      children: [
-        // Cough Severity Card
-        _buildSliderCard(
-          title: 'Cough Severity',
-          subtitle: 'Scale: 1 (Mild) - 10 (Severe)',
-          value: _coughSeverity,
-          min: 1.0,
-          max: 10.0,
-          divisions: 9,
-          icon: Icons.sick_outlined,
-          onChanged: (val) => setState(() => _coughSeverity = val),
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
+    );
+  }
+
+  Widget _buildDatePickerCard(BuildContext context) {
+    final dateStr =
+        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+
+    return InkWell(
+      onTap: () => _selectDate(context),
+      borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(color: AppColors.border),
         ),
-        const SizedBox(height: 16),
-
-        // Breathlessness Card
-        _buildSliderCard(
-          title: 'Breathlessness',
-          subtitle: 'Scale: 1 - 10',
-          value: _breathlessness,
-          min: 1.0,
-          max: 10.0,
-          divisions: 9,
-          icon: Icons.air_rounded,
-          onChanged: (val) => setState(() => _breathlessness = val),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.calendar_month_outlined, color: AppColors.primary, size: 24),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Check-in Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const SizedBox(height: 2),
+                    Text(dateStr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.text)),
+                  ],
+                ),
+              ],
+            ),
+            const Icon(Icons.edit_calendar_outlined, color: AppColors.secondary, size: 20),
+          ],
         ),
-        const SizedBox(height: 16),
-
-        // Toggle list card (Pain, Fever, Wheezing)
-        _buildTogglesCard(),
-        const SizedBox(height: 16),
-
-        // Smoking Button Card
-        _buildSmokingCard(),
-        const SizedBox(height: 16),
-
-        // Exercise slider
-        _buildExerciseCard(),
-        const SizedBox(height: 16),
-
-        // Hydration Counter
-        _buildHydrationCard(),
-        const SizedBox(height: 16),
-
-        // Sleep details
-        _buildSleepCard(),
-      ],
+      ),
     );
   }
 
@@ -190,14 +392,11 @@ class _DailyLogPageState extends State<DailyLogPage> {
     required String title,
     required String subtitle,
     required double value,
-    required double min,
-    required double max,
-    required int divisions,
     required IconData icon,
     required ValueChanged<double> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16.0),
@@ -208,374 +407,156 @@ class _DailyLogPageState extends State<DailyLogPage> {
         children: [
           Row(
             children: [
-              Icon(icon, color: AppColors.primary, size: 24),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 15),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Slider(
-            value: value,
-            min: min,
-            max: max,
-            divisions: divisions,
-            activeColor: AppColors.primary,
-            inactiveColor: AppColors.border,
-            label: value.toInt().toString(),
-            onChanged: onChanged,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(min.toInt().toString(), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-              Text(
-                value.toInt().toString(),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16),
-              ),
-              Text(max.toInt().toString(), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTogglesCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          _buildToggleRow(
-            title: 'Chest Pain',
-            icon: Icons.heart_broken_outlined,
-            value: _chestPain,
-            onChanged: (val) => setState(() => _chestPain = val),
-          ),
-          const Divider(color: AppColors.border),
-          _buildToggleRow(
-            title: 'Fever',
-            icon: Icons.thermostat_outlined,
-            value: _fever,
-            onChanged: (val) => setState(() => _fever = val),
-          ),
-          const Divider(color: AppColors.border),
-          _buildToggleRow(
-            title: 'Wheezing',
-            icon: Icons.insights_rounded,
-            value: _wheezing,
-            onChanged: (val) => setState(() => _wheezing = val),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleRow({
-    required String title,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: AppColors.secondary, size: 22),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.text, fontSize: 14),
-              ),
-            ],
-          ),
-          Switch(
-            value: value,
-            activeColor: AppColors.primary,
-            activeTrackColor: AppColors.primary.withOpacity(0.2),
-            inactiveThumbColor: AppColors.textSecondary,
-            inactiveTrackColor: AppColors.border,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSmokingCard() {
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.smoke_free_rounded, color: AppColors.text, size: 24),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Smoking', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text('Did you smoke today?', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _smoking = false),
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: !_smoking ? AppColors.supportingGreen.withOpacity(0.15) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(
-                        color: !_smoking ? AppColors.supportingGreen : AppColors.border,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'No',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: !_smoking ? AppColors.supportingGreen : AppColors.text,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              Icon(icon, color: AppColors.primary, size: 22),
               const SizedBox(width: 12),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _smoking = true),
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _smoking ? AppColors.error.withOpacity(0.12) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(
-                        color: _smoking ? AppColors.error : AppColors.border,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Yes',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: _smoking ? AppColors.error : AppColors.text,
-                      ),
-                    ),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExerciseCard() {
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 24),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Exercise', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      Text('Minutes of activity', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
-              const Icon(Icons.health_and_safety_outlined, color: AppColors.supportingGreen, size: 24),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Slider(
-            value: _exerciseMinutes,
-            min: 0.0,
-            max: 180.0,
-            divisions: 12,
-            activeColor: AppColors.primary,
-            inactiveColor: AppColors.border,
-            onChanged: (val) => setState(() => _exerciseMinutes = val),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('0m', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-              Text(
-                '${_exerciseMinutes.toInt()} mins',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.supportingGreen, fontSize: 15),
-              ),
-              const Text('180m', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHydrationCard() {
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.local_drink_outlined, color: AppColors.secondary, size: 24),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Hydration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text('Daily target progress', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                ],
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: AppColors.textSecondary),
-                onPressed: () {
-                  if (_hydrationLiters > 0.1) {
-                    setState(() => _hydrationLiters = double.parse((_hydrationLiters - 0.2).toStringAsFixed(1)));
-                  }
-                },
-              ),
-              Text(
-                '${_hydrationLiters}L',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.text),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add_circle, color: AppColors.secondary),
-                onPressed: () {
-                  setState(() => _hydrationLiters = double.parse((_hydrationLiters + 0.2).toStringAsFixed(1)));
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSleepCard() {
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.bedtime_outlined, color: AppColors.primary, size: 24),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Sleep Quality', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      Text('Estimated hours and restfulness', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
-              Text(
-                '${_sleepHours} hrs',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  value.toInt().toString(),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Slider(
-            value: _sleepHours,
-            min: 4.0,
-            max: 12.0,
-            divisions: 16,
+            value: value,
+            min: 0,
+            max: 10,
+            divisions: 10,
             activeColor: AppColors.primary,
             inactiveColor: AppColors.border,
-            onChanged: (val) => setState(() => _sleepHours = val),
+            label: value.toInt().toString(),
+            onChanged: onChanged,
           ),
-          const Divider(color: AppColors.border, height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmokingRadioCard() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Smoked Today?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                  SizedBox(height: 2),
+                  Text('Tobacco/vape usage', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: ['Poor', 'Fair', 'Good', 'Excellent'].map((quality) {
-              final isSelected = _sleepQuality == quality;
-              return GestureDetector(
-                onTap: () => setState(() => _sleepQuality = quality),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Text(
-                    quality,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                    ),
-                  ),
+            children: [
+              ChoiceChip(
+                label: const Text('No'),
+                selected: !_smokedToday,
+                selectedColor: AppColors.supportingGreen,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: !_smokedToday ? AppColors.surface : AppColors.text,
                 ),
-              );
-            }).toList(),
+                onSelected: (val) {
+                  if (val) setState(() => _smokedToday = false);
+                },
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Yes'),
+                selected: _smokedToday,
+                selectedColor: AppColors.error,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _smokedToday ? AppColors.surface : AppColors.text,
+                ),
+                onSelected: (val) {
+                  if (val) setState(() => _smokedToday = true);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCounterCard({
+    required String title,
+    required String subtitle,
+    required double value,
+    required double step,
+    required double min,
+    required double max,
+    required String unit,
+    required IconData icon,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 22),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.primary),
+                onPressed: value > min ? () => onChanged((value - step).clamp(min, max)) : null,
+              ),
+              Text(
+                value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                onPressed: value < max ? () => onChanged((value + step).clamp(min, max)) : null,
+              ),
+            ],
           ),
         ],
       ),

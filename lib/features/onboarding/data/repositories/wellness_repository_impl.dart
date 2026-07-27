@@ -21,14 +21,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
     await checkInBox.put(log.id, map);
 
     if (dailyLogRemoteDataSource != null) {
-      try {
-        await dailyLogRemoteDataSource!.createCheckIn(
-          coughSeverity: log.coughSeverity.round(),
-          shortnessOfBreath: log.breathlessness.round(),
-          fatigueLevel: log.sleepQuality.toLowerCase() == 'poor' ? 7 : 3,
-          symptomsDescription: 'Cough: ${log.coughSeverity}, Breathlessness: ${log.breathlessness}',
-        );
-      } catch (_) {}
+      await dailyLogRemoteDataSource!.createCheckIn(log);
     }
   }
 
@@ -38,18 +31,26 @@ class WellnessRepositoryImpl implements WellnessRepository {
       try {
         final remoteLogs = await dailyLogRemoteDataSource!.getCheckIns();
         for (var remote in remoteLogs) {
+          final now = remote.timestamp;
+          final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
           final entity = DailyLogEntity(
             id: remote.id,
-            coughSeverity: remote.coughSeverity.toDouble(),
+            checkinDate: dateStr,
             breathlessness: remote.shortnessOfBreath.toDouble(),
-            chestPain: false,
-            fever: false,
-            wheezing: false,
-            smoking: false,
+            activityLimitation: remote.fatigueLevel.toDouble(),
+            changeFromUsual: 3,
+            fever: 0,
+            chestTightness: 0,
+            chestDiscomfortBreathing: 0,
+            wheezing: 0,
+            coughSeverity: remote.coughSeverity.toDouble(),
+            mucus: 0,
+            sleepDisruption: 0,
+            chestPain: 0,
+            smokedToday: false,
             exerciseMinutes: 30,
-            hydrationLiters: 2.0,
             sleepHours: 8.0,
-            sleepQuality: remote.fatigueLevel > 5 ? 'Fair' : 'Good',
+            waterIntakeLiters: 2.0,
             timestamp: remote.timestamp,
           );
           await checkInBox.put(entity.id, _dailyLogToMap(entity));
@@ -99,20 +100,25 @@ class WellnessRepositoryImpl implements WellnessRepository {
     return list;
   }
 
-  // Serializer helpers
   Map<String, dynamic> _dailyLogToMap(DailyLogEntity log) {
     return {
       'id': log.id,
-      'coughSeverity': log.coughSeverity,
+      'checkinDate': log.checkinDate,
       'breathlessness': log.breathlessness,
-      'chestPain': log.chestPain,
+      'activityLimitation': log.activityLimitation,
+      'changeFromUsual': log.changeFromUsual,
       'fever': log.fever,
+      'chestTightness': log.chestTightness,
+      'chestDiscomfortBreathing': log.chestDiscomfortBreathing,
       'wheezing': log.wheezing,
-      'smoking': log.smoking,
+      'coughSeverity': log.coughSeverity,
+      'mucus': log.mucus,
+      'sleepDisruption': log.sleepDisruption,
+      'chestPain': log.chestPain,
+      'smokedToday': log.smokedToday,
       'exerciseMinutes': log.exerciseMinutes,
-      'hydrationLiters': log.hydrationLiters,
       'sleepHours': log.sleepHours,
-      'sleepQuality': log.sleepQuality,
+      'waterIntakeLiters': log.waterIntakeLiters,
       'timestamp': log.timestamp.toIso8601String(),
     };
   }
@@ -120,17 +126,23 @@ class WellnessRepositoryImpl implements WellnessRepository {
   DailyLogEntity _mapToDailyLog(Map<String, dynamic> map) {
     return DailyLogEntity(
       id: map['id'] as String? ?? '',
-      coughSeverity: (map['coughSeverity'] as num?)?.toDouble() ?? 0.0,
+      checkinDate: map['checkinDate'] as String? ?? '',
       breathlessness: (map['breathlessness'] as num?)?.toDouble() ?? 0.0,
-      chestPain: map['chestPain'] as bool? ?? false,
-      fever: map['fever'] as bool? ?? false,
-      wheezing: map['wheezing'] as bool? ?? false,
-      smoking: map['smoking'] as bool? ?? false,
+      activityLimitation: (map['activityLimitation'] as num?)?.toDouble() ?? 0.0,
+      changeFromUsual: (map['changeFromUsual'] as num?)?.toDouble() ?? 0.0,
+      fever: (map['fever'] as num?)?.toDouble() ?? 0.0,
+      chestTightness: (map['chestTightness'] as num?)?.toDouble() ?? 0.0,
+      chestDiscomfortBreathing: (map['chestDiscomfortBreathing'] as num?)?.toDouble() ?? 0.0,
+      wheezing: (map['wheezing'] as num?)?.toDouble() ?? 0.0,
+      coughSeverity: (map['coughSeverity'] as num?)?.toDouble() ?? 0.0,
+      mucus: (map['mucus'] as num?)?.toDouble() ?? 0.0,
+      sleepDisruption: (map['sleepDisruption'] as num?)?.toDouble() ?? 0.0,
+      chestPain: (map['chestPain'] as num?)?.toDouble() ?? 0.0,
+      smokedToday: map['smokedToday'] as bool? ?? false,
       exerciseMinutes: (map['exerciseMinutes'] as num?)?.toDouble() ?? 0.0,
-      hydrationLiters: (map['hydrationLiters'] as num?)?.toDouble() ?? 0.0,
       sleepHours: (map['sleepHours'] as num?)?.toDouble() ?? 0.0,
-      sleepQuality: map['sleepQuality'] as String? ?? 'Good',
-      timestamp: DateTime.parse(map['timestamp'] as String),
+      waterIntakeLiters: (map['waterIntakeLiters'] as num?)?.toDouble() ?? 0.0,
+      timestamp: map['timestamp'] != null ? DateTime.tryParse(map['timestamp']) ?? DateTime.now() : DateTime.now(),
     );
   }
 

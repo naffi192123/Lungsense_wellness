@@ -1,48 +1,66 @@
 import 'package:equatable/equatable.dart';
 
-/// Entity representing daily symptom tracker entries.
+/// Entity representing daily symptom tracker entries aligned with backend payload schema.
 class DailyLogEntity extends Equatable {
   final String id;
-  final double coughSeverity;
+  final String checkinDate;
   final double breathlessness;
-  final bool chestPain;
-  final bool fever;
-  final bool wheezing;
-  final bool smoking;
+  final double activityLimitation;
+  final double changeFromUsual;
+  final double fever;
+  final double chestTightness;
+  final double chestDiscomfortBreathing;
+  final double wheezing;
+  final double coughSeverity;
+  final double mucus;
+  final double sleepDisruption;
+  final double chestPain;
+  final bool smokedToday;
   final double exerciseMinutes;
-  final double hydrationLiters;
   final double sleepHours;
-  final String sleepQuality; // Poor, Fair, Good, Excellent
+  final double waterIntakeLiters;
   final DateTime timestamp;
 
   const DailyLogEntity({
     required this.id,
-    required this.coughSeverity,
+    required this.checkinDate,
     required this.breathlessness,
-    required this.chestPain,
+    required this.activityLimitation,
+    required this.changeFromUsual,
     required this.fever,
+    required this.chestTightness,
+    required this.chestDiscomfortBreathing,
     required this.wheezing,
-    required this.smoking,
+    required this.coughSeverity,
+    required this.mucus,
+    required this.sleepDisruption,
+    required this.chestPain,
+    required this.smokedToday,
     required this.exerciseMinutes,
-    required this.hydrationLiters,
     required this.sleepHours,
-    required this.sleepQuality,
+    required this.waterIntakeLiters,
     required this.timestamp,
   });
 
   @override
   List<Object?> get props => [
         id,
-        coughSeverity,
+        checkinDate,
         breathlessness,
-        chestPain,
+        activityLimitation,
+        changeFromUsual,
         fever,
+        chestTightness,
+        chestDiscomfortBreathing,
         wheezing,
-        smoking,
+        coughSeverity,
+        mucus,
+        sleepDisruption,
+        chestPain,
+        smokedToday,
         exerciseMinutes,
-        hydrationLiters,
         sleepHours,
-        sleepQuality,
+        waterIntakeLiters,
         timestamp,
       ];
 }
