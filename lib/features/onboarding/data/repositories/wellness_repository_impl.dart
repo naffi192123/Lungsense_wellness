@@ -123,25 +123,41 @@ class WellnessRepositoryImpl implements WellnessRepository {
     };
   }
 
+  double _toDouble(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    if (val is bool) return val ? 10.0 : 0.0;
+    if (val is String) return double.tryParse(val) ?? 0.0;
+    return 0.0;
+  }
+
+  bool _toBool(dynamic val) {
+    if (val == null) return false;
+    if (val is bool) return val;
+    if (val is num) return val > 0;
+    if (val is String) return val.toLowerCase() == 'true';
+    return false;
+  }
+
   DailyLogEntity _mapToDailyLog(Map<String, dynamic> map) {
     return DailyLogEntity(
       id: map['id'] as String? ?? '',
       checkinDate: map['checkinDate'] as String? ?? '',
-      breathlessness: (map['breathlessness'] as num?)?.toDouble() ?? 0.0,
-      activityLimitation: (map['activityLimitation'] as num?)?.toDouble() ?? 0.0,
-      changeFromUsual: (map['changeFromUsual'] as num?)?.toDouble() ?? 0.0,
-      fever: (map['fever'] as num?)?.toDouble() ?? 0.0,
-      chestTightness: (map['chestTightness'] as num?)?.toDouble() ?? 0.0,
-      chestDiscomfortBreathing: (map['chestDiscomfortBreathing'] as num?)?.toDouble() ?? 0.0,
-      wheezing: (map['wheezing'] as num?)?.toDouble() ?? 0.0,
-      coughSeverity: (map['coughSeverity'] as num?)?.toDouble() ?? 0.0,
-      mucus: (map['mucus'] as num?)?.toDouble() ?? 0.0,
-      sleepDisruption: (map['sleepDisruption'] as num?)?.toDouble() ?? 0.0,
-      chestPain: (map['chestPain'] as num?)?.toDouble() ?? 0.0,
-      smokedToday: map['smokedToday'] as bool? ?? false,
-      exerciseMinutes: (map['exerciseMinutes'] as num?)?.toDouble() ?? 0.0,
-      sleepHours: (map['sleepHours'] as num?)?.toDouble() ?? 0.0,
-      waterIntakeLiters: (map['waterIntakeLiters'] as num?)?.toDouble() ?? 0.0,
+      breathlessness: _toDouble(map['breathlessness']),
+      activityLimitation: _toDouble(map['activityLimitation']),
+      changeFromUsual: _toDouble(map['changeFromUsual']),
+      fever: _toDouble(map['fever']),
+      chestTightness: _toDouble(map['chestTightness']),
+      chestDiscomfortBreathing: _toDouble(map['chestDiscomfortBreathing']),
+      wheezing: _toDouble(map['wheezing']),
+      coughSeverity: _toDouble(map['coughSeverity']),
+      mucus: _toDouble(map['mucus']),
+      sleepDisruption: _toDouble(map['sleepDisruption']),
+      chestPain: _toDouble(map['chestPain']),
+      smokedToday: _toBool(map['smokedToday'] ?? map['smoking']),
+      exerciseMinutes: _toDouble(map['exerciseMinutes']),
+      sleepHours: _toDouble(map['sleepHours']),
+      waterIntakeLiters: _toDouble(map['waterIntakeLiters'] ?? map['hydrationLiters']),
       timestamp: map['timestamp'] != null ? DateTime.tryParse(map['timestamp']) ?? DateTime.now() : DateTime.now(),
     );
   }

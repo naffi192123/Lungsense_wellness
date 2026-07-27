@@ -63,6 +63,14 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
     }
   }
 
+  int _toInt(dynamic val) {
+    if (val == null) return 0;
+    if (val is num) return val.toInt();
+    if (val is bool) return val ? 10 : 0;
+    if (val is String) return int.tryParse(val) ?? 0;
+    return 0;
+  }
+
   @override
   Future<List<DailyCheckInEntity>> getCheckIns() async {
     try {
@@ -72,9 +80,9 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
         return list.map((item) {
           return DailyCheckInEntity(
             id: item['id'] as String? ?? '',
-            coughSeverity: item['cough_severity'] as int? ?? 0,
-            shortnessOfBreath: item['shortness_of_breath'] as int? ?? 0,
-            fatigueLevel: item['fatigue_level'] as int? ?? 0,
+            coughSeverity: _toInt(item['cough_severity']),
+            shortnessOfBreath: _toInt(item['breathlessness'] ?? item['shortness_of_breath']),
+            fatigueLevel: _toInt(item['activity_limitation'] ?? item['fatigue_level']),
             notes: item['symptoms_description'] as String?,
             timestamp: item['created_at'] != null ? DateTime.tryParse(item['created_at']) ?? DateTime.now() : DateTime.now(),
           );

@@ -459,41 +459,51 @@ class _DailyLogPageState extends State<DailyLogPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
-              SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Smoked Today?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
-                  SizedBox(height: 2),
-                  Text('Tobacco/vape usage', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-                ],
-              ),
-            ],
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Smoked Today?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                      const SizedBox(height: 2),
+                      const Text('Tobacco/vape usage', style: TextStyle(color: AppColors.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ChoiceChip(
+                visualDensity: VisualDensity.compact,
                 label: const Text('No'),
                 selected: !_smokedToday,
                 selectedColor: AppColors.supportingGreen,
                 labelStyle: TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 13,
                   color: !_smokedToday ? AppColors.surface : AppColors.text,
                 ),
                 onSelected: (val) {
                   if (val) setState(() => _smokedToday = false);
                 },
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               ChoiceChip(
+                visualDensity: VisualDensity.compact,
                 label: const Text('Yes'),
                 selected: _smokedToday,
                 selectedColor: AppColors.error,
                 labelStyle: TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 13,
                   color: _smokedToday ? AppColors.surface : AppColors.text,
                 ),
                 onSelected: (val) {
@@ -528,32 +538,45 @@ class _DailyLogPageState extends State<DailyLogPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: AppColors.primary, size: 22),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-                ],
-              ),
-            ],
+          Expanded(
+            child: Row(
+              children: [
+                Icon(icon, color: AppColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.primary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.primary, size: 22),
                 onPressed: value > min ? () => onChanged((value - step).clamp(min, max)) : null,
               ),
-              Text(
-                value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Text(
+                  value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 22),
                 onPressed: value < max ? () => onChanged((value + step).clamp(min, max)) : null,
               ),
             ],
