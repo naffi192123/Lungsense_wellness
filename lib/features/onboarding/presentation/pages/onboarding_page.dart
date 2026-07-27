@@ -71,11 +71,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (_dobController.text != data.dateOfBirth) {
       _dobController.text = data.dateOfBirth;
     }
-    if (data.height > 0 && _heightController.text != data.height.toString()) {
-      _heightController.text = data.height.toString();
+    final curHeight = double.tryParse(_heightController.text);
+    if (data.height > 0 && curHeight != data.height) {
+      _heightController.text = data.height % 1 == 0 ? data.height.toInt().toString() : data.height.toString();
     }
-    if (data.weight > 0 && _weightController.text != data.weight.toString()) {
-      _weightController.text = data.weight.toString();
+    final curWeight = double.tryParse(_weightController.text);
+    if (data.weight > 0 && curWeight != data.weight) {
+      _weightController.text = data.weight % 1 == 0 ? data.weight.toInt().toString() : data.weight.toString();
     }
     _selectedGender = data.gender.toLowerCase();
 
@@ -83,11 +85,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       _occupationController.text = data.occupation;
     }
     _selectedActivityLevel = data.activityLevel;
-    if (data.sleepHours != null && _sleepController.text != data.sleepHours.toString()) {
-      _sleepController.text = data.sleepHours.toString();
+    final curSleep = double.tryParse(_sleepController.text);
+    if (data.sleepHours != null && data.sleepHours! > 0 && curSleep != data.sleepHours) {
+      _sleepController.text = data.sleepHours! % 1 == 0 ? data.sleepHours!.toInt().toString() : data.sleepHours!.toString();
     }
-    if (data.waterIntake != null && _waterController.text != data.waterIntake.toString()) {
-      _waterController.text = data.waterIntake.toString();
+    final curWater = double.tryParse(_waterController.text);
+    if (data.waterIntake != null && data.waterIntake! > 0 && curWater != data.waterIntake) {
+      _waterController.text = data.waterIntake! % 1 == 0 ? data.waterIntake!.toInt().toString() : data.waterIntake!.toString();
     }
     if (data.exerciseDays != null && _exerciseController.text != data.exerciseDays.toString()) {
       _exerciseController.text = data.exerciseDays.toString();
@@ -442,17 +446,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     TextFormField(
                       controller: _heightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
                       decoration: const InputDecoration(hintText: '175'),
                       onChanged: (val) {
                         _bloc.add(OnboardingUpdateDataEvent(_gatherCurrentData(data)));
                       },
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.trim().isEmpty) {
                           return 'Required';
                         }
                         final height = double.tryParse(value);
-                        if (height == null || height <= 0) {
-                          return 'Invalid';
+                        if (height == null || height < 50 || height > 250) {
+                          return 'Enter valid height (cm)';
                         }
                         return null;
                       },
@@ -470,17 +477,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     TextFormField(
                       controller: _weightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
                       decoration: const InputDecoration(hintText: '70'),
                       onChanged: (val) {
                         _bloc.add(OnboardingUpdateDataEvent(_gatherCurrentData(data)));
                       },
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.trim().isEmpty) {
                           return 'Required';
                         }
                         final weight = double.tryParse(value);
-                        if (weight == null || weight <= 0) {
-                          return 'Invalid';
+                        if (weight == null || weight < 20 || weight > 300) {
+                          return 'Enter valid weight (kg)';
                         }
                         return null;
                       },
