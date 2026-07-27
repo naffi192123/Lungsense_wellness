@@ -28,6 +28,16 @@ import '../../features/onboarding/domain/usecases/save_onboarding_usecase.dart';
 import '../../features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import '../../features/onboarding/domain/repositories/wellness_repository.dart';
 import '../../features/onboarding/data/repositories/wellness_repository_impl.dart';
+import '../../features/recording/data/services/audio_recorder_service.dart';
+import '../../features/recording/data/services/audio_player_service.dart';
+import '../../features/recording/data/services/file_picker_service.dart';
+import '../../features/recording/data/datasources/audio_recording_remote_data_source.dart';
+import '../../features/recording/data/repositories/audio_recording_repository_impl.dart';
+import '../../features/recording/domain/repositories/audio_recording_repository.dart';
+import '../../features/recording/domain/usecases/upload_audio_usecase.dart';
+import '../../features/recording/domain/usecases/get_job_status_usecase.dart';
+import '../../features/recording/domain/usecases/check_and_record_consent_usecase.dart';
+import '../../features/recording/presentation/bloc/audio_recording_bloc.dart';
 import '../../features/dashboard/presentation/bloc/wellness_bloc.dart';
 
 /// Service Locator instance.
@@ -126,6 +136,38 @@ Future<void> initDependencies() async {
   sl.registerFactory(
     () => WellnessBloc(
       repository: sl(),
+    ),
+  );
+
+  // ==========================================
+  // Features Layer - Audio Recording
+  // ==========================================
+  // Services
+  sl.registerLazySingleton<AudioRecorderService>(() => AudioRecorderService());
+  sl.registerLazySingleton<AudioPlayerService>(() => AudioPlayerService());
+  sl.registerLazySingleton<FilePickerService>(() => FilePickerService());
+
+  // DataSources
+  sl.registerLazySingleton<AudioRecordingRemoteDataSource>(
+      () => AudioRecordingRemoteDataSourceImpl(sl()));
+
+  // Repositories
+  sl.registerLazySingleton<AudioRecordingRepository>(
+      () => AudioRecordingRepositoryImpl(remoteDataSource: sl()));
+
+  // UseCases
+  sl.registerLazySingleton(() => UploadAudioUseCase(sl()));
+  sl.registerLazySingleton(() => GetJobStatusUseCase(sl()));
+  sl.registerLazySingleton(() => CheckAndRecordConsentUseCase(sl()));
+
+  // Blocs
+  sl.registerFactory(
+    () => AudioRecordingBloc(
+      recorderService: sl(),
+      filePickerService: sl(),
+      uploadAudioUseCase: sl(),
+      getJobStatusUseCase: sl(),
+      checkAndRecordConsentUseCase: sl(),
     ),
   );
 }

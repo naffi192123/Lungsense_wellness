@@ -16,6 +16,7 @@ import '../../features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import '../../features/daily_log/presentation/pages/daily_log_page.dart';
 import '../../features/recording/presentation/pages/audio_analysis_page.dart';
 import '../../features/recording/presentation/pages/record_page.dart';
+import '../../features/recording/presentation/bloc/audio_recording_bloc.dart';
 
 /// Central routing management using GoRouter.
 abstract class AppRouter {
@@ -128,8 +129,11 @@ abstract class AppRouter {
       GoRoute(
         path: recordPath,
         name: recordName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<WellnessBloc>(),
+        builder: (context, state) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<WellnessBloc>()),
+            BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
+          ],
           child: const RecordPage(),
         ),
       ),
