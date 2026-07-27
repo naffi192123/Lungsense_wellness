@@ -480,9 +480,6 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Widget _buildEnvironmentTipsAndPicker(BuildContext context, AudioRecordingState state) {
-    final bloc = context.read<AudioRecordingBloc>();
-    final isRecording = state is AudioRecordingInProgress;
-
     return Column(
       children: [
         Padding(
@@ -494,13 +491,16 @@ class _RecordPageState extends State<RecordPage> {
           ),
         ),
         const SizedBox(height: 16),
-        _buildPickFileButton(context),
+        _buildPickFileButton(context, state),
       ],
     );
   }
 
-  Widget _buildPickFileButton(BuildContext context) {
+  Widget _buildPickFileButton(BuildContext context, AudioRecordingState state) {
     final bloc = context.read<AudioRecordingBloc>();
+    final isUploading = state is AudioRecordingUploading || state is AudioRecordingJobPolling;
+    final isRecording = state is AudioRecordingInProgress;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -509,7 +509,7 @@ class _RecordPageState extends State<RecordPage> {
         border: Border.all(color: AppColors.primary.withOpacity(0.2)),
       ),
       child: TextButton.icon(
-        onPressed: _isUploading
+        onPressed: (isUploading || isRecording)
             ? null
             : () {
                 bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
@@ -596,6 +596,7 @@ class _RecordPageState extends State<RecordPage> {
 
   Widget _buildSubmitButton(BuildContext context, AudioRecordingState state) {
     final bloc = context.read<AudioRecordingBloc>();
+    final isUploading = state is AudioRecordingUploading || state is AudioRecordingJobPolling;
 
     return Container(
       width: double.infinity,
@@ -606,7 +607,7 @@ class _RecordPageState extends State<RecordPage> {
         ),
       ),
       child: ElevatedButton(
-        onPressed: _isUploading
+        onPressed: isUploading
             ? null
             : () {
                 _audioPlayerService.stop();
