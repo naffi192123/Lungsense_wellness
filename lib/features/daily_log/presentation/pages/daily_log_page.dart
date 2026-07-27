@@ -230,7 +230,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
                     title: 'Change From Usual Baseline',
                     subtitle: 'Deviation from your normal state',
                     value: _changeFromUsual,
-                    icon: Icons.swap_driving_apps_outlined,
+                    icon: Icons.published_with_changes_rounded,
                     onChanged: (val) => setState(() => _changeFromUsual = val),
                   ),
                   const SizedBox(height: 12),
