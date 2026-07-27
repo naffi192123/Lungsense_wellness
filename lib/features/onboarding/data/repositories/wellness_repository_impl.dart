@@ -1,29 +1,66 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../daily_log/data/datasources/daily_log_remote_data_source.dart';
 import '../../domain/entities/wellness_entities.dart';
 import '../../domain/repositories/wellness_repository.dart';
 
-/// Implementation of WellnessRepository using Hive storage boxes for local caching.
+/// Implementation of WellnessRepository using Hive storage boxes and optional remote sync.
 class WellnessRepositoryImpl implements WellnessRepository {
   final Box checkInBox;
   final Box recordingsBox;
+  final DailyLogRemoteDataSource? dailyLogRemoteDataSource;
 
   WellnessRepositoryImpl({
     required this.checkInBox,
     required this.recordingsBox,
+    this.dailyLogRemoteDataSource,
   });
 
   @override
   Future<void> saveDailyLog(DailyLogEntity log) async {
     final map = _dailyLogToMap(log);
     await checkInBox.put(log.id, map);
+
+    if (dailyLogRemoteDataSource != null) {
+      try {
+        await dailyLogRemoteDataSource!.createCheckIn(
+          coughSeverity: log.coughSeverity.round(),
+          shortnessOfBreath: log.breathlessness.round(),
+          fatigueLevel: log.sleepQuality.toLowerCase() == 'poor' ? 7 : 3,
+          symptomsDescription: 'Cough: ${log.coughSeverity}, Breathlessness: ${log.breathlessness}',
+        );
+      } catch (_) {}
+    }
   }
 
   @override
   Future<List<DailyLogEntity>> getDailyLogs() async {
+    if (dailyLogRemoteDataSource != null) {
+      try {
+        final remoteLogs = await dailyLogRemoteDataSource!.getCheckIns();
+        for (var remote in remoteLogs) {
+          final entity = DailyLogEntity(
+            id: remote.id,
+            coughSeverity: remote.coughSeverity.toDouble(),
+            breathlessness: remote.shortnessOfBreath.toDouble(),
+            chestPain: false,
+            fever: false,
+            wheezing: false,
+            smoking: false,
+            exerciseMinutes: 30,
+            hydrationLiters: 2.0,
+            sleepHours: 8.0,
+            sleepQuality: remote.fatigueLevel > 5 ? 'Fair' : 'Good',
+            timestamp: remote.timestamp,
+          );
+          await checkInBox.put(entity.id, _dailyLogToMap(entity));
+        }
+      } catch (_) {}
+    }
+
     if (checkInBox.isEmpty) {
       final logs = _getMockDailyLogs();
       for (var log in logs) {
-        await saveDailyLog(log);
+        await checkInBox.put(log.id, _dailyLogToMap(log));
       }
     }
     final List<DailyLogEntity> list = [];

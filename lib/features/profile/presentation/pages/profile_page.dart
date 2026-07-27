@@ -34,9 +34,8 @@ class ProfilePage extends StatelessWidget {
                   context,
                   title: 'SETTINGS & SUPPORT',
                   items: [
-                    _SettingsItem(Icons.mail_outline_rounded, 'Contact Us'),
-                    _SettingsItem(Icons.lock_outline_rounded, 'Privacy Policy'),
-                    _SettingsItem(Icons.campaign_outlined, 'Ads'),
+                    _SettingsItem(Icons.mail_outline_rounded, 'Contact Us', route: '/contact-us'),
+                    _SettingsItem(Icons.lock_outline_rounded, 'Privacy Policy', route: '/privacy-policy'),
                   ],
                 ),
                 const SizedBox(height: 32),
@@ -68,7 +67,9 @@ class ProfilePage extends StatelessWidget {
 
     if (authState is AuthAuthenticated) {
       email = authState.user.email;
-      displayName = authState.user.name ?? 'Alex Rivera';
+      displayName = (authState.user.name != null && authState.user.name!.isNotEmpty)
+          ? authState.user.name!
+          : email.split('@').first;
     }
 
     return Column(
@@ -156,7 +157,11 @@ class ProfilePage extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14, color: AppColors.text),
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.border),
-                onTap: () {},
+                onTap: () {
+                  if (item.route != null) {
+                    context.push(item.route!);
+                  }
+                },
               );
             },
           ),
@@ -198,6 +203,7 @@ class ProfilePage extends StatelessWidget {
 class _SettingsItem {
   final IconData icon;
   final String title;
+  final String? route;
 
-  _SettingsItem(this.icon, this.title);
+  _SettingsItem(this.icon, this.title, {this.route});
 }

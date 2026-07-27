@@ -494,19 +494,36 @@ class _RecordPageState extends State<RecordPage> {
           ),
         ),
         const SizedBox(height: 16),
-        TextButton.icon(
-          onPressed: isRecording
-              ? null
-              : () {
-                  bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
-                },
-          icon: const Icon(Icons.upload_file_outlined, color: AppColors.primary),
-          label: const Text(
-            'Upload audio file from device (.m4a, .wav, .mp3)',
-            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-          ),
-        ),
+        _buildPickFileButton(context),
       ],
+    );
+  }
+
+  Widget _buildPickFileButton(BuildContext context) {
+    final bloc = context.read<AudioRecordingBloc>();
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: TextButton.icon(
+        onPressed: _isUploading
+            ? null
+            : () {
+                bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
+              },
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        ),
+        icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.primary, size: 22),
+        label: const Text(
+          'Upload Audio File from Device (.m4a, .wav, .mp3)',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
+        ),
+      ),
     );
   }
 
@@ -577,7 +594,7 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildSubmitButton(BuildContext context, AudioRecordingReady state) {
+  Widget _buildSubmitButton(BuildContext context, AudioRecordingState state) {
     final bloc = context.read<AudioRecordingBloc>();
 
     return Container(
@@ -589,10 +606,12 @@ class _RecordPageState extends State<RecordPage> {
         ),
       ),
       child: ElevatedButton(
-        onPressed: () {
-          _audioPlayerService.stop();
-          bloc.add(AudioUploadEvent(recordingType: _currentRecordingType));
-        },
+        onPressed: _isUploading
+            ? null
+            : () {
+                _audioPlayerService.stop();
+                bloc.add(AudioUploadEvent(recordingType: _currentRecordingType));
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           foregroundColor: AppColors.surface,
@@ -633,6 +652,19 @@ class _RecordPageState extends State<RecordPage> {
                   msg,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.read<AudioRecordingBloc>().add(const AudioCancelProcessingEvent());
+                    Navigator.of(dialogContext, rootNavigator: true).pop();
+                  },
+                  icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 18),
+                  label: const Text('Cancel Processing', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ],
             ),

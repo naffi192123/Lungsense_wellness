@@ -58,6 +58,10 @@ class AudioResetEvent extends AudioRecordingEvent {
   const AudioResetEvent();
 }
 
+class AudioCancelProcessingEvent extends AudioRecordingEvent {
+  const AudioCancelProcessingEvent();
+}
+
 class AudioTimerTickEvent extends AudioRecordingEvent {
   final int durationSeconds;
 

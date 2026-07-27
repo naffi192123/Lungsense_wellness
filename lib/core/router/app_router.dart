@@ -17,6 +17,8 @@ import '../../features/daily_log/presentation/pages/daily_log_page.dart';
 import '../../features/recording/presentation/pages/audio_analysis_page.dart';
 import '../../features/recording/presentation/pages/record_page.dart';
 import '../../features/recording/presentation/bloc/audio_recording_bloc.dart';
+import '../../features/profile/presentation/pages/contact_us_page.dart';
+import '../../features/profile/presentation/pages/privacy_policy_page.dart';
 
 /// Central routing management using GoRouter.
 abstract class AppRouter {
@@ -41,6 +43,10 @@ abstract class AppRouter {
   static const String audioAnalysisName = 'audio-analysis';
   static const String recordPath = '/record';
   static const String recordName = 'record';
+  static const String contactUsPath = '/contact-us';
+  static const String contactUsName = 'contact-us';
+  static const String privacyPolicyPath = '/privacy-policy';
+  static const String privacyPolicyName = 'privacy-policy';
 
   /// GoRouter configuration.
   static final GoRouter router = GoRouter(
@@ -136,6 +142,16 @@ abstract class AppRouter {
           ],
           child: const RecordPage(),
         ),
+      ),
+      GoRoute(
+        path: contactUsPath,
+        name: contactUsName,
+        builder: (context, state) => const ContactUsPage(),
+      ),
+      GoRoute(
+        path: privacyPolicyPath,
+        name: privacyPolicyName,
+        builder: (context, state) => const PrivacyPolicyPage(),
       ),
     ],
   );

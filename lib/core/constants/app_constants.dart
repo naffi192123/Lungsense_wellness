@@ -1,6 +1,6 @@
 /// App-wide constants for names, paths, cache keys, and values.
 abstract class AppConstants {
-  static const String appName = 'LungSense Wellness';
+  static const String appName = 'LungSense';
   
   // Hive Box Names
   static const String userPreferencesBox = 'user_preferences_box';

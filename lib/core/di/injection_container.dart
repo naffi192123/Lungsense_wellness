@@ -17,6 +17,7 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/splash/presentation/bloc/splash_bloc.dart';
 import '../../features/onboarding/data/datasources/onboarding_local_data_source.dart';
 import '../../features/onboarding/data/datasources/onboarding_remote_data_source.dart';
+import '../../features/daily_log/data/datasources/daily_log_remote_data_source.dart';
 import '../../features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import '../../features/onboarding/domain/repositories/onboarding_repository.dart';
 import '../../features/onboarding/domain/usecases/clear_onboarding_draft_usecase.dart';
@@ -90,6 +91,7 @@ Future<void> initDependencies() async {
   // DataSources
   sl.registerLazySingleton<OnboardingLocalDataSource>(() => OnboardingLocalDataSourceImpl(sl()));
   sl.registerLazySingleton<OnboardingRemoteDataSource>(() => OnboardingRemoteDataSourceImpl(sl()));
+  sl.registerLazySingleton<DailyLogRemoteDataSource>(() => DailyLogRemoteDataSourceImpl(sl()));
 
   // Repositories
   sl.registerLazySingleton<OnboardingRepository>(() => OnboardingRepositoryImpl(
@@ -99,6 +101,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<WellnessRepository>(() => WellnessRepositoryImpl(
         checkInBox: checkInBox,
         recordingsBox: recordingsBox,
+        dailyLogRemoteDataSource: sl(),
       ));
 
   // UseCases

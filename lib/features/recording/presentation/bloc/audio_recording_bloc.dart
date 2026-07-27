@@ -37,7 +37,18 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     on<AudioRemoveFileEvent>(_onRemoveFile);
     on<AudioUploadEvent>(_onUpload);
     on<AudioResetEvent>(_onReset);
+    on<AudioCancelProcessingEvent>(_onCancelProcessing);
     on<AudioTimerTickEvent>(_onTimerTick);
+  }
+
+  bool _isProcessingCancelled = false;
+
+  void _onCancelProcessing(
+    AudioCancelProcessingEvent event,
+    Emitter<AudioRecordingState> emit,
+  ) {
+    _isProcessingCancelled = true;
+    emit(const AudioRecordingInitial());
   }
 
   void _onTimerTick(
@@ -194,6 +205,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     AudioUploadEvent event,
     Emitter<AudioRecordingState> emit,
   ) async {
+    _isProcessingCancelled = false;
     final filePath = _currentFilePath;
     if (filePath == null) {
       emit(const AudioRecordingFailure(message: 'No audio file available for upload.'));
@@ -204,6 +216,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
 
     // Step 1: Check and record user consent
     final consentResult = await checkAndRecordConsentUseCase();
+    if (_isProcessingCancelled) return;
     final consentGranted = consentResult.fold((_) => false, (consent) => consent.granted);
     if (!consentGranted) {
       emit(const AudioRecordingFailure(message: 'Audio recording consent is required by backend specifications.'));
@@ -217,15 +230,20 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       recordingType: event.recordingType,
     );
 
+    if (_isProcessingCancelled) return;
+
     await uploadResult.fold(
       (failure) async {
-        emit(AudioRecordingFailure(
-          message: failure.message,
-          filePath: filePath,
-          recordingType: event.recordingType,
-        ));
+        if (!_isProcessingCancelled) {
+          emit(AudioRecordingFailure(
+            message: failure.message,
+            filePath: filePath,
+            recordingType: event.recordingType,
+          ));
+        }
       },
       (job) async {
+        if (_isProcessingCancelled) return;
         // Step 3: Poll status of job until completed or failed
         emit(AudioRecordingJobPolling(
           jobId: job.jobId,
@@ -247,8 +265,10 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     int attempt = 0;
 
     while (attempt < maxPollAttempts) {
+      if (_isProcessingCancelled) return;
       attempt++;
       await Future.delayed(const Duration(seconds: 2));
+      if (_isProcessingCancelled) return;
 
       final jobResult = await getJobStatusUseCase(jobId);
 
