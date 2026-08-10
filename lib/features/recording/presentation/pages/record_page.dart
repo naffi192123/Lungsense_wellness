@@ -240,8 +240,9 @@ class _RecordPageState extends State<RecordPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPermissionWarning(BuildContext context, AudioRecordingPermissionDenied state) {
     return Container(
