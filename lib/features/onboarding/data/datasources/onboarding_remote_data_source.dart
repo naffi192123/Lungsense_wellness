@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/onboarding_model.dart';
@@ -24,8 +25,6 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
 
   @override
   Future<List<MedicalConditionEntity>> fetchMedicalConditions() async {
-    // Since the backend does not expose a list of conditions via endpoints,
-    // we return a standard static list of common respiratory/medical conditions.
     return const [
       MedicalConditionEntity(id: '1', name: 'Asthma', description: 'Chronic bronchial airway inflammation'),
       MedicalConditionEntity(id: '2', name: 'COPD', description: 'Chronic Obstructive Pulmonary Disease'),
@@ -40,39 +39,27 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
   Future<void> saveOnboarding({required OnboardingModel model, required String userId}) async {
     try {
       final age = _calculateAge(model.dateOfBirth);
-      final conditions = model.selectedConditionIds.map((id) {
-        if (id == '1') return 'Asthma';
-        if (id == '2') return 'COPD';
-        if (id == '3') return 'Chronic Bronchitis';
-        if (id == '4') return 'Allergies';
-        if (id == '5') return 'Hypertension';
-        if (id == '6') return 'Diabetes';
-        return id;
-      }).join(', ');
+      String gender = model.gender.trim().toLowerCase();
+      if (gender != 'male' && gender != 'female') {
+        gender = 'other';
+      }
 
-      final profileUpsert = {
+      final profileUpsert = <String, dynamic>{
         'age': age,
-        'gender': model.gender.toLowerCase(),
-        'height_cm': model.height,
-        'weight_kg': model.weight,
-        'smoking_status': model.smokingStatus,
-        'respiratory_conditions': conditions,
-        'occupation': model.occupation,
-        'activity_level': model.activityLevel,
+        'gender': gender,
+        'height_cm': model.height > 0 ? model.height : 170.0,
+        'weight_kg': model.weight > 0 ? model.weight : 70.0,
       };
 
       final response = await apiClient.put('/profile', body: profileUpsert);
 
-      if (response.statusCode != 200) {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        final message = detail is String ? detail : detail.toString();
+      if (response.statusCode == 200) {
+        if (model.fullName.isNotEmpty) {
+          await apiClient.updateUserName(model.fullName);
+        }
+      } else {
+        final message = _extractErrorMessage(response);
         throw ServerException(message, code: response.statusCode.toString());
-      }
-
-      // If the user's name needs updating, call /auth/me or update local cache
-      if (model.fullName.isNotEmpty) {
-        await apiClient.updateUserName(model.fullName);
       }
     } catch (e) {
       if (e is ServerException) {
@@ -114,9 +101,30 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
       if (today.month < birthDate.month || (today.month == birthDate.month && today.day < birthDate.day)) {
         age--;
       }
+      if (age < 1) return 18;
+      if (age > 130) return 100;
       return age;
     } catch (_) {
       return 30; // Sensible default fallback
     }
+  }
+
+  String _extractErrorMessage(http.Response response) {
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map) {
+        final detail = data['detail'];
+        if (detail is String) return detail;
+        if (detail is List && detail.isNotEmpty) {
+          final first = detail.first;
+          if (first is Map && first['msg'] != null) {
+            return first['msg'].toString();
+          }
+          return detail.toString();
+        }
+        if (data['message'] != null) return data['message'].toString();
+      }
+    } catch (_) {}
+    return 'Server returned error (${response.statusCode}): ${response.body.isNotEmpty ? response.body : "Request failed"}';
   }
 }
