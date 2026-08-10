@@ -17,6 +17,9 @@ import '../../features/daily_log/presentation/pages/daily_log_page.dart';
 import '../../features/recording/presentation/pages/audio_analysis_page.dart';
 import '../../features/recording/presentation/pages/record_page.dart';
 import '../../features/recording/presentation/bloc/audio_recording_bloc.dart';
+import '../../features/history/presentation/pages/history_detail_page.dart';
+import '../../features/profile/presentation/pages/edit_profile_page.dart';
+import '../../features/profile/presentation/pages/change_password_page.dart';
 import '../../features/profile/presentation/pages/contact_us_page.dart';
 import '../../features/profile/presentation/pages/privacy_policy_page.dart';
 
@@ -43,6 +46,12 @@ abstract class AppRouter {
   static const String audioAnalysisName = 'audio-analysis';
   static const String recordPath = '/record';
   static const String recordName = 'record';
+  static const String historyDetailsPath = '/history-details';
+  static const String historyDetailsName = 'history-details';
+  static const String editProfilePath = '/edit-profile';
+  static const String editProfileName = 'edit-profile';
+  static const String changePasswordPath = '/change-password';
+  static const String changePasswordName = 'change-password';
   static const String contactUsPath = '/contact-us';
   static const String contactUsName = 'contact-us';
   static const String privacyPolicyPath = '/privacy-policy';
@@ -142,6 +151,26 @@ abstract class AppRouter {
           ],
           child: const RecordPage(),
         ),
+      ),
+      GoRoute(
+        path: historyDetailsPath,
+        name: historyDetailsName,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final logType = extra['logType'] as String? ?? 'generic';
+          final itemData = extra['itemData'];
+          return HistoryDetailPage(logType: logType, itemData: itemData);
+        },
+      ),
+      GoRoute(
+        path: editProfilePath,
+        name: editProfileName,
+        builder: (context, state) => const EditProfilePage(),
+      ),
+      GoRoute(
+        path: changePasswordPath,
+        name: changePasswordName,
+        builder: (context, state) => const ChangePasswordPage(),
       ),
       GoRoute(
         path: contactUsPath,

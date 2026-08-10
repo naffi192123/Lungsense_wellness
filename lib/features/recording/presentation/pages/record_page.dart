@@ -108,19 +108,38 @@ class _RecordPageState extends State<RecordPage> {
     return '$mins:$secs';
   }
 
+  void _onBack() {
+    _audioPlayerService.stop();
+    final bloc = context.read<AudioRecordingBloc>();
+    if (bloc.state is AudioRecordingInProgress) {
+      bloc.add(const AudioResetEvent());
+    }
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/dashboard');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Record Session'),
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.text,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/dashboard'),
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _onBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Record Session'),
+          backgroundColor: AppColors.surface,
+          foregroundColor: AppColors.text,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _onBack,
+          ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textSecondary),

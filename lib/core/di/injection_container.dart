@@ -58,6 +58,8 @@ Future<void> initDependencies() async {
   final checkInBox = await Hive.openBox(AppConstants.checkInBox);
   final recordingsBox = await Hive.openBox(AppConstants.recordingsBox);
   
+  final scoreBox = await Hive.openBox('score_history_box');
+  
   // Register http.Client and ApiClient
   sl.registerLazySingleton<http.Client>(() => http.Client());
   sl.registerLazySingleton<ApiClient>(() => ApiClient(sl(), sl()));
@@ -68,10 +70,11 @@ Future<void> initDependencies() async {
   // Place to register global utilities like NetworkInfo, ApiClient, local database services
 
   // ==========================================
-  // Features Layer - Authentication
+  // Features Layer - Authentication & Profile
   // ==========================================
   // DataSources
   sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(sl()));
+  sl.registerLazySingleton<ProfileRemoteDataSource>(() => ProfileRemoteDataSourceImpl(sl()));
 
   // Repositories
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl()));
@@ -92,6 +95,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<OnboardingLocalDataSource>(() => OnboardingLocalDataSourceImpl(sl()));
   sl.registerLazySingleton<OnboardingRemoteDataSource>(() => OnboardingRemoteDataSourceImpl(sl()));
   sl.registerLazySingleton<DailyLogRemoteDataSource>(() => DailyLogRemoteDataSourceImpl(sl()));
+  sl.registerLazySingleton<ScoreRemoteDataSource>(() => ScoreRemoteDataSourceImpl(sl()));
 
   // Repositories
   sl.registerLazySingleton<OnboardingRepository>(() => OnboardingRepositoryImpl(
@@ -101,7 +105,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<WellnessRepository>(() => WellnessRepositoryImpl(
         checkInBox: checkInBox,
         recordingsBox: recordingsBox,
+        scoreBox: scoreBox,
         dailyLogRemoteDataSource: sl(),
+        scoreRemoteDataSource: sl(),
       ));
 
   // UseCases

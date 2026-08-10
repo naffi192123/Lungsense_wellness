@@ -1,18 +1,23 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../daily_log/data/datasources/daily_log_remote_data_source.dart';
+import '../../../dashboard/data/datasources/score_remote_data_source.dart';
 import '../../domain/entities/wellness_entities.dart';
 import '../../domain/repositories/wellness_repository.dart';
 
-/// Implementation of WellnessRepository using Hive storage boxes and optional remote sync.
+/// Implementation of WellnessRepository with zero mock data and real backend API synchronization.
 class WellnessRepositoryImpl implements WellnessRepository {
   final Box checkInBox;
   final Box recordingsBox;
+  final Box? scoreBox;
   final DailyLogRemoteDataSource? dailyLogRemoteDataSource;
+  final ScoreRemoteDataSource? scoreRemoteDataSource;
 
   WellnessRepositoryImpl({
     required this.checkInBox,
     required this.recordingsBox,
+    this.scoreBox,
     this.dailyLogRemoteDataSource,
+    this.scoreRemoteDataSource,
   });
 
   @override
@@ -58,12 +63,6 @@ class WellnessRepositoryImpl implements WellnessRepository {
       } catch (_) {}
     }
 
-    if (checkInBox.isEmpty) {
-      final logs = _getMockDailyLogs();
-      for (var log in logs) {
-        await checkInBox.put(log.id, _dailyLogToMap(log));
-      }
-    }
     final List<DailyLogEntity> list = [];
     for (var key in checkInBox.keys) {
       final raw = checkInBox.get(key);
@@ -83,12 +82,6 @@ class WellnessRepositoryImpl implements WellnessRepository {
 
   @override
   Future<List<AudioAnalysisEntity>> getAudioAnalyses() async {
-    if (recordingsBox.isEmpty) {
-      final analyses = _getMockAudioAnalyses();
-      for (var analysis in analyses) {
-        await saveAudioAnalysis(analysis);
-      }
-    }
     final List<AudioAnalysisEntity> list = [];
     for (var key in recordingsBox.keys) {
       final raw = recordingsBox.get(key);
@@ -98,6 +91,116 @@ class WellnessRepositoryImpl implements WellnessRepository {
     }
     list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return list;
+  }
+
+  @override
+  Future<List<ScoreHistoryEntity>> getScoreHistory({int limit = 30, int offset = 0}) async {
+    if (scoreRemoteDataSource != null) {
+      try {
+        final remote = await scoreRemoteDataSource!.getScoreHistory(limit: limit, offset: offset);
+        final List<ScoreHistoryEntity> result = [];
+        for (var item in remote) {
+          final entity = ScoreHistoryEntity(
+            id: item['id'] as String? ?? item['created_at']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            score: (item['score'] as num?)?.toInt() ?? (item['final_score'] as num?)?.toInt() ?? 0,
+            band: item['band'] as String? ?? 'good',
+            message: item['message'] as String?,
+            breakdown: item['breakdown'] is Map ? Map<String, dynamic>.from(item['breakdown']) : null,
+            sessionNumber: (item['session_number'] as num?)?.toInt(),
+            baselineStatus: item['baseline_status'] as String?,
+            timestamp: item['created_at'] != null ? DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+          );
+          result.add(entity);
+          if (scoreBox != null) {
+            await scoreBox!.put(entity.id, {
+              'id': entity.id,
+              'score': entity.score,
+              'band': entity.band,
+              'message': entity.message,
+              'breakdown': entity.breakdown,
+              'sessionNumber': entity.sessionNumber,
+              'baselineStatus': entity.baselineStatus,
+              'timestamp': entity.timestamp.toIso8601String(),
+            });
+          }
+        }
+        result.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        return result;
+      } catch (_) {}
+    }
+
+    if (scoreBox != null) {
+      final List<ScoreHistoryEntity> list = [];
+      for (var key in scoreBox!.keys) {
+        final raw = scoreBox!.get(key);
+        if (raw != null) {
+          final map = Map<String, dynamic>.from(raw);
+          list.add(ScoreHistoryEntity(
+            id: map['id'] as String? ?? '',
+            score: (map['score'] as num?)?.toInt() ?? 0,
+            band: map['band'] as String? ?? 'good',
+            message: map['message'] as String?,
+            breakdown: map['breakdown'] is Map ? Map<String, dynamic>.from(map['breakdown']) : null,
+            sessionNumber: (map['sessionNumber'] as num?)?.toInt(),
+            baselineStatus: map['baselineStatus'] as String?,
+            timestamp: map['timestamp'] != null ? DateTime.tryParse(map['timestamp']) ?? DateTime.now() : DateTime.now(),
+          ));
+        }
+      }
+      list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return list;
+    }
+    return [];
+  }
+
+  @override
+  Future<ScoreHistoryEntity?> getLatestScore() async {
+    if (scoreRemoteDataSource != null) {
+      try {
+        final remote = await scoreRemoteDataSource!.getLatestScore();
+        if (remote != null) {
+          return ScoreHistoryEntity(
+            id: remote['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            score: (remote['score'] as num?)?.toInt() ?? (remote['final_score'] as num?)?.toInt() ?? 0,
+            band: remote['band'] as String? ?? 'good',
+            message: remote['message'] as String?,
+            breakdown: remote['breakdown'] is Map ? Map<String, dynamic>.from(remote['breakdown']) : null,
+            sessionNumber: (remote['session_number'] as num?)?.toInt(),
+            baselineStatus: remote['baseline_status'] as String?,
+            timestamp: remote['created_at'] != null ? DateTime.tryParse(remote['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+          );
+        }
+      } catch (_) {}
+    }
+    final history = await getScoreHistory(limit: 1);
+    return history.isNotEmpty ? history.first : null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getBaselineStatus() async {
+    if (scoreRemoteDataSource != null) {
+      try {
+        return await scoreRemoteDataSource!.getBaselineStatus();
+      } catch (_) {}
+    }
+    return {'status': 'initializing', 'message': 'Complete screening sessions to activate trend scoring.'};
+  }
+
+  // Serializers with safe conversion helpers
+  double _toDouble(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    if (val is bool) return val ? 10.0 : 0.0;
+    if (val is String) return double.tryParse(val) ?? 0.0;
+    return 0.0;
+  }
+
+  bool _toBool(dynamic val) {
+    if (val == null) return false;
+    if (val is bool) return val;
+    if (val is num) return val > 0;
+    if (val is String) return val.toLowerCase() == 'true';
+    return false;
   }
 
   Map<String, dynamic> _dailyLogToMap(DailyLogEntity log) {
@@ -121,22 +224,6 @@ class WellnessRepositoryImpl implements WellnessRepository {
       'waterIntakeLiters': log.waterIntakeLiters,
       'timestamp': log.timestamp.toIso8601String(),
     };
-  }
-
-  double _toDouble(dynamic val) {
-    if (val == null) return 0.0;
-    if (val is num) return val.toDouble();
-    if (val is bool) return val ? 10.0 : 0.0;
-    if (val is String) return double.tryParse(val) ?? 0.0;
-    return 0.0;
-  }
-
-  bool _toBool(dynamic val) {
-    if (val == null) return false;
-    if (val is bool) return val;
-    if (val is num) return val > 0;
-    if (val is String) return val.toLowerCase() == 'true';
-    return false;
   }
 
   DailyLogEntity _mapToDailyLog(Map<String, dynamic> map) {
@@ -186,119 +273,17 @@ class WellnessRepositoryImpl implements WellnessRepository {
       id: map['id'] as String? ?? '',
       title: map['title'] as String? ?? '',
       type: map['type'] as String? ?? '',
-      duration: map['duration'] as int? ?? 0,
-      confidence: map['confidence'] as int? ?? 0,
-      lungsScore: map['lungsScore'] as int? ?? 0,
+      duration: (map['duration'] as num?)?.toInt() ?? 0,
+      confidence: (map['confidence'] as num?)?.toInt() ?? 0,
+      lungsScore: (map['lungsScore'] as num?)?.toInt() ?? 0,
       insight: map['insight'] as String? ?? '',
       intensity: map['intensity'] as String? ?? '',
-      breathingRate: map['breathingRate'] as int? ?? 0,
+      breathingRate: (map['breathingRate'] as num?)?.toInt() ?? 0,
       rhythm: map['rhythm'] as String? ?? '',
       signalQuality: map['signalQuality'] as String? ?? '',
       backgroundNoise: map['backgroundNoise'] as String? ?? '',
       timestamp: DateTime.parse(map['timestamp'] as String),
       tags: List<String>.from(map['tags'] ?? []),
     );
-  }
-
-  // Mock data generators
-  List<DailyLogEntity> _getMockDailyLogs() {
-    final now = DateTime.now();
-    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    return [
-      DailyLogEntity(
-        id: 'log1',
-        checkinDate: dateStr,
-        breathlessness: 2,
-        activityLimitation: 1,
-        changeFromUsual: 2,
-        fever: 0,
-        chestTightness: 1,
-        chestDiscomfortBreathing: 1,
-        wheezing: 0,
-        coughSeverity: 3,
-        mucus: 1,
-        sleepDisruption: 1,
-        chestPain: 0,
-        smokedToday: false,
-        exerciseMinutes: 45,
-        sleepHours: 7.5,
-        waterIntakeLiters: 2.4,
-        timestamp: now.subtract(const Duration(hours: 4)),
-      ),
-      DailyLogEntity(
-        id: 'log2',
-        checkinDate: dateStr,
-        breathlessness: 3,
-        activityLimitation: 2,
-        changeFromUsual: 3,
-        fever: 0,
-        chestTightness: 2,
-        chestDiscomfortBreathing: 2,
-        wheezing: 2,
-        coughSeverity: 4,
-        mucus: 2,
-        sleepDisruption: 2,
-        chestPain: 0,
-        smokedToday: false,
-        exerciseMinutes: 30,
-        sleepHours: 6.0,
-        waterIntakeLiters: 1.8,
-        timestamp: now.subtract(const Duration(days: 1)),
-      ),
-    ];
-  }
-
-  List<AudioAnalysisEntity> _getMockAudioAnalyses() {
-    final now = DateTime.now();
-    return [
-      AudioAnalysisEntity(
-        id: 'rec1',
-        title: 'Excellent Airflow',
-        type: 'Cough',
-        duration: 42,
-        confidence: 98,
-        lungsScore: 98,
-        insight: 'Your recording shows a crisp, dry cough pattern with a clear respiratory rhythm. No significant wheezing or crackling was detected by the algorithm. This profile is consistent with minor throat irritation rather than deep lung congestion.',
-        intensity: 'Moderate',
-        breathingRate: 16,
-        rhythm: 'Steady',
-        signalQuality: 'Excellent',
-        backgroundNoise: 'Low (Minimal Interference)',
-        timestamp: now.subtract(const Duration(hours: 2)),
-        tags: const ['No Congestion', 'High Energy'],
-      ),
-      AudioAnalysisEntity(
-        id: 'rec2',
-        title: 'Slight Wheezing',
-        type: 'Breathing',
-        duration: 30,
-        confidence: 85,
-        lungsScore: 85,
-        insight: 'Slight whistling sounds detected during exhalation phases. This could point to mild airway restriction or environmental allergy responses.',
-        intensity: 'Low',
-        breathingRate: 18,
-        rhythm: 'Irregular',
-        signalQuality: 'Good',
-        backgroundNoise: 'Medium (Slight static)',
-        timestamp: now.subtract(const Duration(days: 1)),
-        tags: const ['Mild Cough', 'Humidity Alert'],
-      ),
-      AudioAnalysisEntity(
-        id: 'rec3',
-        title: 'Optimal Recovery',
-        type: 'Cough',
-        duration: 55,
-        confidence: 95,
-        lungsScore: 95,
-        insight: 'Lung acoustics present clear airways with a stable breath recovery timing profile under 1.5 seconds, showing healthy baseline function.',
-        intensity: 'Moderate',
-        breathingRate: 15,
-        rhythm: 'Steady',
-        signalQuality: 'Excellent',
-        backgroundNoise: 'Low (Minimal Interference)',
-        timestamp: now.subtract(const Duration(days: 2)),
-        tags: const ['Clear Morning'],
-      ),
-    ];
   }
 }

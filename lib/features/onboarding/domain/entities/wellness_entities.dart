@@ -117,3 +117,38 @@ class AudioAnalysisEntity extends Equatable {
         tags,
       ];
 }
+
+/// Entity representing a computed Lung Wellness Score history record from backend.
+class ScoreHistoryEntity extends Equatable {
+  final String id;
+  final int score;
+  final String band;
+  final String? message;
+  final Map<String, dynamic>? breakdown;
+  final int? sessionNumber;
+  final String? baselineStatus;
+  final DateTime timestamp;
+
+  const ScoreHistoryEntity({
+    required this.id,
+    required this.score,
+    required this.band,
+    this.message,
+    this.breakdown,
+    this.sessionNumber,
+    this.baselineStatus,
+    required this.timestamp,
+  });
+
+  @override
+  List<Object?> get props => [
+        id,
+        score,
+        band,
+        message,
+        breakdown,
+        sessionNumber,
+        baselineStatus,
+        timestamp,
+      ];
+}

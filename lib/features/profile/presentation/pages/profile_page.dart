@@ -31,13 +31,24 @@ class ProfilePage extends StatelessWidget {
                 _buildProfileHeader(context),
                 const SizedBox(height: 24),
 
+                // Account Settings Group
+                _buildSettingsGroup(
+                  context,
+                  title: 'ACCOUNT MANAGEMENT',
+                  items: [
+                    _SettingsItem(Icons.edit_outlined, 'Edit Profile', route: '/edit-profile'),
+                    _SettingsItem(Icons.password_rounded, 'Change Password', route: '/change-password'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // Settings Group
                 _buildSettingsGroup(
                   context,
                   title: 'SETTINGS & SUPPORT',
                   items: [
                     _SettingsItem(Icons.mail_outline_rounded, 'Contact Us', route: '/contact-us'),
-                    _SettingsItem(Icons.lock_outline_rounded, 'Privacy Policy', route: '/privacy-policy'),
+                    _SettingsItem(Icons.privacy_tip_outlined, 'Privacy Policy', route: '/privacy-policy'),
                   ],
                 ),
                 const SizedBox(height: 32),

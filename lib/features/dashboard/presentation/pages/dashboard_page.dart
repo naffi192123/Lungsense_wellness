@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +11,11 @@ import '../bloc/wellness_bloc.dart';
 import '../bloc/wellness_event.dart';
 import '../bloc/wellness_state.dart';
 import '../../../history/presentation/pages/history_page.dart';
+import '../../../analytics/presentation/pages/analytics_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
 
-/// The central premium dashboard screen managing bottom navigation tabs.
+/// The central dashboard screen managing navigation tabs and real health metrics.
 class DashboardPage extends StatefulWidget {
   final int initialTab;
   const DashboardPage({super.key, this.initialTab = 0});
@@ -29,18 +31,17 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _currentTabIndex = widget.initialTab;
-    // Load local storage check-in and recording details
+    // Fetch and synchronize real user data from backend
     context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
   }
 
   @override
   Widget build(BuildContext context) {
-    // List of embedded page widgets corresponding to bottom navigation tabs
     final List<Widget> tabs = [
       _buildHomeTab(),
       _buildRecordTabPlaceholder(),
       const HistoryPage(),
-      _buildAnalyticsTabPlaceholder(),
+      const AnalyticsPage(),
       const ProfilePage(),
     ];
 
@@ -57,8 +58,7 @@ class _DashboardPageState extends State<DashboardPage> {
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
           if (index == 1) {
-            // "Record" button redirects immediately to the new RecordPage recording workflow
-            context.go('/record');
+            context.push('/record');
             return;
           }
           setState(() {
@@ -114,18 +114,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return BlocBuilder<WellnessBloc, WellnessState>(
       builder: (context, state) {
-        int lungsScore = 92;
-        String coughStatus = 'Normal';
-        String breathing = 'High';
-        String weeklyTrend = '+5%';
-        List<AudioAnalysisEntity> recentActivities = state.audioAnalyses;
+        final latestScore = state.latestScore?.score ??
+            (state.scoreHistory.isNotEmpty ? state.scoreHistory.first.score : null);
 
-        if (recentActivities.isNotEmpty) {
-          final latest = recentActivities.first;
-          lungsScore = latest.lungsScore;
-          coughStatus = latest.intensity == 'Low' ? 'Mild' : (latest.intensity == 'Moderate' ? 'Normal' : latest.intensity);
-          breathing = latest.breathingRate > 17 ? 'High' : 'Normal';
-        }
+        final recentAudio = state.audioAnalyses;
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -148,8 +140,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Good Morning',
+                            const Text(
+                              'Welcome back,',
                               style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
                             ),
                             Text(
@@ -166,12 +158,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 24),
 
                 // Lungs Health Score Circular Dial Card
-                _buildLungsHealthScoreCard(lungsScore),
+                _buildLungsHealthScoreCard(latestScore),
                 const SizedBox(height: 24),
-
-                // Metrics Grid
-                _buildMetricsGrid(coughStatus, breathing, weeklyTrend),
-                const SizedBox(height: 28),
 
                 // Quick Actions
                 const Text(
@@ -180,11 +168,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 16),
                 _buildQuickActionsGrid(),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // Daily Tip Card
-                _buildDailyTipCard(),
-                const SizedBox(height: 28),
+                // Continuous Auto-Scrolling Daily Tips Section
+                const Text(
+                  'Daily Respiratory Tips',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                ),
+                const SizedBox(height: 12),
+                const _DailyTipsCarousel(),
+                const SizedBox(height: 24),
 
                 // Recent Activity
                 Row(
@@ -208,7 +201,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildRecentActivityList(recentActivities),
+                _buildRecentActivityList(recentAudio, state.dailyLogs),
               ],
             ),
           ),
@@ -217,7 +210,16 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildLungsHealthScoreCard(int score) {
+  Widget _buildLungsHealthScoreCard(int? score) {
+    final hasScore = score != null && score > 0;
+    final displayScore = hasScore ? score : 0;
+    final statusText = hasScore
+        ? (displayScore >= 80 ? 'EXCELLENT' : (displayScore >= 60 ? 'FAIR' : 'ATTENTION'))
+        : 'NO SCORE YET';
+    final statusColor = hasScore
+        ? (displayScore >= 80 ? AppColors.supportingGreen : (displayScore >= 60 ? AppColors.secondary : AppColors.error))
+        : AppColors.textSecondary;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24.0),
@@ -225,13 +227,6 @@ class _DashboardPageState extends State<DashboardPage> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24.0),
         border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.text.withOpacity(0.01),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -242,95 +237,38 @@ class _DashboardPageState extends State<DashboardPage> {
                 height: 140,
                 width: 140,
                 child: CircularProgressIndicator(
-                  value: score / 100.0,
+                  value: hasScore ? (displayScore / 100.0) : 0.0,
                   strokeWidth: 10,
                   backgroundColor: AppColors.border,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.supportingGreen),
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
               ),
               Column(
                 children: [
                   Text(
-                    '$score',
+                    hasScore ? '$displayScore' : '--',
                     style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppColors.text),
                   ),
-                  const Text(
-                    'EXCELLENT',
-                    style: TextStyle(fontSize: 10, color: AppColors.supportingGreen, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  Text(
+                    statusText,
+                    style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                 ],
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Icon(Icons.wind_power_outlined, color: AppColors.border.withOpacity(0.5), size: 36),
               ),
             ],
           ),
           const SizedBox(height: 20),
           const Text(
-            'Lungs Health Score',
+            'Lung Wellness Score',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
           ),
           const SizedBox(height: 6),
           Text(
-            'Your respiratory system is functioning optimally today.',
+            hasScore
+                ? 'Score computed from your latest symptom and acoustic screening.'
+                : 'Complete your symptom check-in and audio recordings to compute today\'s score.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricsGrid(String cough, String breathing, String trend) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
-      children: [
-        _buildMetricTile('Cough Status', cough, Icons.medical_services_outlined, AppColors.supportingGreen),
-        _buildMetricTile('Breathing', breathing, Icons.waves_rounded, AppColors.secondary),
-        _buildMetricTile('Lifestyle', '88', Icons.insights_rounded, AppColors.primary),
-        _buildMetricTile('Weekly Trend', trend, Icons.trending_up_rounded, AppColors.supportingGreen),
-      ],
-    );
-  }
-
-  Widget _buildMetricTile(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: color, size: 20),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.text),
-              ),
-            ],
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
         ],
       ),
@@ -338,165 +276,106 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildQuickActionsGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.6,
+    return Row(
       children: [
-        GestureDetector(
-          onTap: () => context.go('/record'),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.supportingGreen,
-              borderRadius: BorderRadius.circular(16.0),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.mic_rounded, color: AppColors.surface, size: 28),
-                SizedBox(height: 8),
-                Text(
-                  'Record Cough',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.surface, fontSize: 13),
-                ),
-              ],
-            ),
+        Expanded(
+          child: _buildActionTile(
+            title: 'Record Audio',
+            subtitle: 'Cough & Breathing',
+            icon: Icons.mic_none_outlined,
+            color: AppColors.primary,
+            onTap: () => context.push('/record'),
           ),
         ),
-        GestureDetector(
-          onTap: () => context.go('/record'),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16.0),
-              border: Border.all(color: AppColors.supportingGreen),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.air_rounded, color: AppColors.supportingGreen, size: 28),
-                SizedBox(height: 8),
-                Text(
-                  'Record Breathing',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.supportingGreen, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-        GestureDetector(
-          onTap: () => context.go('/daily-log'),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16.0),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 28),
-                SizedBox(height: 8),
-                Text(
-                  'Log Symptoms',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-        GestureDetector(
-          onTap: () => setState(() => _currentTabIndex = 2), // Jump to History
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16.0),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.history_rounded, color: AppColors.secondary, size: 28),
-                SizedBox(height: 8),
-                Text(
-                  'View History',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 13),
-                ),
-              ],
-            ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildActionTile(
+            title: 'Daily Log',
+            subtitle: 'Check symptoms',
+            icon: Icons.edit_note_rounded,
+            color: AppColors.supportingGreen,
+            onTap: () => context.push('/daily-log'),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDailyTipCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F6F8), // Light cyan backdrop
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.secondary.withOpacity(0.15),
-            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.secondary, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Daily Tip',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 15),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Try 5 mins of box breathing today to improve lung capacity and reduce stress.',
-                  style: TextStyle(color: AppColors.text.withOpacity(0.8), fontSize: 12, height: 1.4),
-                ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Text(
-                      'Start Exercise',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 12),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_rounded, color: AppColors.secondary, size: 14),
-                  ],
-                ),
-              ],
+  Widget _buildActionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: color.withOpacity(0.12),
+              child: Icon(icon, color: color, size: 20),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildRecentActivityList(List<AudioAnalysisEntity> list) {
-    if (list.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24.0),
-        child: Center(child: Text('No recent activities logged.')),
+  Widget _buildRecentActivityList(List<AudioAnalysisEntity> audioList, List<DailyLogEntity> logList) {
+    if (audioList.isEmpty && logList.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24.0),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Center(
+          child: Text(
+            'No recent activity yet.\nComplete a recording or symptom log to see it here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+          ),
+        ),
       );
     }
 
-    final displayList = list.take(2).toList();
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: displayList.length,
-      itemBuilder: (context, index) {
-        final item = displayList[index];
-        final isGood = item.lungsScore >= 90;
-        final iconColor = isGood ? AppColors.supportingGreen : AppColors.secondary;
-        final iconData = isGood ? Icons.mic_none_outlined : Icons.waves_rounded;
+    final items = audioList.take(3).toList();
+
+    return Column(
+      children: items.map((item) {
+        final iconColor = item.lungsScore >= 90 ? AppColors.supportingGreen : AppColors.secondary;
+        final iconData = item.type == 'Cough' ? Icons.sick_outlined : Icons.air_rounded;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12.0),
@@ -509,55 +388,63 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: iconColor.withOpacity(0.1),
-                    child: Icon(iconData, color: iconColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.type == 'Cough' ? 'Cough Analysis' : 'Breathing Test',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: iconColor.withOpacity(0.12),
+                      child: Icon(iconData, color: iconColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.type == 'Cough' ? 'Cough Recording' : 'Breathing Session',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatShortTime(item.timestamp),
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _formatShortTime(item.timestamp),
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    item.title,
+                    'Score ${item.lungsScore}',
                     style: TextStyle(fontWeight: FontWeight.bold, color: iconColor, fontSize: 13),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    item.type == 'Cough' ? 'Confidence ${item.confidence}%' : '${item.lungsScore}/100',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    '${item.duration}s',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
                   ),
                 ],
               ),
             ],
           ),
         );
-      },
+      }).toList(),
     );
   }
 
   String _formatShortTime(DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time).inDays;
-    
+
     String day = 'Today';
     if (difference == 1) {
       day = 'Yesterday';
@@ -573,49 +460,125 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildRecordTabPlaceholder() {
-    return const Center(child: Text('Record Audio...'));
+    return const SizedBox.shrink();
+  }
+}
+
+/// Continuous smooth auto-scrolling respiratory daily tips carousel.
+class _DailyTipsCarousel extends StatefulWidget {
+  const _DailyTipsCarousel();
+
+  @override
+  State<_DailyTipsCarousel> createState() => _DailyTipsCarouselState();
+}
+
+class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  Timer? _timer;
+
+  final List<Map<String, dynamic>> _tips = const [
+    {
+      'title': 'Deep Diaphragmatic Breathing',
+      'desc': 'Inhale slowly through your nose for 4 seconds, feeling your belly expand. Exhale gently through pursed lips for 6 seconds.',
+      'icon': Icons.air_rounded,
+      'color': AppColors.primary,
+    },
+    {
+      'title': 'Hydration Keeps Airways Clear',
+      'desc': 'Drinking 2 to 2.5 liters of water daily thins mucus secretions in the respiratory tract and eases bronchial airflow.',
+      'icon': Icons.local_drink_rounded,
+      'color': AppColors.supportingGreen,
+    },
+    {
+      'title': 'Posture & Airflow Expansion',
+      'desc': 'Sitting or standing tall opens the thoracic cavity, allowing your lungs to expand fully and receive up to 15% more oxygen.',
+      'icon': Icons.accessibility_new_rounded,
+      'color': AppColors.secondary,
+    },
+    {
+      'title': 'Monitor Indoor Air Quality',
+      'desc': 'Ventilate living spaces regularly and avoid artificial aerosols or dust accumulation to protect sensitive airways.',
+      'icon': Icons.wb_sunny_outlined,
+      'color': AppColors.primary,
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.92);
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_pageController.hasClients) {
+        _currentPage = (_currentPage + 1) % _tips.length;
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
   }
 
-  Widget _buildAnalyticsTabPlaceholder() {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Analytics'),
-        centerTitle: false,
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.text,
-        elevation: 0.5,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24.0),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16.0),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 64),
-                  SizedBox(height: 16),
-                  Text(
-                    'Lung Wellness Trends',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Weekly lung score and symptom analytics tracking charts will be displayed here in a future update.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
-                  ),
-                ],
-              ),
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 120,
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: _tips.length,
+        onPageChanged: (index) => setState(() => _currentPage = index),
+        itemBuilder: (context, index) {
+          final tip = _tips[index];
+          final color = tip['color'] as Color;
+
+          return Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.3)),
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: color.withOpacity(0.12),
+                  child: Icon(tip['icon'] as IconData, color: color, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        tip['title'] as String,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        tip['desc'] as String,
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
