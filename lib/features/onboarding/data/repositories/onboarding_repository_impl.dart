@@ -22,12 +22,25 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   Future<Either<Failure, void>> saveOnboarding(OnboardingData data) async {
     try {
       final model = OnboardingModel.fromEntity(data);
-      await remoteDataSource.saveOnboarding(model: model, userId: '');
+      // Persist completed profile locally first
+      await localDataSource.saveCompletedProfile(model);
+
+      // Attempt remote sync with backend
+      try {
+        await remoteDataSource.saveOnboarding(model: model, userId: '');
+      } on ServerException catch (e) {
+        // If server encounters a 5xx error, allow user to proceed since profile is safely cached locally
+        if (e.code != null && int.tryParse(e.code!) != null && int.parse(e.code!) >= 500) {
+          return const Right(null);
+        }
+        return Left(ServerFailure(e.message, code: e.code));
+      } catch (_) {
+        return const Right(null);
+      }
+
       return const Right(null);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, code: e.code));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(CacheFailure(e.toString()));
     }
   }
 
@@ -46,12 +59,15 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   @override
   Future<Either<Failure, bool>> checkProfileCompleted() async {
     try {
+      final localCompleted = await localDataSource.isProfileCompletedLocally();
+      if (localCompleted) {
+        return const Right(true);
+      }
       final completed = await remoteDataSource.checkProfileCompleted(userId: '');
       return Right(completed);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, code: e.code));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
+    } catch (_) {
+      final localCompleted = await localDataSource.isProfileCompletedLocally();
+      return Right(localCompleted);
     }
   }
 
