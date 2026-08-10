@@ -18,6 +18,8 @@ import '../../features/splash/presentation/bloc/splash_bloc.dart';
 import '../../features/onboarding/data/datasources/onboarding_local_data_source.dart';
 import '../../features/onboarding/data/datasources/onboarding_remote_data_source.dart';
 import '../../features/daily_log/data/datasources/daily_log_remote_data_source.dart';
+import '../../features/dashboard/data/datasources/score_remote_data_source.dart';
+import '../../features/profile/data/datasources/profile_remote_data_source.dart';
 import '../../features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import '../../features/onboarding/domain/repositories/onboarding_repository.dart';
 import '../../features/onboarding/domain/usecases/clear_onboarding_draft_usecase.dart';

@@ -140,21 +140,21 @@ class _RecordPageState extends State<RecordPage> {
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: _onBack,
           ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textSecondary),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16.0, left: 8.0),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, size: 18, color: AppColors.surface),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textSecondary),
+              onPressed: () {},
             ),
-          ),
-        ],
-      ),
+            const Padding(
+              padding: EdgeInsets.only(right: 16.0, left: 8.0),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primary,
+                child: Icon(Icons.person, size: 18, color: AppColors.surface),
+              ),
+            ),
+          ],
+        ),
       body: BlocListener<AudioRecordingBloc, AudioRecordingState>(
         listener: (context, state) {
           if (state is AudioRecordingUploading || state is AudioRecordingJobPolling) {
