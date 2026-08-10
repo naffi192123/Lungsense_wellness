@@ -57,52 +57,56 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       });
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
         final accessToken = data['access_token'] as String;
-        final refreshToken = data['refresh_token'] as String;
+        final refreshToken = data['refresh_token'] as String? ?? '';
+        
+        // Decode JWT payload for user metadata
+        final jwtPayload = _decodeJwtPayload(accessToken);
+        
+        final userId = data['user_id'] as String? ?? 
+                       data['id'] as String? ?? 
+                       jwtPayload?['sub'] as String? ?? 
+                       '';
+                       
+        final userEmail = data['email'] as String? ?? 
+                          jwtPayload?['email'] as String? ?? 
+                          email;
 
-        // Fetch user info via /auth/me
-        final meResponse = await http.get(
-          Uri.parse('https://lungsense-wellness.onrender.com/auth/me'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $accessToken',
-          },
+        // Extract name from JWT or fetch profile
+        String? name = jwtPayload?['user_metadata']?['full_name'] as String? ??
+                       jwtPayload?['user_metadata']?['name'] as String? ??
+                       jwtPayload?['name'] as String?;
+
+        // Save session immediately so subsequent requests are authenticated
+        await apiClient.saveSession(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          userId: userId,
+          email: userEmail,
+          name: name,
         );
 
-        if (meResponse.statusCode == 200) {
-          final meData = jsonDecode(meResponse.body);
-          String? name = meData['full_name'] as String?;
-
-          // Fetch profile details from /profile if full_name is null
-          if (name == null || name.isEmpty) {
-            name = await _fetchProfileName(accessToken);
-          }
-
-          final userModel = UserModel(
-            id: meData['id'] as String,
-            email: meData['email'] as String,
-            name: name ?? apiClient.userName,
-            isEmailVerified: true,
-          );
-
-          await apiClient.saveSession(
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            userId: userModel.id,
-            email: userModel.email,
-            name: userModel.name,
-          );
-
-          _userStreamController.add(userModel);
-          return userModel;
-        } else {
-          throw const AuthException('Failed to retrieve user details.');
+        // Attempt to fetch profile name if missing from JWT
+        if (name == null || name.isEmpty) {
+          name = await _fetchProfileName(accessToken);
         }
+
+        final userModel = UserModel(
+          id: userId,
+          email: userEmail,
+          name: name ?? apiClient.userName,
+          isEmailVerified: true,
+        );
+
+        if (userModel.name != null && userModel.name!.isNotEmpty) {
+          await apiClient.updateUserName(userModel.name!);
+        }
+
+        _userStreamController.add(userModel);
+        return userModel;
       } else {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        final message = detail is String ? detail : detail.toString();
+        final message = _extractErrorMessage(response.body, fallback: 'Invalid email or password.');
         throw AuthException(message, code: response.statusCode.toString());
       }
     } on AuthException {
@@ -137,9 +141,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         );
         return userModel;
       } else {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        final message = detail is String ? detail : detail.toString();
+        final message = _extractErrorMessage(response.body, fallback: 'Registration failed.');
         throw AuthException(message, code: response.statusCode.toString());
       }
     } on AuthException {
@@ -157,10 +159,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await apiClient.post('/auth/forgot-password', body: {
         'email': email,
       });
-      if (response.statusCode != 202) {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        final message = detail is String ? detail : detail.toString();
+      if (response.statusCode != 202 && response.statusCode != 200) {
+        final message = _extractErrorMessage(response.body, fallback: 'Password reset request failed.');
         throw AuthException(message, code: response.statusCode.toString());
       }
     } on AuthException {
@@ -187,19 +187,38 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (token == null) {
         return null;
       }
+
+      final id = apiClient.userId ?? '';
+      final email = apiClient.userEmail ?? '';
+      String? name = apiClient.userName;
+
+      if (name == null || name.isEmpty) {
+        name = await _fetchProfileName(token);
+      }
+
+      if (id.isNotEmpty && email.isNotEmpty) {
+        final userModel = UserModel(
+          id: id,
+          email: email,
+          name: name,
+          isEmailVerified: true,
+        );
+        _userStreamController.add(userModel);
+        return userModel;
+      }
+
+      // Try fetching from /auth/me or /profile
       final response = await apiClient.get('/auth/me');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        String? name = data['full_name'] as String?;
-
-        if (name == null || name.isEmpty) {
-          name = await _fetchProfileName(token);
-        }
+        final fetchedName = data['full_name'] as String? ?? data['name'] as String?;
+        final fetchedId = data['id'] as String? ?? data['user_id'] as String? ?? id;
+        final fetchedEmail = data['email'] as String? ?? email;
 
         final userModel = UserModel(
-          id: data['id'] as String,
-          email: data['email'] as String,
-          name: name ?? apiClient.userName,
+          id: fetchedId,
+          email: fetchedEmail,
+          name: fetchedName ?? name,
           isEmailVerified: true,
         );
 
@@ -238,6 +257,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
     } catch (_) {}
     return null;
+  }
+
+  Map<String, dynamic>? _decodeJwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      String normalized = base64Url.normalize(parts[1]);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      return jsonDecode(decoded) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _extractErrorMessage(String responseBody, {String fallback = 'An error occurred.'}) {
+    try {
+      final data = jsonDecode(responseBody);
+      final detail = data['detail'];
+      if (detail is String) return detail;
+      if (detail is List && detail.isNotEmpty) {
+        final first = detail.first;
+        if (first is Map && first['msg'] != null) {
+          return first['msg'].toString();
+        }
+        return detail.toString();
+      }
+      if (data['message'] != null) return data['message'].toString();
+    } catch (_) {}
+    return fallback;
   }
 
   @override

@@ -87,12 +87,20 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
     try {
       final response = await apiClient.get('/profile');
       if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map) {
+          final isCompletedFlag = data['profile_completed'] as bool?;
+          if (isCompletedFlag != null) return isCompletedFlag;
+          final age = data['age'];
+          final height = data['height_cm'];
+          final weight = data['weight_kg'];
+          return (age != null && (age is num ? age > 0 : true)) ||
+                 (height != null && (height is num ? height > 0 : true)) ||
+                 (weight != null && (weight is num ? weight > 0 : true));
+        }
         return true;
-      } else if (response.statusCode == 404) {
-        return false;
-      } else {
-        return false;
       }
+      return false;
     } catch (_) {
       return false;
     }
