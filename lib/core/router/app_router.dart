@@ -142,18 +142,27 @@ abstract class AppRouter {
       GoRoute(
         path: dailyLogPath,
         name: dailyLogName,
-        builder: (context, state) => const DailyLogPage(),
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<WellnessBloc>(),
+          child: const DailyLogPage(),
+        ),
       ),
       GoRoute(
         path: audioAnalysisPath,
         name: audioAnalysisName,
-        builder: (context, state) => const AudioAnalysisPage(),
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<WellnessBloc>(),
+          child: const AudioAnalysisPage(),
+        ),
       ),
       GoRoute(
         path: recordPath,
         name: recordName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<AudioRecordingBloc>(),
+        builder: (context, state) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
+            BlocProvider(create: (context) => sl<WellnessBloc>()),
+          ],
           child: const RecordPage(),
         ),
       ),
