@@ -1,36 +1,45 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:record/record.dart';
 
 class AudioRecorderService {
-  final AudioRecorder _audioRecorder = AudioRecorder();
+  AudioRecorder? _audioRecorder;
   String? _currentRecordingPath;
   Timer? _timer;
   int _elapsedSeconds = 0;
   
-  final StreamController<int> _durationController = StreamController<int>.broadcast();
-  Stream<int> get durationStream => _durationController.stream;
+  StreamController<int>? _durationController;
+
+  Stream<int> get durationStream {
+    if (_durationController == null || _durationController!.isClosed) {
+      _durationController = StreamController<int>.broadcast();
+    }
+    return _durationController!.stream;
+  }
+
   int get elapsedSeconds => _elapsedSeconds;
+
+  AudioRecorder _ensureRecorder() {
+    _audioRecorder ??= AudioRecorder();
+    return _audioRecorder!;
+  }
 
   /// Check and request runtime microphone and storage permissions.
   Future<bool> requestMicrophonePermission() async {
-    final status = await Permission.microphone.request();
-    if (status.isGranted) {
-      return true;
-    }
-    return false;
+    final status = await ph.Permission.microphone.request();
+    return status.isGranted;
   }
 
   /// Check if microphone permission is permanently denied.
   Future<bool> isPermissionPermanentlyDenied() async {
-    return await Permission.microphone.isPermanentlyDenied;
+    return await ph.Permission.microphone.isPermanentlyDenied;
   }
 
   /// Open device app settings.
   Future<bool> openAppSettings() async {
-    return await openAppSettings();
+    return await ph.openAppSettings();
   }
 
   /// Start recording audio live to a local temporary file.
@@ -40,8 +49,15 @@ class AudioRecorderService {
       throw Exception('Microphone permission is required to record audio.');
     }
 
-    if (await _audioRecorder.isRecording()) {
-      await stopRecording();
+    final recorder = _ensureRecorder();
+
+    try {
+      if (await recorder.isRecording()) {
+        await stopRecording();
+      }
+    } catch (_) {
+      // If previous recorder was in invalid state, re-instantiate
+      _audioRecorder = AudioRecorder();
     }
 
     final tempDir = await getTemporaryDirectory();
@@ -54,43 +70,65 @@ class AudioRecorderService {
       bitRate: 128000,
     );
 
-    await _audioRecorder.start(config, path: filePath);
+    await _ensureRecorder().start(config, path: filePath);
 
     _elapsedSeconds = 0;
-    _durationController.add(0);
+    _emitDuration(0);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _elapsedSeconds++;
-      _durationController.add(_elapsedSeconds);
+      _emitDuration(_elapsedSeconds);
     });
 
     return filePath;
   }
 
+  void _emitDuration(int seconds) {
+    if (_durationController != null && !_durationController!.isClosed) {
+      _durationController!.add(seconds);
+    }
+  }
+
   /// Pause current active recording.
   Future<void> pauseRecording() async {
-    if (await _audioRecorder.isRecording()) {
-      await _audioRecorder.pause();
-      _timer?.cancel();
+    final recorder = _audioRecorder;
+    if (recorder != null) {
+      try {
+        if (await recorder.isRecording()) {
+          await recorder.pause();
+          _timer?.cancel();
+        }
+      } catch (_) {}
     }
   }
 
   /// Resume recording after pause.
   Future<void> resumeRecording() async {
-    if (await _audioRecorder.isPaused()) {
-      await _audioRecorder.resume();
-      _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        _elapsedSeconds++;
-        _durationController.add(_elapsedSeconds);
-      });
+    final recorder = _audioRecorder;
+    if (recorder != null) {
+      try {
+        if (await recorder.isPaused()) {
+          await recorder.resume();
+          _timer?.cancel();
+          _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            _elapsedSeconds++;
+            _emitDuration(_elapsedSeconds);
+          });
+        }
+      } catch (_) {}
     }
   }
 
   /// Stop current recording and return the completed audio file path.
   Future<String?> stopRecording() async {
     _timer?.cancel();
-    final path = await _audioRecorder.stop();
+    final recorder = _audioRecorder;
+    String? path;
+    if (recorder != null) {
+      try {
+        path = await recorder.stop();
+      } catch (_) {}
+    }
     _currentRecordingPath = null;
     return path;
   }
@@ -98,15 +136,18 @@ class AudioRecorderService {
   /// Cancel and discard the current recording file.
   Future<void> cancelRecording() async {
     _timer?.cancel();
-    try {
-      final path = await _audioRecorder.stop();
-      if (path != null) {
-        final file = File(path);
-        if (await file.exists()) {
-          await file.delete();
+    final recorder = _audioRecorder;
+    if (recorder != null) {
+      try {
+        final path = await recorder.stop();
+        if (path != null) {
+          final file = File(path);
+          if (await file.exists()) {
+            await file.delete();
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
     if (_currentRecordingPath != null) {
       try {
         final file = File(_currentRecordingPath!);
@@ -117,12 +158,20 @@ class AudioRecorderService {
     }
     _currentRecordingPath = null;
     _elapsedSeconds = 0;
-    _durationController.add(0);
+    _emitDuration(0);
   }
 
   Future<void> dispose() async {
     _timer?.cancel();
-    await _durationController.close();
-    await _audioRecorder.dispose();
+    if (_durationController != null && !_durationController!.isClosed) {
+      await _durationController!.close();
+      _durationController = null;
+    }
+    if (_audioRecorder != null) {
+      try {
+        await _audioRecorder!.dispose();
+      } catch (_) {}
+      _audioRecorder = null;
+    }
   }
 }
