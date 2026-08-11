@@ -484,32 +484,40 @@ class _DailyLogPageState extends State<DailyLogPage> {
 
   Widget _buildSmokingRadioCard() {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16.0),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
-              SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Smoked Today?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
-                  SizedBox(height: 2),
-                  Text('Tobacco/vape usage', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-                ],
-              ),
-            ],
+          const Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Smoked Today?',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Tobacco/vape usage',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ChoiceChip(
+                visualDensity: VisualDensity.compact,
                 label: const Text('No'),
                 selected: !_smokedToday,
                 selectedColor: AppColors.primary,
@@ -522,8 +530,9 @@ class _DailyLogPageState extends State<DailyLogPage> {
                   if (selected) setState(() => _smokedToday = false);
                 },
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               ChoiceChip(
+                visualDensity: VisualDensity.compact,
                 label: const Text('Yes'),
                 selected: _smokedToday,
                 selectedColor: AppColors.error,
@@ -555,41 +564,57 @@ class _DailyLogPageState extends State<DailyLogPage> {
     required ValueChanged<double> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16.0),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: AppColors.primary, size: 22),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-                ],
-              ),
-            ],
+          Icon(icon, color: AppColors.primary, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: AppColors.primary, size: 26),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: const Icon(Icons.remove_circle_outline, color: AppColors.primary, size: 24),
                 onPressed: value > min ? () => onChanged((value - step).clamp(min, max)) : null,
               ),
-              Text(
-                value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Text(
+                  value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 26),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
                 onPressed: value < max ? () => onChanged((value + step).clamp(min, max)) : null,
               ),
             ],
