@@ -27,7 +27,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   void _submitForm() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            AuthResetPasswordEvent(
+            AuthForgotPasswordEvent(
               email: _emailController.text.trim(),
             ),
           );
@@ -69,12 +69,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         if (state is AuthPasswordResetSent) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Password reset link successfully sent to your email.'),
+                              content: Text('Verification code sent to your email.'),
                               backgroundColor: AppColors.success,
                             ),
                           );
-                          // Navigate back to login
-                          context.go('/login');
+                          final emailParam = state.email ?? _emailController.text.trim();
+                          context.go('/reset-password?email=${Uri.encodeComponent(emailParam)}');
                         } else if (state is AuthError) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -106,54 +106,134 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Title Header
-                                Text(
-                                  'Reset Password',
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.text,
-                                      ),
+                                const Text(
+                                  'Forgot Password',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.text,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
-                                
-                                // Description
-                                Text(
-                                  "Enter your email address below and we'll send you a link to reset your password.",
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppColors.textSecondary,
-                                        height: 1.5,
-                                      ),
+                                const Text(
+                                  'Enter your registered email address. We will send you a 6-digit verification code to reset your password.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.textSecondary,
+                                    height: 1.4,
+                                  ),
                                 ),
                                 const SizedBox(height: 24),
 
                                 // Email Input Label
-                                Text(
+                                const Text(
                                   'Email Address',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.text,
-                                      ),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.text,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
-                                _buildEmailField(),
+                                TextFormField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter your email',
+                                    prefixIcon: const Icon(
+                                      Icons.email_outlined,
+                                      color: AppColors.primary,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppColors.background,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: AppColors.border),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: AppColors.border),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: AppColors.primary,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter your email address.';
+                                    }
+                                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                                    if (!emailRegex.hasMatch(value.trim())) {
+                                      return 'Please enter a valid email address.';
+                                    }
+                                    return null;
+                                  },
+                                ),
                                 const SizedBox(height: 24),
 
-                                // Submit Reset Link Button
-                                _buildSubmitButton(isLoading),
-                                const SizedBox(height: 24),
+                                // Send Code Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    onPressed: isLoading ? null : _submitForm,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: AppColors.surface,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12.0),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.surface),
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Send Verification Code',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
 
-                                // Back to Login footer
-                                _buildLoginFooter(context),
+                                // Back to Login Row
+                                Center(
+                                  child: TextButton.icon(
+                                    onPressed: () => context.go('/login'),
+                                    icon: const Icon(
+                                      Icons.arrow_back,
+                                      size: 18,
+                                      color: AppColors.primary,
+                                    ),
+                                    label: const Text(
+                                      'Back to Sign In',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         );
                       },
                     ),
-                    const SizedBox(height: 32),
-
-                    // Secure Data badge
-                    _buildSecurityBadge(),
                   ],
                 ),
               ),
@@ -163,144 +243,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       ),
     );
   }
-
-  Widget _buildEmailField() {
-    return TextFormField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _submitForm(),
-      decoration: InputDecoration(
-        hintText: 'name@example.com',
-        prefixIcon: const Icon(Icons.mail_outline_rounded, color: AppColors.supportingGreen),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your email address';
-        }
-        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-        if (!emailRegex.hasMatch(value)) {
-          return 'Please enter a valid email address';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildSubmitButton(bool isLoading) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12.0),
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.supportingGreen],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _submitForm,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: AppColors.surface,
-          shadowColor: Colors.transparent,
-          minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(color: AppColors.surface, strokeWidth: 2.0),
-              )
-            : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Send Reset Link',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, size: 20),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _buildLoginFooter(BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: () => context.go('/login'),
-        child: Text(
-          'Back to Login',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSecurityBadge() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(
-          Icons.verified_user_outlined,
-          color: AppColors.supportingGreen,
-          size: 16,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Your data is secure with us',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.supportingGreen.withOpacity(0.8),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
-/// Helper background painter for auth pages.
 class _ForgotBgPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..color = AppColors.primary.withOpacity(0.04);
-
-    // Subtle background lines
-    canvas.drawCircle(Offset(size.width * 0.9, size.height * 0.05), 180, paint);
-    canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.9), 220, paint);
-    
-    final wavePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..shader = LinearGradient(
-        colors: [
-          AppColors.primary.withOpacity(0.04),
-          AppColors.secondary.withOpacity(0.01),
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTRB(0, size.height * 0.8, size.width, size.height));
+      ..color = AppColors.primary.withOpacity(0.04)
+      ..style = PaintingStyle.fill;
 
     final path = Path()
-      ..moveTo(0, size.height * 0.85)
-      ..quadraticBezierTo(size.width * 0.35, size.height * 0.8, size.width * 0.7, size.height * 0.87)
-      ..quadraticBezierTo(size.width * 0.85, size.height * 0.9, size.width, size.height * 0.85)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
+      ..moveTo(0, size.height * 0.15)
+      ..quadraticBezierTo(
+        size.width * 0.35,
+        size.height * 0.05,
+        size.width,
+        size.height * 0.2,
+      )
+      ..lineTo(size.width, 0)
+      ..lineTo(0, 0)
       ..close();
-    canvas.drawPath(path, wavePaint);
+
+    canvas.drawPath(path, paint);
   }
 
   @override

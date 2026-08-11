@@ -785,7 +785,7 @@ class _RecordPageState extends State<RecordPage> {
           children: [
             Icon(Icons.error_outline_rounded, color: AppColors.error, size: 28),
             SizedBox(width: 8),
-            Text('Upload Failed'),
+            Text('Processing Failed'),
           ],
         ),
         content: Text(
@@ -794,19 +794,25 @@ class _RecordPageState extends State<RecordPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<AudioRecordingBloc>().add(AudioUploadEvent(recordingType: _currentRecordingType));
+              context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
             },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              // Clean up previous failed file and return to live microphone recording mode
+              context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
+            },
+            icon: const Icon(Icons.mic_rounded, size: 18),
+            label: const Text('Record Again'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Retry Upload'),
           ),
         ],
       ),

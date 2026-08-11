@@ -7,6 +7,7 @@ import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/email_verification_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
@@ -34,6 +35,8 @@ abstract class AppRouter {
   static const String registerName = 'register';
   static const String forgotPasswordPath = '/forgot-password';
   static const String forgotPasswordName = 'forgot-password';
+  static const String resetPasswordPath = '/reset-password';
+  static const String resetPasswordName = 'reset-password';
   static const String emailVerificationPath = '/email-verification';
   static const String emailVerificationName = 'email-verification';
   static const String onboardingPath = '/onboarding';
@@ -95,6 +98,17 @@ abstract class AppRouter {
         ),
       ),
       GoRoute(
+        path: resetPasswordPath,
+        name: resetPasswordName,
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'];
+          return BlocProvider(
+            create: (context) => sl<AuthBloc>(),
+            child: ResetPasswordPage(initialEmail: email),
+          );
+        },
+      ),
+      GoRoute(
         path: emailVerificationPath,
         name: emailVerificationName,
         builder: (context, state) => BlocProvider(
@@ -118,8 +132,8 @@ abstract class AppRouter {
           final initialTab = int.tryParse(tabStr ?? '') ?? 0;
           return MultiBlocProvider(
             providers: [
-              BlocProvider(create: (context) => sl<AuthBloc>()),
               BlocProvider(create: (context) => sl<WellnessBloc>()),
+              BlocProvider(create: (context) => sl<AuthBloc>()),
             ],
             child: DashboardPage(initialTab: initialTab),
           );
@@ -128,27 +142,18 @@ abstract class AppRouter {
       GoRoute(
         path: dailyLogPath,
         name: dailyLogName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<WellnessBloc>(),
-          child: const DailyLogPage(),
-        ),
+        builder: (context, state) => const DailyLogPage(),
       ),
       GoRoute(
         path: audioAnalysisPath,
         name: audioAnalysisName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<WellnessBloc>(),
-          child: const AudioAnalysisPage(),
-        ),
+        builder: (context, state) => const AudioAnalysisPage(),
       ),
       GoRoute(
         path: recordPath,
         name: recordName,
-        builder: (context, state) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (context) => sl<WellnessBloc>()),
-            BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
-          ],
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<AudioRecordingBloc>(),
           child: const RecordPage(),
         ),
       ),
@@ -156,10 +161,11 @@ abstract class AppRouter {
         path: historyDetailsPath,
         name: historyDetailsName,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
-          final logType = extra['logType'] as String? ?? 'generic';
-          final itemData = extra['itemData'];
-          return HistoryDetailPage(logType: logType, itemData: itemData);
+          final logType = state.uri.queryParameters['type'] ?? 'checkin';
+          return HistoryDetailPage(
+            logType: logType,
+            itemData: state.extra,
+          );
         },
       ),
       GoRoute(

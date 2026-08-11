@@ -11,6 +11,8 @@ import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/register_usecase.dart';
 import '../../features/auth/domain/usecases/reset_password_usecase.dart';
+import '../../features/auth/domain/usecases/forgot_password_usecase.dart';
+import '../../features/auth/domain/usecases/confirm_reset_password_usecase.dart';
 import '../../features/auth/domain/usecases/google_sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/observe_user_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
@@ -67,11 +69,6 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<ApiClient>(() => ApiClient(sl(), sl()));
 
   // ==========================================
-  // Core Layer
-  // ==========================================
-  // Place to register global utilities like NetworkInfo, ApiClient, local database services
-
-  // ==========================================
   // Features Layer - Authentication & Profile
   // ==========================================
   // DataSources
@@ -85,6 +82,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
+  sl.registerLazySingleton(() => ForgotPasswordUseCase(sl()));
+  sl.registerLazySingleton(() => ConfirmResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
   sl.registerLazySingleton(() => GoogleSignInUseCase(sl()));
@@ -129,6 +128,8 @@ Future<void> initDependencies() async {
       loginUseCase: sl(),
       registerUseCase: sl(),
       resetPasswordUseCase: sl(),
+      forgotPasswordUseCase: sl(),
+      confirmResetPasswordUseCase: sl(),
       logoutUseCase: sl(),
       getCurrentUserUseCase: sl(),
       googleSignInUseCase: sl(),
@@ -144,14 +145,9 @@ Future<void> initDependencies() async {
       clearOnboardingDraftUseCase: sl(),
     ),
   );
-  sl.registerFactory(
-    () => WellnessBloc(
-      repository: sl(),
-    ),
-  );
 
   // ==========================================
-  // Features Layer - Audio Recording
+  // Features Layer - Audio Recording & Processing
   // ==========================================
   // Services
   sl.registerLazySingleton<AudioRecorderService>(() => AudioRecorderService());
@@ -160,11 +156,15 @@ Future<void> initDependencies() async {
 
   // DataSources
   sl.registerLazySingleton<AudioRecordingRemoteDataSource>(
-      () => AudioRecordingRemoteDataSourceImpl(sl()));
+    () => AudioRecordingRemoteDataSourceImpl(sl()),
+  );
 
   // Repositories
   sl.registerLazySingleton<AudioRecordingRepository>(
-      () => AudioRecordingRepositoryImpl(remoteDataSource: sl()));
+    () => AudioRecordingRepositoryImpl(
+      remoteDataSource: sl(),
+    ),
+  );
 
   // UseCases
   sl.registerLazySingleton(() => UploadAudioUseCase(sl()));
@@ -180,5 +180,9 @@ Future<void> initDependencies() async {
       getJobStatusUseCase: sl(),
       checkAndRecordConsentUseCase: sl(),
     ),
+  );
+
+  sl.registerFactory(
+    () => WellnessBloc(repository: sl()),
   );
 }

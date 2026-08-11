@@ -39,7 +39,7 @@ class AuthRegisterEvent extends AuthEvent {
   List<Object?> get props => [email, password, name];
 }
 
-/// Dispatched when requesting a password reset email link.
+/// Dispatched when requesting a password reset OTP code.
 class AuthResetPasswordEvent extends AuthEvent {
   final String email;
 
@@ -49,6 +49,34 @@ class AuthResetPasswordEvent extends AuthEvent {
 
   @override
   List<Object?> get props => [email];
+}
+
+/// Dispatched when requesting a password reset OTP code (alias for AuthResetPasswordEvent).
+class AuthForgotPasswordEvent extends AuthEvent {
+  final String email;
+
+  const AuthForgotPasswordEvent({
+    required this.email,
+  });
+
+  @override
+  List<Object?> get props => [email];
+}
+
+/// Dispatched when submitting the OTP code and new password.
+class AuthResetPasswordWithOtpEvent extends AuthEvent {
+  final String email;
+  final String otpCode;
+  final String newPassword;
+
+  const AuthResetPasswordWithOtpEvent({
+    required this.email,
+    required this.otpCode,
+    required this.newPassword,
+  });
+
+  @override
+  List<Object?> get props => [email, otpCode, newPassword];
 }
 
 /// Dispatched when the user logs out from their session.
@@ -61,12 +89,7 @@ class AuthCheckStatusEvent extends AuthEvent {
   const AuthCheckStatusEvent();
 }
 
-/// Dispatched when the user initiates Google OAuth sign-in.
-class AuthGoogleSignInEvent extends AuthEvent {
-  const AuthGoogleSignInEvent();
-}
-
-/// Internal event fired when session status stream updates.
+/// Dispatched whenever the user session stream emits an update.
 class AuthUserChangedEvent extends AuthEvent {
   final UserEntity? user;
 
@@ -74,4 +97,9 @@ class AuthUserChangedEvent extends AuthEvent {
 
   @override
   List<Object?> get props => [user];
+}
+
+/// Dispatched to trigger Google Sign-In authentication.
+class AuthGoogleSignInEvent extends AuthEvent {
+  const AuthGoogleSignInEvent();
 }

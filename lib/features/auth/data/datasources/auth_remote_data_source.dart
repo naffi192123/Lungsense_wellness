@@ -20,9 +20,16 @@ abstract class AuthRemoteDataSource {
     required String name,
   });
 
-  /// Requests password reset link.
-  Future<void> resetPassword({
+  /// Requests a 6-digit password reset code sent to email.
+  Future<void> forgotPassword({
     required String email,
+  });
+
+  /// Resets password with 6-digit OTP code.
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String otpCode,
+    required String newPassword,
   });
 
   /// Signs out the user and clears stored tokens.
@@ -152,7 +159,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> resetPassword({
+  Future<void> forgotPassword({
     required String email,
   }) async {
     try {
@@ -161,6 +168,29 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       });
       if (response.statusCode != 202 && response.statusCode != 200) {
         final message = _extractErrorMessage(response.body, fallback: 'Password reset request failed.');
+        throw AuthException(message, code: response.statusCode.toString());
+      }
+    } on AuthException {
+      rethrow;
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await apiClient.post('/auth/reset-password', body: {
+        'email': email,
+        'otp_code': otpCode,
+        'new_password': newPassword,
+      });
+      if (response.statusCode != 200) {
+        final message = _extractErrorMessage(response.body, fallback: 'Failed to reset password.');
         throw AuthException(message, code: response.statusCode.toString());
       }
     } on AuthException {
@@ -207,7 +237,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return userModel;
       }
 
-      // Try fetching from /auth/me or /profile
       final response = await apiClient.get('/auth/me');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

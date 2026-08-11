@@ -6,6 +6,8 @@ import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/reset_password_usecase.dart';
+import '../../domain/usecases/forgot_password_usecase.dart';
+import '../../domain/usecases/confirm_reset_password_usecase.dart';
 import '../../domain/usecases/google_sign_in_usecase.dart';
 import '../../domain/usecases/observe_user_usecase.dart';
 import '../../domain/entities/user_entity.dart';
@@ -17,6 +19,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
   final ResetPasswordUseCase _resetPasswordUseCase;
+  final ForgotPasswordUseCase _forgotPasswordUseCase;
+  final ConfirmResetPasswordUseCase _confirmResetPasswordUseCase;
   final LogoutUseCase _logoutUseCase;
   final GetCurrentUserUseCase _getCurrentUserUseCase;
   final GoogleSignInUseCase _googleSignInUseCase;
@@ -28,6 +32,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required LoginUseCase loginUseCase,
     required RegisterUseCase registerUseCase,
     required ResetPasswordUseCase resetPasswordUseCase,
+    required ForgotPasswordUseCase forgotPasswordUseCase,
+    required ConfirmResetPasswordUseCase confirmResetPasswordUseCase,
     required LogoutUseCase logoutUseCase,
     required GetCurrentUserUseCase getCurrentUserUseCase,
     required GoogleSignInUseCase googleSignInUseCase,
@@ -35,6 +41,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   })  : _loginUseCase = loginUseCase,
         _registerUseCase = registerUseCase,
         _resetPasswordUseCase = resetPasswordUseCase,
+        _forgotPasswordUseCase = forgotPasswordUseCase,
+        _confirmResetPasswordUseCase = confirmResetPasswordUseCase,
         _logoutUseCase = logoutUseCase,
         _getCurrentUserUseCase = getCurrentUserUseCase,
         _googleSignInUseCase = googleSignInUseCase,
@@ -43,6 +51,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginEvent>(_onLogin);
     on<AuthRegisterEvent>(_onRegister);
     on<AuthResetPasswordEvent>(_onResetPassword);
+    on<AuthForgotPasswordEvent>(_onForgotPassword);
+    on<AuthResetPasswordWithOtpEvent>(_onResetPasswordWithOtp);
     on<AuthLogoutEvent>(_onLogout);
     on<AuthCheckStatusEvent>(_onCheckStatus);
     on<AuthGoogleSignInEvent>(_onGoogleSignIn);
@@ -84,7 +94,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _resetPasswordUseCase(ResetPasswordParams(email: event.email));
     result.fold(
       (failure) => emit(AuthError(failure.message)),
-      (_) => emit(const AuthPasswordResetSent()),
+      (_) => emit(AuthPasswordResetSent(event.email)),
+    );
+  }
+
+  Future<void> _onForgotPassword(AuthForgotPasswordEvent event, Emitter<AuthState> emit) async {
+    emit(const AuthLoading());
+    final result = await _forgotPasswordUseCase(ForgotPasswordParams(email: event.email));
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(AuthPasswordResetSent(event.email)),
+    );
+  }
+
+  Future<void> _onResetPasswordWithOtp(AuthResetPasswordWithOtpEvent event, Emitter<AuthState> emit) async {
+    emit(const AuthLoading());
+    final result = await _confirmResetPasswordUseCase(ConfirmResetPasswordParams(
+      email: event.email,
+      otpCode: event.otpCode,
+      newPassword: event.newPassword,
+    ));
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(const AuthPasswordResetSuccess()),
     );
   }
 
@@ -116,7 +148,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _googleSignInUseCase(const NoParams());
     result.fold(
       (failure) => emit(AuthError(failure.message)),
-      (_) => null, // The reactive userStream listener handles emitting AuthAuthenticated
+      (_) => null,
     );
   }
 

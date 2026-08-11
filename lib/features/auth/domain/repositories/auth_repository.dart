@@ -3,7 +3,6 @@ import '../../../../core/errors/failures.dart';
 import '../entities/user_entity.dart';
 
 /// Contract definition for Authentication logic.
-/// Implemented in the Data layer and consumed by UseCases.
 abstract class AuthRepository {
   /// Signs in a user using email and password.
   Future<Either<Failure, UserEntity>> loginWithEmailAndPassword({
@@ -18,9 +17,21 @@ abstract class AuthRepository {
     required String name,
   });
 
-  /// Sends a password reset email link for the specified address.
+  /// Requests a password reset verification code to be sent to email.
+  Future<Either<Failure, void>> forgotPassword({
+    required String email,
+  });
+
+  /// Requests a password reset verification code (alias for forgotPassword).
   Future<Either<Failure, void>> resetPassword({
     required String email,
+  });
+
+  /// Resets the user's password using the OTP verification code.
+  Future<Either<Failure, void>> resetPasswordWithOtp({
+    required String email,
+    required String otpCode,
+    required String newPassword,
   });
 
   /// Terminates the current active session.

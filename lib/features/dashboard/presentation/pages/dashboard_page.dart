@@ -152,13 +152,22 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ],
                     ),
-                    const Icon(Icons.notifications_none_rounded, color: AppColors.textSecondary, size: 24),
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 24),
+                      onPressed: () {
+                        context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
 
                 // Lungs Health Score Circular Dial Card
                 _buildLungsHealthScoreCard(latestScore),
+                const SizedBox(height: 20),
+
+                // 4 Specific Health Score Breakdown Cards
+                _buildFourScoreCards(state),
                 const SizedBox(height: 24),
 
                 // Quick Actions
@@ -273,6 +282,187 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildFourScoreCards(WellnessState state) {
+    // 1. Cough Score
+    int? coughScore = _extractBreakdownScore(state.latestScore?.breakdown, ['C', 'cough_score', 'cough']);
+    if (coughScore == null && state.audioAnalyses.isNotEmpty) {
+      final coughAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
+      if (coughAudio != null) {
+        coughScore = coughAudio.lungsScore;
+      }
+    }
+
+    // 2. Breathing Score
+    int? breathingScore = _extractBreakdownScore(state.latestScore?.breakdown, ['B', 'breathing_score', 'breathing']);
+    if (breathingScore == null && state.audioAnalyses.isNotEmpty) {
+      final breathingAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
+      if (breathingAudio != null) {
+        breathingScore = breathingAudio.lungsScore;
+      }
+    }
+
+    // 3. Symptom Score
+    int? symptomScore = _extractBreakdownScore(state.latestScore?.breakdown, ['S', 'symptom_score', 'symptom']);
+    if (symptomScore == null && state.dailyLogs.isNotEmpty) {
+      final latestLog = state.dailyLogs.first;
+      final sumSymptoms = latestLog.breathlessness +
+          latestLog.activityLimitation +
+          latestLog.changeFromUsual +
+          latestLog.fever +
+          latestLog.chestTightness +
+          latestLog.chestDiscomfortBreathing +
+          latestLog.wheezing +
+          latestLog.coughSeverity +
+          latestLog.mucus +
+          latestLog.sleepDisruption +
+          latestLog.chestPain;
+      final scoreVal = (100 - (sumSymptoms / 44.0 * 100)).clamp(0, 100).round();
+      symptomScore = scoreVal;
+    }
+
+    // 4. Heart Score
+    int? heartScore = _extractBreakdownScore(state.latestScore?.breakdown, ['heart_score', 'heart_rate_score', 'H']);
+    if (heartScore == null && state.audioAnalyses.isNotEmpty) {
+      final rate = state.audioAnalyses.first.breathingRate;
+      if (rate > 0) {
+        if (rate >= 12 && rate <= 20) {
+          heartScore = 90;
+        } else if (rate >= 10 && rate <= 24) {
+          heartScore = 75;
+        } else {
+          heartScore = 60;
+        }
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Health Score Breakdown',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Cough Score',
+                score: coughScore,
+                icon: Icons.sick_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Breathing Score',
+                score: breathingScore,
+                icon: Icons.air_rounded,
+                color: AppColors.supportingGreen,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Symptom Score',
+                score: symptomScore,
+                icon: Icons.assignment_turned_in_outlined,
+                color: Colors.amber.shade800,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Heart Score',
+                score: heartScore,
+                icon: Icons.favorite_rounded,
+                color: Colors.redAccent,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard({
+    required String title,
+    required int? score,
+    required IconData icon,
+    required Color color,
+  }) {
+    final hasScore = score != null && score > 0;
+    final statusText = hasScore
+        ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
+        : 'No logs yet';
+    final statusColor = hasScore
+        ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
+        : AppColors.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary),
+              ),
+              Icon(icon, size: 20, color: color),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hasScore ? '$score' : '--',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: AppColors.text),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                statusText,
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  int? _extractBreakdownScore(Map<String, dynamic>? breakdown, List<String> keys) {
+    if (breakdown == null) return null;
+    for (final k in keys) {
+      if (breakdown.containsKey(k) && breakdown[k] != null) {
+        final val = breakdown[k];
+        if (val is num && val > 0) return val.round();
+      }
+    }
+    return null;
   }
 
   Widget _buildQuickActionsGrid() {
@@ -449,14 +639,12 @@ class _DashboardPageState extends State<DashboardPage> {
     if (difference == 1) {
       day = 'Yesterday';
     } else if (difference > 1) {
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      day = "${months[time.month - 1]} ${time.day}";
+      day = '${time.day}/${time.month}';
     }
 
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
-    final minuteStr = time.minute.toString().padLeft(2, '0');
-    return "$day, $hour:$minuteStr $period";
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$day, $hour:$minute';
   }
 
   Widget _buildRecordTabPlaceholder() {
@@ -464,7 +652,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-/// Continuous smooth auto-scrolling respiratory daily tips carousel.
+/// Continuous Auto-Scrolling Respiratory Tips Carousel
 class _DailyTipsCarousel extends StatefulWidget {
   const _DailyTipsCarousel();
 
@@ -473,42 +661,46 @@ class _DailyTipsCarousel extends StatefulWidget {
 }
 
 class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
-  late final PageController _pageController;
-  int _currentPage = 0;
+  final PageController _pageController = PageController(viewportFraction: 0.92);
   Timer? _timer;
+  int _currentPage = 0;
 
-  final List<Map<String, dynamic>> _tips = const [
+  final List<Map<String, String>> _tips = const [
     {
-      'title': 'Deep Diaphragmatic Breathing',
-      'desc': 'Inhale slowly through your nose for 4 seconds, feeling your belly expand. Exhale gently through pursed lips for 6 seconds.',
-      'icon': Icons.air_rounded,
-      'color': AppColors.primary,
+      'title': 'Pursed-Lip Breathing',
+      'body': 'Inhale slowly through your nose for 2 counts, then breathe out gently through pursed lips for 4 counts to keep airways open.',
+      'tag': 'Exercise',
     },
     {
-      'title': 'Hydration Keeps Airways Clear',
-      'desc': 'Drinking 2 to 2.5 liters of water daily thins mucus secretions in the respiratory tract and eases bronchial airflow.',
-      'icon': Icons.local_drink_rounded,
-      'color': AppColors.supportingGreen,
+      'title': 'Stay Hydrated',
+      'body': 'Drinking 2+ liters of water daily thins mucus secretions, making it easier for your lungs to clear irritants.',
+      'tag': 'Hydration',
     },
     {
-      'title': 'Posture & Airflow Expansion',
-      'desc': 'Sitting or standing tall opens the thoracic cavity, allowing your lungs to expand fully and receive up to 15% more oxygen.',
-      'icon': Icons.accessibility_new_rounded,
-      'color': AppColors.secondary,
+      'title': 'Diaphragmatic Breathing',
+      'body': 'Place one hand on your belly. Breathe deeply so your belly rises more than your chest. Strengthens diaphragm capacity.',
+      'tag': 'Wellness',
     },
     {
-      'title': 'Monitor Indoor Air Quality',
-      'desc': 'Ventilate living spaces regularly and avoid artificial aerosols or dust accumulation to protect sensitive airways.',
-      'icon': Icons.wb_sunny_outlined,
-      'color': AppColors.primary,
+      'title': 'Monitor Air Quality',
+      'body': 'Check local AQI before outdoor workouts. Avoid exercising near heavy traffic during peak pollution hours.',
+      'tag': 'Environment',
+    },
+    {
+      'title': 'Consistent Sleep Rest',
+      'body': '7-8 hours of sleep allows bronchial tissues to repair and supports stronger immune defense against respiratory infections.',
+      'tag': 'Sleep',
     },
   ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.92);
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_pageController.hasClients) {
         _currentPage = (_currentPage + 1) % _tips.length;
         _pageController.animateToPage(
@@ -534,46 +726,58 @@ class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
       child: PageView.builder(
         controller: _pageController,
         itemCount: _tips.length,
-        onPageChanged: (index) => setState(() => _currentPage = index),
+        onPageChanged: (index) {
+          setState(() {
+            _currentPage = index;
+          });
+        },
         itemBuilder: (context, index) {
           final tip = _tips[index];
-          final color = tip['color'] as Color;
-
           return Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+            padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.3)),
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withOpacity(0.08),
+                  AppColors.supportingGreen.withOpacity(0.06),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16.0),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: color.withOpacity(0.12),
-                  child: Icon(tip['icon'] as IconData, color: color, size: 22),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      tip['title']!,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        tip['tag']!,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        tip['title'] as String,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tip['desc'] as String,
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 6),
+                Text(
+                  tip['body']!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
                 ),
               ],
             ),

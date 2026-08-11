@@ -44,7 +44,16 @@ class AuthError extends AuthState {
   List<Object?> get props => [message];
 }
 
-/// Emitted when the password reset link has been successfully dispatched.
+/// Emitted when the password reset link/OTP code has been successfully dispatched to email.
 class AuthPasswordResetSent extends AuthState {
-  const AuthPasswordResetSent();
+  final String? email;
+  const AuthPasswordResetSent([this.email]);
+
+  @override
+  List<Object?> get props => [email];
+}
+
+/// Emitted when the password has been successfully reset.
+class AuthPasswordResetSuccess extends AuthState {
+  const AuthPasswordResetSuccess();
 }
