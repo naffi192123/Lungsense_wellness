@@ -10,10 +10,10 @@ abstract class OnboardingRemoteDataSource {
   /// Fetch all medical conditions listed dynamically in the database.
   Future<List<MedicalConditionEntity>> fetchMedicalConditions();
 
-  /// Save all profile details.
+  /// Save all profile details to backend.
   Future<void> saveOnboarding({required OnboardingModel model, required String userId});
 
-  /// Check completion status flag.
+  /// Check completion status flag directly from backend profile.
   Future<bool> checkProfileCompleted({required String userId});
 }
 
@@ -76,16 +76,19 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data is Map) {
-          final isCompletedFlag = data['profile_completed'] as bool?;
-          if (isCompletedFlag != null) return isCompletedFlag;
           final age = data['age'];
+          final gender = data['gender'];
           final height = data['height_cm'];
           final weight = data['weight_kg'];
-          return (age != null && (age is num ? age > 0 : true)) ||
-                 (height != null && (height is num ? height > 0 : true)) ||
-                 (weight != null && (weight is num ? weight > 0 : true));
+
+          final hasAge = age != null && age is num && age > 0;
+          final hasGender = gender != null && gender.toString().trim().isNotEmpty;
+          final hasHeight = height != null && height is num && height > 0;
+          final hasWeight = weight != null && weight is num && weight > 0;
+
+          // Onboarding is completed only when all required inputs are present in the backend profile
+          return hasAge && hasGender && hasHeight && hasWeight;
         }
-        return true;
       }
       return false;
     } catch (_) {
@@ -105,7 +108,7 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
       if (age > 130) return 100;
       return age;
     } catch (_) {
-      return 30; // Sensible default fallback
+      return 30;
     }
   }
 

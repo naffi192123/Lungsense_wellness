@@ -8,7 +8,7 @@ import '../datasources/onboarding_local_data_source.dart';
 import '../datasources/onboarding_remote_data_source.dart';
 import '../models/onboarding_model.dart';
 
-/// Repository implementation directing local caching and remote sync of onboarding steps.
+/// Repository implementation directing backend verification and synchronization of onboarding.
 class OnboardingRepositoryImpl implements OnboardingRepository {
   final OnboardingRemoteDataSource remoteDataSource;
   final OnboardingLocalDataSource localDataSource;
@@ -22,25 +22,15 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   Future<Either<Failure, void>> saveOnboarding(OnboardingData data) async {
     try {
       final model = OnboardingModel.fromEntity(data);
-      // Persist completed profile locally first
-      await localDataSource.saveCompletedProfile(model);
-
-      // Attempt remote sync with backend
-      try {
-        await remoteDataSource.saveOnboarding(model: model, userId: '');
-      } on ServerException catch (e) {
-        // If server encounters a 5xx error, allow user to proceed since profile is safely cached locally
-        if (e.code != null && int.tryParse(e.code!) != null && int.parse(e.code!) >= 500) {
-          return const Right(null);
-        }
-        return Left(ServerFailure(e.message, code: e.code));
-      } catch (_) {
-        return const Right(null);
-      }
-
+      // Save directly to the backend
+      await remoteDataSource.saveOnboarding(model: model, userId: '');
+      // Clear draft on successful remote save
+      await localDataSource.clearDraft();
       return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, code: e.code));
     } catch (e) {
-      return Left(CacheFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -59,15 +49,13 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   @override
   Future<Either<Failure, bool>> checkProfileCompleted() async {
     try {
-      final localCompleted = await localDataSource.isProfileCompletedLocally();
-      if (localCompleted) {
-        return const Right(true);
-      }
+      // Check completion status from backend profile data as single source of truth
       final completed = await remoteDataSource.checkProfileCompleted(userId: '');
       return Right(completed);
-    } catch (_) {
-      final localCompleted = await localDataSource.isProfileCompletedLocally();
-      return Right(localCompleted);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, code: e.code));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 
