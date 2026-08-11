@@ -7,7 +7,7 @@ import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_event.dart';
 import '../../../dashboard/presentation/bloc/wellness_state.dart';
 
-/// Interactive Daily Log (Check-ins) screen aligned with backend JSON payload schema.
+/// Interactive Daily Log (Check-ins) screen aligned with backend 0-3 symptom severity schema.
 class DailyLogPage extends StatefulWidget {
   const DailyLogPage({super.key});
 
@@ -18,16 +18,16 @@ class DailyLogPage extends StatefulWidget {
 class _DailyLogPageState extends State<DailyLogPage> {
   DateTime _selectedDate = DateTime.now();
 
-  double _breathlessness = 3.0;
-  double _activityLimitation = 3.0;
-  double _changeFromUsual = 3.0;
+  double _breathlessness = 0.0;
+  double _activityLimitation = 0.0;
+  double _changeFromUsual = 0.0;
   double _fever = 0.0;
-  double _chestTightness = 3.0;
-  double _chestDiscomfortBreathing = 3.0;
-  double _wheezing = 3.0;
-  double _coughSeverity = 3.0;
-  double _mucus = 3.0;
-  double _sleepDisruption = 3.0;
+  double _chestTightness = 0.0;
+  double _chestDiscomfortBreathing = 0.0;
+  double _wheezing = 0.0;
+  double _coughSeverity = 0.0;
+  double _mucus = 0.0;
+  double _sleepDisruption = 0.0;
   double _chestPain = 0.0;
   bool _smokedToday = false;
   double _exerciseMinutes = 30.0;
@@ -41,17 +41,17 @@ class _DailyLogPageState extends State<DailyLogPage> {
     final log = DailyLogEntity(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       checkinDate: dateStr,
-      breathlessness: _breathlessness,
-      activityLimitation: _activityLimitation,
-      changeFromUsual: _changeFromUsual,
-      fever: _fever,
-      chestTightness: _chestTightness,
-      chestDiscomfortBreathing: _chestDiscomfortBreathing,
-      wheezing: _wheezing,
-      coughSeverity: _coughSeverity,
-      mucus: _mucus,
-      sleepDisruption: _sleepDisruption,
-      chestPain: _chestPain,
+      breathlessness: _breathlessness.clamp(0.0, 3.0),
+      activityLimitation: _activityLimitation.clamp(0.0, 3.0),
+      changeFromUsual: _changeFromUsual.clamp(0.0, 3.0),
+      fever: _fever.clamp(0.0, 3.0),
+      chestTightness: _chestTightness.clamp(0.0, 3.0),
+      chestDiscomfortBreathing: _chestDiscomfortBreathing.clamp(0.0, 3.0),
+      wheezing: _wheezing.clamp(0.0, 3.0),
+      coughSeverity: _coughSeverity.clamp(0.0, 3.0),
+      mucus: _mucus.clamp(0.0, 3.0),
+      sleepDisruption: _sleepDisruption.clamp(0.0, 3.0),
+      chestPain: _chestPain.clamp(0.0, 3.0),
       smokedToday: _smokedToday,
       exerciseMinutes: _exerciseMinutes,
       sleepHours: _sleepHours,
@@ -85,6 +85,36 @@ class _DailyLogPageState extends State<DailyLogPage> {
       setState(() {
         _selectedDate = picked;
       });
+    }
+  }
+
+  String _getSeverityLabel(int value) {
+    switch (value) {
+      case 0:
+        return 'None';
+      case 1:
+        return 'Mild';
+      case 2:
+        return 'Moderate';
+      case 3:
+        return 'Severe';
+      default:
+        return 'None';
+    }
+  }
+
+  Color _getSeverityColor(int value) {
+    switch (value) {
+      case 0:
+        return AppColors.supportingGreen;
+      case 1:
+        return Colors.blue;
+      case 2:
+        return Colors.orange;
+      case 3:
+        return AppColors.error;
+      default:
+        return AppColors.primary;
     }
   }
 
@@ -137,13 +167,13 @@ class _DailyLogPageState extends State<DailyLogPage> {
                   _buildDatePickerCard(context),
                   const SizedBox(height: 20),
 
-                  // Section Title: Symptoms (0-10 Sliders)
-                  _buildSectionTitle('Respiratory & Physical Symptoms (0 - 10)'),
+                  // Section Title: Symptoms (0-3 Severity Scale)
+                  _buildSectionTitle('Respiratory & Physical Symptoms (0 - 3)'),
                   const SizedBox(height: 12),
 
                   _buildSliderCard(
                     title: 'Cough Severity',
-                    subtitle: '0 (None) to 10 (Severe)',
+                    subtitle: 'Dry or productive coughing',
                     value: _coughSeverity,
                     icon: Icons.sick_outlined,
                     onChanged: (val) => setState(() => _coughSeverity = val),
@@ -197,7 +227,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
 
                   _buildSliderCard(
                     title: 'Chest Pain',
-                    subtitle: '0 (None) to 10 (Severe Pain)',
+                    subtitle: 'Localized chest soreness or pain',
                     value: _chestPain,
                     icon: Icons.heart_broken_outlined,
                     onChanged: (val) => setState(() => _chestPain = val),
@@ -214,7 +244,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
                   const SizedBox(height: 24),
 
                   // Section Title: Daily Impact & Disruption
-                  _buildSectionTitle('Daily Impact & Disruption'),
+                  _buildSectionTitle('Daily Impact & Disruption (0 - 3)'),
                   const SizedBox(height: 12),
 
                   _buildSliderCard(
@@ -395,6 +425,10 @@ class _DailyLogPageState extends State<DailyLogPage> {
     required IconData icon,
     required ValueChanged<double> onChanged,
   }) {
+    final intVal = value.toInt().clamp(0, 3);
+    final label = _getSeverityLabel(intVal);
+    final color = _getSeverityColor(intVal);
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -422,25 +456,25 @@ class _DailyLogPageState extends State<DailyLogPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  value.toInt().toString(),
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                  '$intVal - $label',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Slider(
-            value: value,
+            value: value.clamp(0.0, 3.0),
             min: 0,
-            max: 10,
-            divisions: 10,
-            activeColor: AppColors.primary,
+            max: 3,
+            divisions: 3,
+            activeColor: color,
             inactiveColor: AppColors.border,
-            label: value.toInt().toString(),
+            label: '$intVal ($label)',
             onChanged: onChanged,
           ),
         ],
@@ -459,55 +493,47 @@ class _DailyLogPageState extends State<DailyLogPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                const Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Smoked Today?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
-                      const SizedBox(height: 2),
-                      const Text('Tobacco/vape usage', style: TextStyle(color: AppColors.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          const Row(
+            children: [
+              Icon(Icons.smoking_rooms_outlined, color: AppColors.primary, size: 22),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Smoked Today?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                  SizedBox(height: 2),
+                  Text('Tobacco/vape usage', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               ChoiceChip(
-                visualDensity: VisualDensity.compact,
                 label: const Text('No'),
                 selected: !_smokedToday,
-                selectedColor: AppColors.supportingGreen,
+                selectedColor: AppColors.primary,
                 labelStyle: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
                   color: !_smokedToday ? AppColors.surface : AppColors.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
-                onSelected: (val) {
-                  if (val) setState(() => _smokedToday = false);
+                onSelected: (selected) {
+                  if (selected) setState(() => _smokedToday = false);
                 },
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               ChoiceChip(
-                visualDensity: VisualDensity.compact,
                 label: const Text('Yes'),
                 selected: _smokedToday,
                 selectedColor: AppColors.error,
                 labelStyle: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
                   color: _smokedToday ? AppColors.surface : AppColors.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
-                onSelected: (val) {
-                  if (val) setState(() => _smokedToday = true);
+                onSelected: (selected) {
+                  if (selected) setState(() => _smokedToday = true);
                 },
               ),
             ],
@@ -538,45 +564,32 @@ class _DailyLogPageState extends State<DailyLogPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Icon(icon, color: AppColors.primary, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
-                      const SizedBox(height: 2),
-                      Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
           Row(
-            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: AppColors.primary, size: 22),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+          Row(
             children: [
               IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.primary, size: 22),
+                icon: const Icon(Icons.remove_circle_outline, color: AppColors.primary, size: 26),
                 onPressed: value > min ? () => onChanged((value - step).clamp(min, max)) : null,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Text(
-                  value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
-                ),
+              Text(
+                value % 1 == 0 ? '${value.toInt()} $unit' : '${value.toStringAsFixed(1)} $unit',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
               ),
               IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 22),
+                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 26),
                 onPressed: value < max ? () => onChanged((value + step).clamp(min, max)) : null,
               ),
             ],

@@ -22,21 +22,16 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
     try {
       final body = {
         'checkin_date': log.checkinDate,
-        'breathlessness': log.breathlessness.round(),
-        'activity_limitation': log.activityLimitation.round(),
-        'change_from_usual': log.changeFromUsual.round(),
-        'fever': log.fever.round(),
-        'chest_tightness': log.chestTightness.round(),
-        'chest_discomfort_breathing': log.chestDiscomfortBreathing.round(),
-        'wheezing': log.wheezing.round(),
-        'cough_severity': log.coughSeverity.round(),
-        'mucus': log.mucus.round(),
-        'sleep_disruption': log.sleepDisruption.round(),
-        'chest_pain': log.chestPain.round(),
-        'smoked_today': log.smokedToday,
-        'exercise_minutes': log.exerciseMinutes.round(),
-        'sleep_hours': log.sleepHours,
-        'water_intake_liters': log.waterIntakeLiters,
+        'breathlessness': log.breathlessness.round().clamp(0, 3),
+        'activity_limitation': log.activityLimitation.round().clamp(0, 3),
+        'change_from_usual': log.changeFromUsual.round().clamp(0, 3),
+        'fever': log.fever.round().clamp(0, 3),
+        'chest_tightness': log.chestTightness.round().clamp(0, 3),
+        'chest_discomfort_breathing': log.chestDiscomfortBreathing.round().clamp(0, 3),
+        'wheezing': log.wheezing.round().clamp(0, 3),
+        'cough_severity': log.coughSeverity.round().clamp(0, 3),
+        'mucus': log.mucus.round().clamp(0, 3),
+        'sleep_disruption': log.sleepDisruption.round().clamp(0, 3),
       };
 
       final response = await apiClient.post('/checkins', body: body);
@@ -66,7 +61,7 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
   int _toInt(dynamic val) {
     if (val == null) return 0;
     if (val is num) return val.toInt();
-    if (val is bool) return val ? 10 : 0;
+    if (val is bool) return val ? 1 : 0;
     if (val is String) return int.tryParse(val) ?? 0;
     return 0;
   }
@@ -102,20 +97,10 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        return {
-          'symptom_score': 85,
-          'band': 'good',
-          'label': 'Good',
-          'message': 'Baseline respiratory score is stable.'
-        };
+        return {};
       }
     } catch (_) {
-      return {
-        'symptom_score': 85,
-        'band': 'good',
-        'label': 'Good',
-        'message': 'Baseline respiratory score is stable.'
-      };
+      return {};
     }
   }
 }
