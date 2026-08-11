@@ -48,6 +48,8 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     Emitter<AudioRecordingState> emit,
   ) {
     _isProcessingCancelled = true;
+    _durationSubscription?.cancel();
+    _currentFilePath = null;
     emit(const AudioRecordingInitial());
   }
 
@@ -115,13 +117,14 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     AudioPauseRecordingEvent event,
     Emitter<AudioRecordingState> emit,
   ) async {
-    if (_currentFilePath == null) return;
+    final path = _currentFilePath;
+    if (path == null) return;
     await recorderService.pauseRecording();
     emit(AudioRecordingInProgress(
       durationSeconds: recorderService.elapsedSeconds,
       isPaused: true,
       recordingType: _currentRecordingType,
-      filePath: _currentFilePath!,
+      filePath: path,
     ));
   }
 
@@ -129,13 +132,14 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     AudioResumeRecordingEvent event,
     Emitter<AudioRecordingState> emit,
   ) async {
-    if (_currentFilePath == null) return;
+    final path = _currentFilePath;
+    if (path == null) return;
     await recorderService.resumeRecording();
     emit(AudioRecordingInProgress(
       durationSeconds: recorderService.elapsedSeconds,
       isPaused: false,
       recordingType: _currentRecordingType,
-      filePath: _currentFilePath!,
+      filePath: path,
     ));
   }
 
@@ -145,7 +149,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
   ) async {
     _durationSubscription?.cancel();
     final path = await recorderService.stopRecording();
-    if (path != null) {
+    if (path != null && path.isNotEmpty) {
       _currentFilePath = path;
       _fileName = path.split('/').last;
       emit(AudioRecordingReady(
@@ -197,6 +201,8 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     AudioRemoveFileEvent event,
     Emitter<AudioRecordingState> emit,
   ) async {
+    _isProcessingCancelled = true;
+    _durationSubscription?.cancel();
     _currentFilePath = null;
     emit(const AudioRecordingInitial());
   }
@@ -271,12 +277,13 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       if (_isProcessingCancelled) return;
 
       final jobResult = await getJobStatusUseCase(jobId);
+      if (_isProcessingCancelled) return;
 
       bool isDone = false;
 
       jobResult.fold(
         (failure) {
-          // Keep retrying unless exceeded
+          if (_isProcessingCancelled) return;
           if (attempt >= maxPollAttempts) {
             emit(AudioRecordingFailure(
               message: failure.message,
@@ -288,6 +295,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
           }
         },
         (job) {
+          if (_isProcessingCancelled) return;
           if (job.isCompleted) {
             emit(AudioRecordingSuccess(job: job));
             isDone = true;
@@ -311,7 +319,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       if (isDone) break;
     }
 
-    if (attempt >= maxPollAttempts && state is AudioRecordingJobPolling) {
+    if (!_isProcessingCancelled && attempt >= maxPollAttempts && state is AudioRecordingJobPolling) {
       emit(AudioRecordingFailure(
         message: 'Acoustic analysis timeout. The job took longer than 60 seconds.',
         jobId: jobId,
@@ -325,6 +333,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     AudioResetEvent event,
     Emitter<AudioRecordingState> emit,
   ) async {
+    _isProcessingCancelled = true;
     _durationSubscription?.cancel();
     _currentFilePath = null;
     emit(const AudioRecordingInitial());

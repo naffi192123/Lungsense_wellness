@@ -1,20 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_event.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../data/services/audio_player_service.dart';
-import '../../data/services/audio_recorder_service.dart';
 import '../bloc/audio_recording_bloc.dart';
 import '../bloc/audio_recording_event.dart';
 import '../bloc/audio_recording_state.dart';
 
-/// Screen managing dual-mode cough and breathing audio recordings.
+/// Interactive audio recording and acoustic screening page.
 class RecordPage extends StatefulWidget {
   const RecordPage({super.key});
 
@@ -22,18 +21,17 @@ class RecordPage extends StatefulWidget {
   State<RecordPage> createState() => _RecordPageState();
 }
 
-class _RecordPageState extends State<RecordPage> {
+class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateMixin {
   int _selectedTabIndex = 0; // 0 = Cough, 1 = Breathing
   late final AudioPlayerService _audioPlayerService;
-  
-  bool _isPlaying = false;
-  double _playProgress = 0.0;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
 
-  StreamSubscription? _playerStateSubscription;
-  StreamSubscription? _playerPositionSubscription;
-  StreamSubscription? _playerDurationSubscription;
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<Duration>? _playerPositionSubscription;
+  StreamSubscription<Duration>? _playerDurationSubscription;
+
+  bool _isPlaying = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
 
   @override
   void initState() {
@@ -49,10 +47,9 @@ class _RecordPageState extends State<RecordPage> {
     });
 
     _playerPositionSubscription = _audioPlayerService.positionStream.listen((pos) {
-      if (mounted && _duration.inMilliseconds > 0) {
+      if (mounted) {
         setState(() {
           _position = pos;
-          _playProgress = (pos.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
         });
       }
     });
@@ -111,7 +108,7 @@ class _RecordPageState extends State<RecordPage> {
   void _onBack() {
     _audioPlayerService.stop();
     final bloc = context.read<AudioRecordingBloc>();
-    if (bloc.state is AudioRecordingInProgress) {
+    if (bloc.state is AudioRecordingInProgress || bloc.state is AudioRecordingReady) {
       bloc.add(const AudioResetEvent());
     }
     if (context.canPop()) {
@@ -155,129 +152,281 @@ class _RecordPageState extends State<RecordPage> {
             ),
           ],
         ),
-      body: BlocListener<AudioRecordingBloc, AudioRecordingState>(
-        listener: (context, state) {
-          if (state is AudioRecordingUploading || state is AudioRecordingJobPolling) {
-            // Show non-dismissible loading dialog if not already shown
-            _showProcessingDialog(context, state);
-          } else if (state is AudioRecordingSuccess) {
-            // Pop processing dialog
-            Navigator.of(context, rootNavigator: true).pop();
-            _handleSuccessAnalysis(context, state);
-          } else if (state is AudioRecordingFailure) {
-            // Pop processing dialog if open
-            Navigator.of(context, rootNavigator: true).pop();
-            _showErrorDialog(context, state);
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-                child: Column(
-                  children: [
-                    // Tabs Pill Selector
-                    _buildToggleTabs(),
-                    const SizedBox(height: 32),
+        body: BlocConsumer<AudioRecordingBloc, AudioRecordingState>(
+          listener: (context, state) {
+            if (state is AudioRecordingSuccess) {
+              _handleSuccessAnalysis(context, state);
+            } else if (state is AudioRecordingFailure) {
+              _showErrorDialog(context, state);
+            }
+          },
+          builder: (context, state) {
+            // If currently uploading or polling, show in-place pipeline processing view
+            if (state is AudioRecordingUploading || state is AudioRecordingJobPolling) {
+              return _buildProcessingOverlay(context, state);
+            }
 
-                    // Permission Warning (If Denied)
-                    BlocBuilder<AudioRecordingBloc, AudioRecordingState>(
-                      builder: (context, state) {
-                        if (state is AudioRecordingPermissionDenied) {
-                          return _buildPermissionWarning(context, state);
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                    child: Column(
+                      children: [
+                        // Tabs Pill Selector
+                        _buildToggleTabs(),
+                        const SizedBox(height: 32),
 
-                    // Central Visual Microphone circle
-                    BlocBuilder<AudioRecordingBloc, AudioRecordingState>(
-                      builder: (context, state) {
-                        final isRecording = state is AudioRecordingInProgress && !state.isPaused;
-                        return _buildMicrophoneIndicator(isRecording);
-                      },
-                    ),
-                    const SizedBox(height: 32),
+                        // Permission Warning (If Denied)
+                        if (state is AudioRecordingPermissionDenied)
+                          _buildPermissionWarning(context, state),
 
-                    // Time display & status label
-                    BlocBuilder<AudioRecordingBloc, AudioRecordingState>(
-                      builder: (context, state) {
-                        return _buildTimerSection(state);
-                      },
-                    ),
-                    const SizedBox(height: 40),
+                        // Central Visual Microphone circle
+                        _buildMicrophoneIndicator(state is AudioRecordingInProgress && !state.isPaused),
+                        const SizedBox(height: 32),
 
-                    // Controls or Playback widgets depending on state
-                    BlocBuilder<AudioRecordingBloc, AudioRecordingState>(
-                      builder: (context, state) {
-                        if (state is AudioRecordingReady) {
-                          return Column(
+                        // Time display & status label
+                        _buildTimerSection(state),
+                        const SizedBox(height: 40),
+
+                        // Controls or Playback widgets depending on state
+                        if (state is AudioRecordingReady)
+                          Column(
                             children: [
                               _buildPlaybackPanel(context, state),
                               const SizedBox(height: 24),
                               _buildSubmitButton(context, state),
                             ],
-                          );
-                        } else {
-                          return Column(
+                          )
+                        else
+                          Column(
                             children: [
                               _buildRecordingControls(context, state),
                               const SizedBox(height: 24),
                               _buildEnvironmentTipsAndPicker(context, state),
                             ],
-                          );
-                        }
-                      },
+                          ),
+                      ],
                     ),
-                  ],
+                  ),
+                ),
+
+                // Navigation bar alignment
+                _buildBottomNavMenu(),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProcessingOverlay(BuildContext context, AudioRecordingState state) {
+    String msg = 'Processing audio signature...';
+    int currentStep = 1;
+    if (state is AudioRecordingUploading) {
+      msg = state.statusMessage;
+      currentStep = 1;
+    } else if (state is AudioRecordingJobPolling) {
+      msg = state.statusMessage;
+      currentStep = 2;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Animated Pulse Indicator
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.12),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 28),
 
-            // Navigation bar alignment
-            _buildBottomNavMenu(),
-          ],
+          Text(
+            'Analyzing ${_currentRecordingType.toUpperCase()} Audio',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            msg,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // 3 Step Pipeline Progress Cards
+          _buildProcessingStepItem(
+            stepNumber: 1,
+            title: 'Upload & Consent Check',
+            isComplete: currentStep > 1,
+            isActive: currentStep == 1,
+          ),
+          const SizedBox(height: 12),
+          _buildProcessingStepItem(
+            stepNumber: 2,
+            title: 'Acoustic Feature Extraction',
+            isComplete: currentStep > 2,
+            isActive: currentStep == 2,
+          ),
+          const SizedBox(height: 12),
+          _buildProcessingStepItem(
+            stepNumber: 3,
+            title: 'Neural Respiratory Classification',
+            isComplete: false,
+            isActive: currentStep == 3,
+          ),
+          const SizedBox(height: 40),
+
+          // Immediate Cancel Button
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                context.read<AudioRecordingBloc>().add(const AudioCancelProcessingEvent());
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Processing cancelled. You can record a new audio.'),
+                    backgroundColor: AppColors.warning,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.close_rounded, color: AppColors.error, size: 20),
+              label: const Text(
+                'Cancel Processing',
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.error, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessingStepItem({
+    required int stepNumber,
+    required String title,
+    required bool isComplete,
+    required bool isActive,
+  }) {
+    final color = isComplete
+        ? AppColors.supportingGreen
+        : (isActive ? AppColors.primary : AppColors.textSecondary.withOpacity(0.4));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14.0),
+        border: Border.all(
+          color: isActive ? AppColors.primary.withOpacity(0.5) : AppColors.border,
+          width: isActive ? 1.5 : 1.0,
         ),
       ),
-    ),
-  );
-}
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: color.withOpacity(0.15),
+            child: isComplete
+                ? const Icon(Icons.check_rounded, color: AppColors.supportingGreen, size: 16)
+                : (isActive
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
+                      )
+                    : Text('$stepNumber', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color))),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: isActive || isComplete ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+                color: isComplete || isActive ? AppColors.text : AppColors.textSecondary,
+              ),
+            ),
+          ),
+          if (isComplete)
+            const Text(
+              'Done',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.supportingGreen),
+            )
+          else if (isActive)
+            const Text(
+              'In Progress...',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildPermissionWarning(BuildContext context, AudioRecordingPermissionDenied state) {
     return Container(
       margin: const EdgeInsets.only(bottom: 24.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.08),
+        color: AppColors.error.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16.0),
         border: Border.all(color: AppColors.error.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.mic_off_rounded, color: AppColors.error),
+          const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 28),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              state.message,
-              style: const TextStyle(fontSize: 13, color: AppColors.text),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Microphone Access Required',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  state.message,
+                  style: const TextStyle(color: AppColors.text, fontSize: 12),
+                ),
+              ],
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (state.isPermanentlyDenied) {
-                sl<AudioRecorderService>().openAppSettings();
-              } else {
-                context.read<AudioRecordingBloc>().add(
-                      AudioStartRecordingEvent(recordingType: _currentRecordingType),
-                    );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.surface,
-            ),
-            child: Text(state.isPermanentlyDenied ? 'Settings' : 'Grant'),
           ),
         ],
       ),
@@ -286,30 +435,40 @@ class _RecordPageState extends State<RecordPage> {
 
   Widget _buildToggleTabs() {
     return Container(
-      height: 52,
       padding: const EdgeInsets.all(4.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(26.0),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.border.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(30.0),
       ),
       child: Row(
         children: [
           Expanded(
             child: GestureDetector(
               onTap: () => _onToggleTab(0),
-              child: Container(
-                alignment: Alignment.center,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
                 decoration: BoxDecoration(
-                  color: _selectedTabIndex == 0 ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(22.0),
+                  color: _selectedTabIndex == 0 ? AppColors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(24.0),
+                  boxShadow: _selectedTabIndex == 0
+                      ? [
+                          BoxShadow(
+                            color: AppColors.text.withOpacity(0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : [],
                 ),
-                child: Text(
-                  'Cough Recording',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _selectedTabIndex == 0 ? AppColors.primary : AppColors.textSecondary,
-                    fontSize: 14,
+                child: Center(
+                  child: Text(
+                    'Cough Sound',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: _selectedTabIndex == 0 ? AppColors.primary : AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
@@ -318,18 +477,30 @@ class _RecordPageState extends State<RecordPage> {
           Expanded(
             child: GestureDetector(
               onTap: () => _onToggleTab(1),
-              child: Container(
-                alignment: Alignment.center,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
                 decoration: BoxDecoration(
-                  color: _selectedTabIndex == 1 ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(22.0),
+                  color: _selectedTabIndex == 1 ? AppColors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(24.0),
+                  boxShadow: _selectedTabIndex == 1
+                      ? [
+                          BoxShadow(
+                            color: AppColors.text.withOpacity(0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : [],
                 ),
-                child: Text(
-                  'Breathing Recording',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _selectedTabIndex == 1 ? AppColors.primary : AppColors.textSecondary,
-                    fontSize: 14,
+                child: Center(
+                  child: Text(
+                    'Breathing Audio',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: _selectedTabIndex == 1 ? AppColors.primary : AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
@@ -345,32 +516,42 @@ class _RecordPageState extends State<RecordPage> {
       alignment: Alignment.center,
       children: [
         if (isRecording)
-          Container(
-            height: 200,
-            width: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.supportingGreen.withOpacity(0.25), width: 3),
-            ),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.8, end: 1.2),
+            duration: const Duration(milliseconds: 800),
+            builder: (context, val, child) {
+              return Container(
+                width: 170 * val,
+                height: 170 * val,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.08 / val),
+                ),
+              );
+            },
           ),
         Container(
-          height: 150,
-          width: 150,
+          width: 140,
+          height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isRecording ? AppColors.supportingGreen : AppColors.supportingGreen.withOpacity(0.12),
+            color: AppColors.surface,
+            border: Border.all(
+              color: isRecording ? AppColors.primary : AppColors.border,
+              width: isRecording ? 3.0 : 1.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.supportingGreen.withOpacity(isRecording ? 0.35 : 0.05),
-                blurRadius: 24,
-                spreadRadius: 6,
+                color: isRecording ? AppColors.primary.withOpacity(0.2) : AppColors.text.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Icon(
-            Icons.mic_none_rounded,
-            size: 60,
-            color: isRecording ? AppColors.surface : AppColors.supportingGreen,
+            _selectedTabIndex == 0 ? Icons.sick_outlined : Icons.air_rounded,
+            size: 54,
+            color: isRecording ? AppColors.primary : AppColors.textSecondary,
           ),
         ),
       ],
@@ -378,35 +559,42 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Widget _buildTimerSection(AudioRecordingState state) {
-    String statusLabel = 'READY TO RECORD';
-    String timerText = '00:00';
+    int elapsed = 0;
+    String status = 'Ready to Record';
 
     if (state is AudioRecordingInProgress) {
-      statusLabel = state.isPaused ? 'PAUSED' : 'RECORDING...';
-      timerText = _formatSeconds(state.durationSeconds);
+      elapsed = state.durationSeconds;
+      status = state.isPaused ? 'Recording Paused' : 'Recording in Progress...';
     } else if (state is AudioRecordingReady) {
-      statusLabel = state.isImported ? 'AUDIO FILE IMPORTED' : 'RECORDING COMPLETED';
+      elapsed = 12; // Duration captured
+      status = 'Recording Complete';
     }
 
     return Column(
       children: [
         Text(
-          timerText,
+          _formatSeconds(elapsed),
           style: const TextStyle(
-            fontSize: 44,
+            fontSize: 36,
             fontWeight: FontWeight.bold,
-            letterSpacing: 2,
+            letterSpacing: 1.5,
             color: AppColors.text,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          statusLabel,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.5,
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.border.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            status,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
       ],
@@ -415,83 +603,107 @@ class _RecordPageState extends State<RecordPage> {
 
   Widget _buildRecordingControls(BuildContext context, AudioRecordingState state) {
     final bloc = context.read<AudioRecordingBloc>();
-    final inProgress = state is AudioRecordingInProgress;
+    final isRecording = state is AudioRecordingInProgress;
+    final isPaused = isRecording && state.isPaused;
 
-    if (!inProgress) {
-      return Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.supportingGreen,
-          borderRadius: BorderRadius.circular(16.0),
-        ),
-        child: ElevatedButton.icon(
-          onPressed: () {
+    if (!isRecording) {
+      return Center(
+        child: InkWell(
+          onTap: () {
+            _audioPlayerService.stop();
             bloc.add(AudioStartRecordingEvent(recordingType: _currentRecordingType));
           },
-          icon: const Icon(Icons.play_arrow_rounded, color: AppColors.surface),
-          label: const Text(
-            'Start Recording',
-            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.surface, fontSize: 16),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
+          borderRadius: BorderRadius.circular(35),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.supportingGreen],
+              ),
+              borderRadius: BorderRadius.circular(35),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.mic, color: AppColors.surface, size: 24),
+                const SizedBox(width: 10),
+                Text(
+                  'Start ${_selectedTabIndex == 0 ? "Cough" : "Breathing"} Recording',
+                  style: const TextStyle(
+                    color: AppColors.surface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       );
     }
 
-    final isPaused = state.isPaused;
-
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Discard / Cancel button
+        // Cancel Action
         IconButton(
-          onPressed: () => bloc.add(const AudioCancelRecordingEvent()),
-          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 28),
-          tooltip: 'Discard',
+          iconSize: 32,
+          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+          onPressed: () {
+            bloc.add(const AudioCancelRecordingEvent());
+          },
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 24),
 
-        // Pause / Resume button
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () {
-              if (isPaused) {
-                bloc.add(const AudioResumeRecordingEvent());
-              } else {
-                bloc.add(const AudioPauseRecordingEvent());
-              }
-            },
-            icon: Icon(isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, color: AppColors.primary),
-            label: Text(isPaused ? 'Resume' : 'Pause'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
+        // Pause/Resume Action
+        InkWell(
+          onTap: () {
+            if (isPaused) {
+              bloc.add(const AudioResumeRecordingEvent());
+            } else {
+              bloc.add(const AudioPauseRecordingEvent());
+            }
+          },
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Icon(
+              isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+              color: AppColors.text,
+              size: 28,
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 24),
 
-        // Stop button
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => bloc.add(const AudioStopRecordingEvent()),
-            icon: const Icon(Icons.stop_rounded, color: AppColors.surface),
-            label: const Text('Stop'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.surface,
-              minimumSize: const Size(double.infinity, 54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
+        // Stop Action
+        InkWell(
+          onTap: () {
+            bloc.add(const AudioStopRecordingEvent());
+          },
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.stop_rounded,
+              color: AppColors.surface,
+              size: 28,
             ),
           ),
         ),
@@ -500,49 +712,78 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Widget _buildEnvironmentTipsAndPicker(BuildContext context, AudioRecordingState state) {
+    final bloc = context.read<AudioRecordingBloc>();
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            'Ensure you are in a quiet environment for optimal acoustic signature analysis.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary.withOpacity(0.8), fontSize: 12, height: 1.4),
+        // Upload from Device File Button
+        OutlinedButton.icon(
+          onPressed: () {
+            _audioPlayerService.stop();
+            bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
+          },
+          icon: const Icon(Icons.file_upload_outlined, size: 18, color: AppColors.primary),
+          label: const Text(
+            'Import Recorded Audio File',
+            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+          ),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: AppColors.primary),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
-        const SizedBox(height: 16),
-        _buildPickFileButton(context, state),
+        const SizedBox(height: 20),
+
+        // Tips Card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.tips_and_updates_outlined, size: 18, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text(
+                    'Optimal Recording Guidelines',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _buildBulletPoint('Hold your phone roughly 15-20 cm away from your mouth.'),
+              _buildBulletPoint('Ensure background noise (fans, TV, traffic) is minimized.'),
+              _buildBulletPoint(_selectedTabIndex == 0
+                  ? 'Perform 3-5 distinct, natural coughs during the session.'
+                  : 'Take deep, controlled inhalations and exhalations through mouth.'),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildPickFileButton(BuildContext context, AudioRecordingState state) {
-    final bloc = context.read<AudioRecordingBloc>();
-    final isUploading = state is AudioRecordingUploading || state is AudioRecordingJobPolling;
-    final isRecording = state is AudioRecordingInProgress;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: TextButton.icon(
-        onPressed: (isUploading || isRecording)
-            ? null
-            : () {
-                bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
-              },
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-        ),
-        icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.primary, size: 22),
-        label: const Text(
-          'Upload Audio File from Device (.m4a, .wav, .mp3)',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
-        ),
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -551,29 +792,34 @@ class _RecordPageState extends State<RecordPage> {
     final bloc = context.read<AudioRecordingBloc>();
 
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(20.0),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                state.isImported ? Icons.audio_file_rounded : Icons.mic_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  state.fileName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      state.fileName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      state.isImported ? 'Imported from device' : 'Recorded live via microphone',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ],
                 ),
               ),
               IconButton(
@@ -585,16 +831,24 @@ class _RecordPageState extends State<RecordPage> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+
+          // Audio Slider & Play Button
           Row(
             children: [
               IconButton(
-                icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: AppColors.primary, size: 28),
+                icon: Icon(
+                  _isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                  color: AppColors.primary,
+                  size: 38,
+                ),
                 onPressed: () => _toggleAudioPlayback(state.filePath),
               ),
               Expanded(
                 child: Slider(
-                  value: _playProgress,
+                  value: _duration.inMilliseconds > 0
+                      ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+                      : 0.0,
                   activeColor: AppColors.primary,
                   inactiveColor: AppColors.border,
                   onChanged: (val) {
@@ -616,7 +870,6 @@ class _RecordPageState extends State<RecordPage> {
 
   Widget _buildSubmitButton(BuildContext context, AudioRecordingState state) {
     final bloc = context.read<AudioRecordingBloc>();
-    final isUploading = state is AudioRecordingUploading || state is AudioRecordingJobPolling;
 
     return Container(
       width: double.infinity,
@@ -627,12 +880,10 @@ class _RecordPageState extends State<RecordPage> {
         ),
       ),
       child: ElevatedButton(
-        onPressed: isUploading
-            ? null
-            : () {
-                _audioPlayerService.stop();
-                bloc.add(AudioUploadEvent(recordingType: _currentRecordingType));
-              },
+        onPressed: () {
+          _audioPlayerService.stop();
+          bloc.add(AudioUploadEvent(recordingType: _currentRecordingType));
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           foregroundColor: AppColors.surface,
@@ -645,51 +896,6 @@ class _RecordPageState extends State<RecordPage> {
         child: Text(
           'Submit & Analyze Acoustic Signature (${_currentRecordingType.toUpperCase()})',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
-      ),
-    );
-  }
-
-  void _showProcessingDialog(BuildContext context, AudioRecordingState state) {
-    String msg = 'Processing audio...';
-    if (state is AudioRecordingUploading) msg = state.statusMessage;
-    if (state is AudioRecordingJobPolling) msg = state.statusMessage;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: AppColors.primary),
-                const SizedBox(height: 20),
-                Text(
-                  msg,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
-                ),
-                const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    context.read<AudioRecordingBloc>().add(const AudioCancelProcessingEvent());
-                    Navigator.of(dialogContext, rootNavigator: true).pop();
-                  },
-                  icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 18),
-                  label: const Text('Cancel Processing', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.error),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -750,6 +956,7 @@ class _RecordPageState extends State<RecordPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
+              context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
               context.go('/dashboard');
             },
             style: ElevatedButton.styleFrom(
