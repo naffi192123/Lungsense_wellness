@@ -322,19 +322,15 @@ class _DashboardPageState extends State<DashboardPage> {
       symptomScore = scoreVal;
     }
 
-    // 4. Heart Score
-    int? heartScore = _extractBreakdownScore(state.latestScore?.breakdown, ['heart_score', 'heart_rate_score', 'H']);
-    if (heartScore == null && state.audioAnalyses.isNotEmpty) {
-      final rate = state.audioAnalyses.first.breathingRate;
-      if (rate > 0) {
-        if (rate >= 12 && rate <= 20) {
-          heartScore = 90;
-        } else if (rate >= 10 && rate <= 24) {
-          heartScore = 75;
-        } else {
-          heartScore = 60;
-        }
-      }
+    // 4. Trend Score
+    int? trendScore = _extractBreakdownScore(state.latestScore?.breakdown, ['T', 'trend_score', 'trend', 'trend_score_val']);
+    if (trendScore == null && state.scoreHistory.length >= 2) {
+      final latest = state.scoreHistory.first.score;
+      final previous = state.scoreHistory[1].score;
+      final diff = latest - previous;
+      trendScore = (75 + diff * 2).clamp(0, 100).round();
+    } else if (trendScore == null && state.latestScore != null && state.latestScore!.score > 0) {
+      trendScore = state.latestScore!.score;
     }
 
     return Column(
@@ -380,10 +376,10 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildMetricCard(
-                title: 'Heart Score',
-                score: heartScore,
-                icon: Icons.favorite_rounded,
-                color: Colors.redAccent,
+                title: 'Trend Score',
+                score: trendScore,
+                icon: Icons.trending_up_rounded,
+                color: Colors.indigoAccent,
               ),
             ),
           ],
