@@ -31,7 +31,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _currentTabIndex = widget.initialTab;
-    // Always fetch fresh score and history from backend on open
+    // Full data fetch (score + logs + recordings + history) on app open
     context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
   }
 
@@ -60,7 +60,8 @@ class _DashboardPageState extends State<DashboardPage> {
           if (index == 1) {
             context.push('/record').then((_) {
               if (mounted) {
-                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                // After recording, fetch fresh score from GET /score/latest
+                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
             });
             return;
@@ -68,8 +69,11 @@ class _DashboardPageState extends State<DashboardPage> {
           setState(() {
             _currentTabIndex = index;
           });
-          if (index == 0 || index == 2) {
-            // Fresh refresh when switching to Home or History tab
+          if (index == 0) {
+            // Navigating to Home tab — lightweight score refresh only
+            context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+          } else if (index == 2) {
+            // History tab needs full data
             context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
           }
         },
@@ -123,13 +127,15 @@ class _DashboardPageState extends State<DashboardPage> {
     return BlocBuilder<WellnessBloc, WellnessState>(
       builder: (context, state) {
         final recentAudio = state.audioAnalyses;
-        final isLoading = state.status == WellnessStatus.loading;
+        final isLoading = state.status == WellnessStatus.loading ||
+            state.status == WellnessStatus.scoreLoading;
 
         return SafeArea(
           child: RefreshIndicator(
             color: AppColors.primary,
             onRefresh: () async {
-              context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+              // Pull-to-refresh always fetches latest score from GET /score/latest
+              context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -175,7 +181,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         onPressed: isLoading
                             ? null
                             : () {
-                                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                                // Refresh icon — always fetch latest score from GET /score/latest
+                                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
                               },
                       ),
                     ],
@@ -241,62 +248,23 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildLungsHealthScoreCard(WellnessState state) {
-    ScoreHistoryEntity? scoreEntity = state.latestScore ??
+    // Read score directly from backend latest score — single source of truth
+    final scoreEntity = state.latestScore ??
         (state.scoreHistory.isNotEmpty ? state.scoreHistory.first : null);
+    final displayScore = (scoreEntity?.score ?? 0) > 0 ? scoreEntity!.score : null;
+    final scoreTime = scoreEntity?.timestamp;
+    final trendScore = state.trendScore; // T component from backend breakdown
+    final baselineMsg = (state.baselineStatus?['message'] as String?);
 
-    int? displayScore = scoreEntity?.score;
-    DateTime? scoreTime = scoreEntity?.timestamp;
-
-    // If backend score is not yet computed or 0, check if we have symptom or audio logs to derive composite
-    if (displayScore == null || displayScore <= 0) {
-      int? coughScore = _extractBreakdownScore(scoreEntity?.breakdown, ['C', 'cough_score', 'cough', 'coughScore']);
-      if (coughScore == null && state.audioAnalyses.isNotEmpty) {
-        final coughAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
-        if (coughAudio != null) {
-          coughScore = coughAudio.lungsScore;
-          scoreTime ??= coughAudio.timestamp;
-        }
-      }
-
-      int? breathingScore = _extractBreakdownScore(scoreEntity?.breakdown, ['B', 'breathing_score', 'breathing', 'breathingScore']);
-      if (breathingScore == null && state.audioAnalyses.isNotEmpty) {
-        final breathingAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
-        if (breathingAudio != null) {
-          breathingScore = breathingAudio.lungsScore;
-          scoreTime ??= breathingAudio.timestamp;
-        }
-      }
-
-      int? symptomScore = _extractBreakdownScore(scoreEntity?.breakdown, ['S', 'symptom_score', 'symptom', 'symptomScore']);
-      if (symptomScore == null && state.dailyLogs.isNotEmpty) {
-        final latestLog = state.dailyLogs.first;
-        scoreTime ??= latestLog.timestamp;
-        final sumSymptoms = latestLog.breathlessness +
-            latestLog.activityLimitation +
-            latestLog.changeFromUsual +
-            latestLog.fever +
-            latestLog.chestTightness +
-            latestLog.chestDiscomfortBreathing +
-            latestLog.wheezing +
-            latestLog.coughSeverity +
-            latestLog.mucus +
-            latestLog.sleepDisruption;
-        symptomScore = (100 - (sumSymptoms / 30.0 * 100)).clamp(0, 100).round();
-      }
-
-      final validScores = [coughScore, breathingScore, symptomScore].whereType<int>().toList();
-      if (validScores.isNotEmpty) {
-        displayScore = (validScores.reduce((a, b) => a + b) / validScores.length).round();
-      }
-    }
-
-    final hasScore = displayScore != null && displayScore > 0;
+    final hasScore = displayScore != null;
     final finalScoreVal = hasScore ? displayScore : 0;
     final statusText = hasScore
         ? (finalScoreVal >= 80 ? 'EXCELLENT' : (finalScoreVal >= 60 ? 'FAIR' : 'ATTENTION'))
         : 'NO SCORE YET';
     final statusColor = hasScore
-        ? (finalScoreVal >= 80 ? AppColors.supportingGreen : (finalScoreVal >= 60 ? AppColors.secondary : AppColors.error))
+        ? (finalScoreVal >= 80
+            ? AppColors.supportingGreen
+            : (finalScoreVal >= 60 ? AppColors.secondary : AppColors.error))
         : AppColors.textSecondary;
 
     return Container(
@@ -344,11 +312,47 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 6),
           Text(
             hasScore
-                ? 'Score computed from your latest symptom and acoustic screening.'
+                ? (scoreEntity?.message ?? 'Score computed from your latest symptom and acoustic screening.')
                 : 'Complete your symptom check-in and audio recordings to compute today\'s score.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
+          // Trend Score chip — shown when T component is available from backend
+          if (trendScore != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.trending_up_rounded, size: 15, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Trend Score: $trendScore',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          // Baseline initializing message
+          if (!hasScore && baselineMsg != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              baselineMsg,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+            ),
+          ],
           if (hasScore && scoreTime != null) ...[
             const SizedBox(height: 12),
             Row(
@@ -369,67 +373,22 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildFourScoreCards(WellnessState state) {
-    // 1. Cough Score
-    int? coughScore = _extractBreakdownScore(state.latestScore?.breakdown, ['C', 'cough_score', 'cough', 'coughScore']);
-    DateTime? coughTime;
+    // All four component scores read directly from backend breakdown (C/B/S/T)
+    // Populated by WellnessBloc._parseComponentScores after GET /score/latest
+    final scoreTime = state.latestScore?.timestamp;
+
+    // Fallback timestamps from individual recordings/logs when available
+    DateTime? coughTime = scoreTime;
+    DateTime? breathingTime = scoreTime;
+    DateTime? symptomTime = scoreTime;
     if (state.audioAnalyses.isNotEmpty) {
       final coughAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
-      if (coughAudio != null) {
-        coughScore ??= coughAudio.lungsScore;
-        coughTime = coughAudio.timestamp;
-      }
+      if (coughAudio != null) coughTime = coughAudio.timestamp;
+      final breathAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
+      if (breathAudio != null) breathingTime = breathAudio.timestamp;
     }
-    coughTime ??= state.latestScore?.timestamp;
-
-    // 2. Breathing Score
-    int? breathingScore = _extractBreakdownScore(state.latestScore?.breakdown, ['B', 'breathing_score', 'breathing', 'breathingScore']);
-    DateTime? breathingTime;
-    if (state.audioAnalyses.isNotEmpty) {
-      final breathingAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
-      if (breathingAudio != null) {
-        breathingScore ??= breathingAudio.lungsScore;
-        breathingTime = breathingAudio.timestamp;
-      }
-    }
-    breathingTime ??= state.latestScore?.timestamp;
-
-    // 3. Symptom Score
-    int? symptomScore = _extractBreakdownScore(state.latestScore?.breakdown, ['S', 'symptom_score', 'symptom', 'symptomScore']);
-    DateTime? symptomTime;
     if (state.dailyLogs.isNotEmpty) {
-      final latestLog = state.dailyLogs.first;
-      symptomTime = latestLog.timestamp;
-      if (symptomScore == null) {
-        final sumSymptoms = latestLog.breathlessness +
-            latestLog.activityLimitation +
-            latestLog.changeFromUsual +
-            latestLog.fever +
-            latestLog.chestTightness +
-            latestLog.chestDiscomfortBreathing +
-            latestLog.wheezing +
-            latestLog.coughSeverity +
-            latestLog.mucus +
-            latestLog.sleepDisruption;
-        symptomScore = (100 - (sumSymptoms / 30.0 * 100)).clamp(0, 100).round();
-      }
-    }
-    symptomTime ??= state.latestScore?.timestamp;
-
-    // 4. Trend Score
-    int? trendScore = _extractBreakdownScore(state.latestScore?.breakdown, ['T', 'trend_score', 'trend', 'trend_score_val', 'trendScore']);
-    DateTime? trendTime = state.latestScore?.timestamp;
-    if (trendScore == null && state.scoreHistory.length >= 2) {
-      final latest = state.scoreHistory.first.score;
-      final previous = state.scoreHistory[1].score;
-      final diff = latest - previous;
-      trendScore = (75 + diff * 2).clamp(0, 100).round();
-      trendTime = state.scoreHistory.first.timestamp;
-    } else if (trendScore == null && state.latestScore != null && state.latestScore!.score > 0) {
-      trendScore = state.latestScore!.score;
-      trendTime = state.latestScore!.timestamp;
-    } else if (trendScore == null && symptomScore != null && symptomScore > 0) {
-      trendScore = symptomScore;
-      trendTime = symptomTime;
+      symptomTime = state.dailyLogs.first.timestamp;
     }
 
     return Column(
@@ -445,7 +404,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: _buildMetricCard(
                 title: 'Cough Score',
-                score: coughScore,
+                score: state.coughScore,
                 timestamp: coughTime,
                 icon: Icons.sick_outlined,
                 color: AppColors.primary,
@@ -455,7 +414,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: _buildMetricCard(
                 title: 'Breathing Score',
-                score: breathingScore,
+                score: state.breathingScore,
                 timestamp: breathingTime,
                 icon: Icons.air_rounded,
                 color: AppColors.supportingGreen,
@@ -469,7 +428,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: _buildMetricCard(
                 title: 'Symptom Score',
-                score: symptomScore,
+                score: state.symptomScore,
                 timestamp: symptomTime,
                 icon: Icons.assignment_turned_in_outlined,
                 color: Colors.amber.shade800,
@@ -479,8 +438,8 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: _buildMetricCard(
                 title: 'Trend Score',
-                score: trendScore,
-                timestamp: trendTime,
+                score: state.trendScore,
+                timestamp: scoreTime,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
               ),
@@ -586,30 +545,8 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  int? _extractBreakdownScore(Map<String, dynamic>? breakdown, List<String> keys) {
-    if (breakdown == null) return null;
-    for (final k in keys) {
-      if (breakdown.containsKey(k) && breakdown[k] != null) {
-        final val = breakdown[k];
-        if (val is num && val > 0) return val.round();
-        if (val is String) {
-          final parsed = num.tryParse(val);
-          if (parsed != null && parsed > 0) return parsed.round();
-        }
-      }
-      for (final entry in breakdown.entries) {
-        if (entry.key.toLowerCase() == k.toLowerCase() && entry.value != null) {
-          final val = entry.value;
-          if (val is num && val > 0) return val.round();
-          if (val is String) {
-            final parsed = num.tryParse(val);
-            if (parsed != null && parsed > 0) return parsed.round();
-          }
-        }
-      }
-    }
-    return null;
-  }
+  // _extractBreakdownScore removed — scores are now parsed centrally in
+  // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
   Widget _buildQuickActionsGrid() {
     return Row(
@@ -623,7 +560,8 @@ class _DashboardPageState extends State<DashboardPage> {
             onTap: () async {
               await context.push('/record');
               if (mounted) {
-                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                // After recording, fetch fresh score from GET /score/latest
+                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
             },
           ),
@@ -638,7 +576,8 @@ class _DashboardPageState extends State<DashboardPage> {
             onTap: () async {
               await context.push('/daily-log');
               if (mounted) {
-                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                // After symptom log, fetch fresh score from GET /score/latest
+                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
             },
           ),
