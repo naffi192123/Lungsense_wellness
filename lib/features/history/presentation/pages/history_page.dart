@@ -18,23 +18,29 @@ class HistoryPage extends StatelessWidget {
         final List<_HistoryItemWrapper> allHistory = [];
 
         for (var audio in state.audioAnalyses) {
+          final isComplete = audio.status.toLowerCase() == 'complete';
+          final isFailed = audio.status.toLowerCase() == 'failed';
+          final statusLabel = isComplete ? 'Completed' : (isFailed ? 'Failed' : 'Processing...');
+
           allHistory.add(_HistoryItemWrapper(
             type: 'audio',
             id: audio.id,
             title: audio.title.isNotEmpty ? audio.title : '${audio.type} Recording',
-            subtitle: '${audio.duration}s acoustic session',
+            subtitle: '${audio.duration}s session • $statusLabel',
             timestamp: audio.timestamp,
-            score: audio.lungsScore,
+            score: isComplete ? audio.lungsScore : null,
             data: audio,
           ));
         }
 
         for (var log in state.dailyLogs) {
+          final cough = log.coughSeverity.toInt();
+          final breath = log.breathlessness.toInt();
           allHistory.add(_HistoryItemWrapper(
             type: 'checkin',
             id: log.id,
             title: 'Symptom Check-in',
-            subtitle: 'Cough: ${log.coughSeverity.toInt()} | Breathlessness: ${log.breathlessness.toInt()}',
+            subtitle: 'Cough: $cough/3 • Breathlessness: $breath/3',
             timestamp: log.timestamp,
             score: null,
             data: log,
@@ -46,7 +52,7 @@ class HistoryPage extends StatelessWidget {
             type: 'score',
             id: score.id,
             title: 'Lung Wellness Score',
-            subtitle: 'Band: ${score.band.toUpperCase()}',
+            subtitle: 'Health Band: ${score.band.toUpperCase()}',
             timestamp: score.timestamp,
             score: score.score,
             data: score,

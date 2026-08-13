@@ -22,11 +22,50 @@ class WellnessRepositoryImpl implements WellnessRepository {
 
   @override
   Future<void> saveDailyLog(DailyLogEntity log) async {
-    final map = _dailyLogToMap(log);
-    await checkInBox.put(log.id, map);
-
+    // 1. Submit to backend checkin API
+    String savedId = log.id;
+    DateTime savedTime = log.timestamp;
     if (dailyLogRemoteDataSource != null) {
-      await dailyLogRemoteDataSource!.createCheckIn(log);
+      try {
+        final remote = await dailyLogRemoteDataSource!.createCheckIn(log);
+        savedId = remote.id;
+        savedTime = remote.timestamp;
+      } catch (_) {}
+    }
+
+    final entityToSave = DailyLogEntity(
+      id: savedId,
+      checkinDate: log.checkinDate,
+      breathlessness: log.breathlessness,
+      activityLimitation: log.activityLimitation,
+      changeFromUsual: log.changeFromUsual,
+      fever: log.fever,
+      chestTightness: log.chestTightness,
+      chestDiscomfortBreathing: log.chestDiscomfortBreathing,
+      wheezing: log.wheezing,
+      coughSeverity: log.coughSeverity,
+      mucus: log.mucus,
+      sleepDisruption: log.sleepDisruption,
+      chestPain: log.chestPain,
+      smokedToday: log.smokedToday,
+      exerciseMinutes: log.exerciseMinutes,
+      sleepHours: log.sleepHours,
+      waterIntakeLiters: log.waterIntakeLiters,
+      timestamp: savedTime,
+    );
+
+    // 2. Persist locally in checkInBox
+    await checkInBox.put(entityToSave.id, _dailyLogToMap(entityToSave));
+
+    // 3. Automatically trigger backend score computation
+    if (scoreRemoteDataSource != null) {
+      try {
+        await scoreRemoteDataSource!.computeScore();
+      } catch (_) {}
+      try {
+        await getLatestScore();
+        await getScoreHistory(limit: 30);
+      } catch (_) {}
     }
   }
 
@@ -34,29 +73,33 @@ class WellnessRepositoryImpl implements WellnessRepository {
   Future<List<DailyLogEntity>> getDailyLogs() async {
     if (dailyLogRemoteDataSource != null) {
       try {
-        final remoteLogs = await dailyLogRemoteDataSource!.getCheckIns();
-        for (var remote in remoteLogs) {
-          final now = remote.timestamp;
-          final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+        final rawCheckIns = await dailyLogRemoteDataSource!.getRawCheckIns();
+        for (var raw in rawCheckIns) {
+          final id = raw['id'] as String? ?? '';
+          if (id.isEmpty) continue;
+          final createdStr = raw['created_at']?.toString();
+          final dt = createdStr != null ? DateTime.tryParse(createdStr) ?? DateTime.now() : DateTime.now();
+          final dateStr = raw['checkin_date'] as String? ?? "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+
           final entity = DailyLogEntity(
-            id: remote.id,
+            id: id,
             checkinDate: dateStr,
-            breathlessness: remote.shortnessOfBreath.toDouble(),
-            activityLimitation: remote.fatigueLevel.toDouble(),
-            changeFromUsual: 3,
-            fever: 0,
-            chestTightness: 0,
-            chestDiscomfortBreathing: 0,
-            wheezing: 0,
-            coughSeverity: remote.coughSeverity.toDouble(),
-            mucus: 0,
-            sleepDisruption: 0,
-            chestPain: 0,
-            smokedToday: false,
-            exerciseMinutes: 30,
-            sleepHours: 8.0,
-            waterIntakeLiters: 2.0,
-            timestamp: remote.timestamp,
+            breathlessness: _toDouble(raw['breathlessness'] ?? raw['shortness_of_breath']),
+            activityLimitation: _toDouble(raw['activity_limitation'] ?? raw['fatigue_level']),
+            changeFromUsual: _toDouble(raw['change_from_usual'] ?? 0),
+            fever: _toDouble(raw['fever'] ?? 0),
+            chestTightness: _toDouble(raw['chest_tightness'] ?? 0),
+            chestDiscomfortBreathing: _toDouble(raw['chest_discomfort_breathing'] ?? 0),
+            wheezing: _toDouble(raw['wheezing'] ?? 0),
+            coughSeverity: _toDouble(raw['cough_severity'] ?? 0),
+            mucus: _toDouble(raw['mucus'] ?? 0),
+            sleepDisruption: _toDouble(raw['sleep_disruption'] ?? 0),
+            chestPain: _toDouble(raw['chest_pain'] ?? 0),
+            smokedToday: _toBool(raw['smoked_today'] ?? raw['smoking']),
+            exerciseMinutes: _toDouble(raw['exercise_minutes'] ?? 30),
+            sleepHours: _toDouble(raw['sleep_hours'] ?? 8.0),
+            waterIntakeLiters: _toDouble(raw['water_intake_liters'] ?? raw['hydration_liters'] ?? 2.0),
+            timestamp: dt,
           );
           await checkInBox.put(entity.id, _dailyLogToMap(entity));
         }
@@ -76,8 +119,20 @@ class WellnessRepositoryImpl implements WellnessRepository {
 
   @override
   Future<void> saveAudioAnalysis(AudioAnalysisEntity analysis) async {
+    // 1. Persist recording entry into recordingsBox
     final map = _audioAnalysisToMap(analysis);
     await recordingsBox.put(analysis.id, map);
+
+    // 2. When complete, compute full Lung Wellness Score
+    if (analysis.status.toLowerCase() == 'complete' && scoreRemoteDataSource != null) {
+      try {
+        await scoreRemoteDataSource!.computeScore();
+      } catch (_) {}
+      try {
+        await getLatestScore();
+        await getScoreHistory(limit: 30);
+      } catch (_) {}
+    }
   }
 
   @override
@@ -159,7 +214,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
       try {
         final remote = await scoreRemoteDataSource!.getLatestScore();
         if (remote != null) {
-          return ScoreHistoryEntity(
+          final entity = ScoreHistoryEntity(
             id: remote['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
             score: (remote['score'] as num?)?.toInt() ?? (remote['final_score'] as num?)?.toInt() ?? 0,
             band: remote['band'] as String? ?? 'good',
@@ -169,6 +224,19 @@ class WellnessRepositoryImpl implements WellnessRepository {
             baselineStatus: remote['baseline_status'] as String?,
             timestamp: remote['created_at'] != null ? DateTime.tryParse(remote['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
           );
+          if (scoreBox != null) {
+            await scoreBox!.put('latest', {
+              'id': entity.id,
+              'score': entity.score,
+              'band': entity.band,
+              'message': entity.message,
+              'breakdown': entity.breakdown,
+              'sessionNumber': entity.sessionNumber,
+              'baselineStatus': entity.baselineStatus,
+              'timestamp': entity.timestamp.toIso8601String(),
+            });
+          }
+          return entity;
         }
       } catch (_) {}
     }
@@ -254,6 +322,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
       'id': analysis.id,
       'title': analysis.title,
       'type': analysis.type,
+      'status': analysis.status,
       'duration': analysis.duration,
       'confidence': analysis.confidence,
       'lungsScore': analysis.lungsScore,
@@ -265,6 +334,14 @@ class WellnessRepositoryImpl implements WellnessRepository {
       'backgroundNoise': analysis.backgroundNoise,
       'timestamp': analysis.timestamp.toIso8601String(),
       'tags': analysis.tags,
+      'localAudioPath': analysis.localAudioPath,
+      'jobId': analysis.jobId,
+      'qualityScore': analysis.qualityScore,
+      'dominantFrequencyHz': analysis.dominantFrequencyHz,
+      'rmsEnergy': analysis.rmsEnergy,
+      'classification': analysis.classification,
+      'errorMessage': analysis.errorMessage,
+      'spectralSummary': analysis.spectralSummary,
     };
   }
 
@@ -273,6 +350,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
       id: map['id'] as String? ?? '',
       title: map['title'] as String? ?? '',
       type: map['type'] as String? ?? '',
+      status: map['status'] as String? ?? 'complete',
       duration: (map['duration'] as num?)?.toInt() ?? 0,
       confidence: (map['confidence'] as num?)?.toInt() ?? 0,
       lungsScore: (map['lungsScore'] as num?)?.toInt() ?? 0,
@@ -282,8 +360,16 @@ class WellnessRepositoryImpl implements WellnessRepository {
       rhythm: map['rhythm'] as String? ?? '',
       signalQuality: map['signalQuality'] as String? ?? '',
       backgroundNoise: map['backgroundNoise'] as String? ?? '',
-      timestamp: DateTime.parse(map['timestamp'] as String),
+      timestamp: map['timestamp'] != null ? DateTime.tryParse(map['timestamp']) ?? DateTime.now() : DateTime.now(),
       tags: List<String>.from(map['tags'] ?? []),
+      localAudioPath: map['localAudioPath'] as String?,
+      jobId: map['jobId'] as String?,
+      qualityScore: (map['qualityScore'] as num?)?.toDouble(),
+      dominantFrequencyHz: (map['dominantFrequencyHz'] as num?)?.toDouble(),
+      rmsEnergy: (map['rmsEnergy'] as num?)?.toDouble(),
+      classification: map['classification'] as String?,
+      errorMessage: map['errorMessage'] as String?,
+      spectralSummary: map['spectralSummary'] is Map ? Map<String, dynamic>.from(map['spectralSummary']) : null,
     );
   }
 }

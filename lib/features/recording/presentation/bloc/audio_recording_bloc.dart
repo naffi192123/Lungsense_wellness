@@ -297,7 +297,11 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
         (job) {
           if (_isProcessingCancelled) return;
           if (job.isCompleted) {
-            emit(AudioRecordingSuccess(job: job));
+            emit(AudioRecordingSuccess(
+              job: job,
+              filePath: filePath,
+              recordingType: recordingType,
+            ));
             isDone = true;
           } else if (job.isFailed) {
             emit(AudioRecordingFailure(

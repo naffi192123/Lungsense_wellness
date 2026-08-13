@@ -70,6 +70,7 @@ class AudioAnalysisEntity extends Equatable {
   final String id;
   final String title;
   final String type; // Cough or Breathing
+  final String status; // complete, processing, failed
   final int duration; // in seconds
   final int confidence; // percentage (e.g. 98%)
   final int lungsScore; // e.g. 89
@@ -81,11 +82,20 @@ class AudioAnalysisEntity extends Equatable {
   final String backgroundNoise; // Low, etc.
   final DateTime timestamp;
   final List<String> tags;
+  final String? localAudioPath;
+  final String? jobId;
+  final double? qualityScore;
+  final double? dominantFrequencyHz;
+  final double? rmsEnergy;
+  final String? classification;
+  final String? errorMessage;
+  final Map<String, dynamic>? spectralSummary;
 
   const AudioAnalysisEntity({
     required this.id,
     required this.title,
     required this.type,
+    this.status = 'complete',
     required this.duration,
     required this.confidence,
     required this.lungsScore,
@@ -97,6 +107,14 @@ class AudioAnalysisEntity extends Equatable {
     required this.backgroundNoise,
     required this.timestamp,
     required this.tags,
+    this.localAudioPath,
+    this.jobId,
+    this.qualityScore,
+    this.dominantFrequencyHz,
+    this.rmsEnergy,
+    this.classification,
+    this.errorMessage,
+    this.spectralSummary,
   });
 
   @override
@@ -104,6 +122,7 @@ class AudioAnalysisEntity extends Equatable {
         id,
         title,
         type,
+        status,
         duration,
         confidence,
         lungsScore,
@@ -115,6 +134,14 @@ class AudioAnalysisEntity extends Equatable {
         backgroundNoise,
         timestamp,
         tags,
+        localAudioPath,
+        jobId,
+        qualityScore,
+        dominantFrequencyHz,
+        rmsEnergy,
+        classification,
+        errorMessage,
+        spectralSummary,
       ];
 }
 

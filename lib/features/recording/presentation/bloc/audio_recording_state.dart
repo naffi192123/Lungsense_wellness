@@ -83,11 +83,17 @@ class AudioRecordingJobPolling extends AudioRecordingState {
 
 class AudioRecordingSuccess extends AudioRecordingState {
   final AudioJobEntity job;
+  final String? filePath;
+  final String? recordingType;
 
-  const AudioRecordingSuccess({required this.job});
+  const AudioRecordingSuccess({
+    required this.job,
+    this.filePath,
+    this.recordingType,
+  });
 
   @override
-  List<Object?> get props => [job];
+  List<Object?> get props => [job, filePath, recordingType];
 }
 
 class AudioRecordingFailure extends AudioRecordingState {

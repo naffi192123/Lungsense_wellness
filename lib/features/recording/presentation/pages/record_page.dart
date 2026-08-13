@@ -905,22 +905,32 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
     final job = state.job;
     final qualityScore = ((job.qualityScore ?? 0.95) * 100).toInt();
     final classification = job.classification ?? 'Optimal Respiratory Sound';
+    final typeName = (state.recordingType ?? _currentRecordingType).toLowerCase() == 'cough' ? 'Cough' : 'Breathing';
+    final audioPath = state.filePath;
 
     final analysisEntity = AudioAnalysisEntity(
       id: job.jobId,
-      title: 'Acoustic Signature Analysis',
-      type: _currentRecordingType.toUpperCase(),
+      title: '$typeName Recording',
+      type: typeName,
+      status: job.status.toLowerCase(),
       duration: (job.durationSeconds ?? 12).toInt(),
       confidence: qualityScore,
       lungsScore: qualityScore,
-      insight: 'Acoustic parameters processed: Breathing Rate = ${job.breathingRateBpm ?? 16} BPM, Frequency = ${job.dominantFrequencyHz ?? 440} Hz, Classification = $classification.',
+      insight: 'Acoustic parameters processed: Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
       intensity: 'Normal',
-      breathingRate: (job.breathingRateBpm ?? 16).toInt(),
+      breathingRate: (job.breathingRateBpm ?? 0).toInt(),
       rhythm: classification,
-      signalQuality: 'Quality score: $qualityScore%',
+      signalQuality: 'Quality: $qualityScore%',
       backgroundNoise: 'Low',
       timestamp: DateTime.now(),
       tags: ['FastAPI Engine', classification],
+      localAudioPath: audioPath,
+      jobId: job.jobId,
+      qualityScore: job.qualityScore,
+      dominantFrequencyHz: job.dominantFrequencyHz,
+      rmsEnergy: job.rmsEnergy,
+      classification: classification,
+      spectralSummary: job.spectralSummary,
     );
 
     context.read<WellnessBloc>().add(WellnessSaveAudioAnalysisEvent(analysisEntity));

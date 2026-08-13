@@ -170,10 +170,17 @@ abstract class AppRouter {
         path: historyDetailsPath,
         name: historyDetailsName,
         builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Map) {
+            return HistoryDetailPage(
+              logType: extra['logType'] as String? ?? 'checkin',
+              itemData: extra['itemData'],
+            );
+          }
           final logType = state.uri.queryParameters['type'] ?? 'checkin';
           return HistoryDetailPage(
             logType: logType,
-            itemData: state.extra,
+            itemData: extra,
           );
         },
       ),

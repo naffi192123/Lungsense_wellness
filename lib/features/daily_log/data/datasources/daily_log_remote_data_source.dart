@@ -9,6 +9,8 @@ abstract class DailyLogRemoteDataSource {
 
   Future<List<DailyCheckInEntity>> getCheckIns();
 
+  Future<List<Map<String, dynamic>>> getRawCheckIns();
+
   Future<Map<String, dynamic>> getSymptomScore();
 }
 
@@ -85,6 +87,20 @@ class DailyLogRemoteDataSourceImpl implements DailyLogRemoteDataSource {
       } else {
         return [];
       }
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRawCheckIns() async {
+    try {
+      final response = await apiClient.get('/checkins');
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return [];
     } catch (_) {
       return [];
     }
