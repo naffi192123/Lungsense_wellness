@@ -2,31 +2,29 @@ import 'dart:convert';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
 
-/// Contract for backend Lung Wellness Score endpoints.
 abstract class ScoreRemoteDataSource {
-  /// Compute today's full score from latest check-in and acoustic features.
+  /// Invokes backend score computation algorithm based on recent acoustic & check-in inputs.
   Future<Map<String, dynamic>> computeScore();
 
-  /// Finalize screening session and advance baseline counter once.
+  /// Finalizes the daily screening session and logs a completed record.
   Future<void> completeSession();
 
-  /// Get single most recent wellness score for the dashboard dial.
+  /// Fetches the most recent Lung Wellness Score object for the active user.
   Future<Map<String, dynamic>?> getLatestScore();
 
-  /// Get paginated wellness score history for trends and charts.
+  /// Fetches historical Lung Wellness Score entries.
   Future<List<Map<String, dynamic>>> getScoreHistory({int limit = 30, int offset = 0});
 
-  /// Get baseline status and progress message.
+  /// Fetches personal baseline status and progress.
   Future<Map<String, dynamic>> getBaselineStatus();
 
-  /// Get symptom score for a specific date (or today).
+  /// Fetches symptom-specific score.
   Future<Map<String, dynamic>> getSymptomScore({String? date});
 
-  /// Get score band legend.
+  /// Fetches the visual classification bands legend.
   Future<Map<String, dynamic>> getScoreBands();
 }
 
-/// Implementation of ScoreRemoteDataSource calling FastAPI endpoints.
 class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
   final ApiClient apiClient;
 
@@ -36,8 +34,19 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
   Future<Map<String, dynamic>> computeScore() async {
     try {
       final response = await apiClient.post('/score/compute');
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        if (decoded is String && decoded.isNotEmpty && decoded != 'null') {
+          try {
+            final inner = jsonDecode(decoded);
+            if (inner is Map) return Map<String, dynamic>.from(inner);
+          } catch (_) {
+            return {};
+          }
+        }
+        return {};
       } else {
         final data = jsonDecode(response.body);
         final detail = data['detail'];
@@ -70,11 +79,13 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
       final response = await apiClient.get('/score/latest');
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        if (decoded == null) return null;
+        if (decoded == null || decoded == 'null') return null;
         if (decoded is Map<String, dynamic>) return decoded;
-        if (decoded is String && decoded.isNotEmpty) {
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        if (decoded is String && decoded.isNotEmpty && decoded != 'null') {
           try {
-            return jsonDecode(decoded) as Map<String, dynamic>;
+            final inner = jsonDecode(decoded);
+            if (inner is Map) return Map<String, dynamic>.from(inner);
           } catch (_) {
             return null;
           }
@@ -111,6 +122,7 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
       }
       return {'status': 'initializing', 'message': 'Complete sessions to activate trend scoring.'};
     } catch (_) {
@@ -121,11 +133,12 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
   @override
   Future<Map<String, dynamic>> getSymptomScore({String? date}) async {
     try {
-      final query = date != null ? '?on=$date' : '';
+      final query = date != null ? '?date=$date' : '';
       final response = await apiClient.get('/score/symptom$query');
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
       }
       return {'symptom_score': 0, 'band': 'neutral'};
     } catch (_) {
@@ -140,6 +153,7 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
       }
       return {};
     } catch (_) {

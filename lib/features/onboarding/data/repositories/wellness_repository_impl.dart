@@ -60,7 +60,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
     // 2. Persist locally in checkInBox
     await checkInBox.put(entityToSave.id, _dailyLogToMap(entityToSave));
 
-    // 3. Automatically trigger backend score computation
+    // 3. Automatically trigger backend score computation via POST /score/compute
     if (scoreRemoteDataSource != null) {
       try {
         await scoreRemoteDataSource!.computeScore();
@@ -126,7 +126,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
     final map = _audioAnalysisToMap(analysis);
     await recordingsBox.put(analysis.id, map);
 
-    // 2. When complete, compute full Lung Wellness Score
+    // 2. When complete, compute full Lung Wellness Score via POST /score/compute
     if (analysis.status.toLowerCase() == 'complete' && scoreRemoteDataSource != null) {
       try {
         await scoreRemoteDataSource!.computeScore();
@@ -206,12 +206,19 @@ class WellnessRepositoryImpl implements WellnessRepository {
         final remote = await scoreRemoteDataSource!.getScoreHistory(limit: limit, offset: offset);
         final List<ScoreHistoryEntity> result = [];
         for (var item in remote) {
+          final rawScore = item['score'] ?? item['final_score'] ?? item['wellness_score'] ?? item['total_score'];
+          final intScore = rawScore != null
+              ? (rawScore is num ? rawScore.toInt() : int.tryParse(rawScore.toString()) ?? 0)
+              : 0;
+
           final entity = ScoreHistoryEntity(
             id: item['id'] as String? ?? item['created_at']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-            score: (item['score'] as num?)?.toInt() ?? (item['final_score'] as num?)?.toInt() ?? 0,
+            score: intScore,
             band: item['band'] as String? ?? 'good',
             message: item['message'] as String?,
-            breakdown: item['breakdown'] is Map ? Map<String, dynamic>.from(item['breakdown']) : null,
+            breakdown: item['breakdown'] is Map
+                ? Map<String, dynamic>.from(item['breakdown'])
+                : (item['components'] is Map ? Map<String, dynamic>.from(item['components']) : null),
             sessionNumber: (item['session_number'] as num?)?.toInt(),
             baselineStatus: item['baseline_status'] as String?,
             timestamp: item['created_at'] != null ? DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
@@ -263,17 +270,36 @@ class WellnessRepositoryImpl implements WellnessRepository {
   Future<ScoreHistoryEntity?> getLatestScore() async {
     if (scoreRemoteDataSource != null) {
       try {
-        final remote = await scoreRemoteDataSource!.getLatestScore();
+        var remote = await scoreRemoteDataSource!.getLatestScore();
+        if (remote == null || (remote['score'] == null && remote['final_score'] == null && remote['wellness_score'] == null)) {
+          // If no score computed yet on backend, try computing via POST /score/compute
+          try {
+            final computed = await scoreRemoteDataSource!.computeScore();
+            if (computed.isNotEmpty && (computed['score'] != null || computed['final_score'] != null || computed['wellness_score'] != null)) {
+              remote = computed;
+            }
+          } catch (_) {}
+        }
+
         if (remote != null) {
+          final rawScore = remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score'];
+          final intScore = rawScore != null
+              ? (rawScore is num ? rawScore.toInt() : int.tryParse(rawScore.toString()) ?? 0)
+              : 0;
+
           final entity = ScoreHistoryEntity(
             id: remote['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
-            score: (remote['score'] as num?)?.toInt() ?? (remote['final_score'] as num?)?.toInt() ?? 0,
+            score: intScore,
             band: remote['band'] as String? ?? 'good',
             message: remote['message'] as String?,
-            breakdown: remote['breakdown'] is Map ? Map<String, dynamic>.from(remote['breakdown']) : null,
+            breakdown: remote['breakdown'] is Map
+                ? Map<String, dynamic>.from(remote['breakdown'])
+                : (remote['components'] is Map ? Map<String, dynamic>.from(remote['components']) : null),
             sessionNumber: (remote['session_number'] as num?)?.toInt(),
             baselineStatus: remote['baseline_status'] as String?,
-            timestamp: remote['created_at'] != null ? DateTime.tryParse(remote['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+            timestamp: remote['created_at'] != null
+                ? DateTime.tryParse(remote['created_at'].toString()) ?? DateTime.now()
+                : (remote['timestamp'] != null ? DateTime.tryParse(remote['timestamp'].toString()) ?? DateTime.now() : DateTime.now()),
           );
           if (scoreBox != null) {
             await scoreBox!.put('latest', {
