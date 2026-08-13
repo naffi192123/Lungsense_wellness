@@ -287,14 +287,28 @@ class WellnessRepositoryImpl implements WellnessRepository {
               ? (rawScore is num ? rawScore.toInt() : int.tryParse(rawScore.toString()) ?? 0)
               : 0;
 
+          final breakdownMap = <String, dynamic>{};
+          if (remote['breakdown'] is Map) {
+            breakdownMap.addAll(Map<String, dynamic>.from(remote['breakdown']));
+          }
+          if (remote['components'] is Map) {
+            breakdownMap.addAll(Map<String, dynamic>.from(remote['components']));
+          }
+          if (remote['scores'] is Map) {
+            breakdownMap.addAll(Map<String, dynamic>.from(remote['scores']));
+          }
+          for (var key in ['C', 'B', 'S', 'T', 'cough_score', 'breathing_score', 'symptom_score', 'trend_score', 'coughScore', 'breathingScore', 'symptomScore', 'trendScore']) {
+            if (remote[key] != null) {
+              breakdownMap[key] = remote[key];
+            }
+          }
+
           final entity = ScoreHistoryEntity(
             id: remote['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
             score: intScore,
             band: remote['band'] as String? ?? 'good',
             message: remote['message'] as String?,
-            breakdown: remote['breakdown'] is Map
-                ? Map<String, dynamic>.from(remote['breakdown'])
-                : (remote['components'] is Map ? Map<String, dynamic>.from(remote['components']) : null),
+            breakdown: breakdownMap.isNotEmpty ? breakdownMap : null,
             sessionNumber: (remote['session_number'] as num?)?.toInt(),
             baselineStatus: remote['baseline_status'] as String?,
             timestamp: remote['created_at'] != null

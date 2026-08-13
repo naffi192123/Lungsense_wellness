@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../onboarding/domain/entities/wellness_entities.dart';
 import '../../../onboarding/domain/repositories/wellness_repository.dart';
 import 'wellness_event.dart';
 import 'wellness_state.dart';
@@ -41,19 +42,25 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
         _repository.getBaselineStatus(),
       ]);
 
-      final logs = results[0] as List;
-      final analyses = results[1] as List;
-      final scoreHistory = results[2] as List;
+      final logs = (results[0] as List).cast<DailyLogEntity>();
+      final analyses = (results[1] as List).cast<AudioAnalysisEntity>();
+      final scoreHistory = (results[2] as List).cast<ScoreHistoryEntity>();
       final baselineStatus = results[3] as Map<String, dynamic>?;
+
+      final fullComponentScores = _parseComponentScores(
+        latestScore?.breakdown,
+        dailyLogs: logs,
+        audioAnalyses: analyses,
+      );
 
       emit(state.copyWith(
         status: WellnessStatus.success,
-        dailyLogs: logs.cast(),
-        audioAnalyses: analyses.cast(),
-        scoreHistory: scoreHistory.cast(),
+        dailyLogs: logs,
+        audioAnalyses: analyses,
+        scoreHistory: scoreHistory,
         latestScore: latestScore,
         baselineStatus: baselineStatus,
-        componentScores: componentScores,
+        componentScores: fullComponentScores,
       ));
     } catch (e) {
       emit(state.copyWith(status: WellnessStatus.error, errorMessage: e.toString()));
@@ -85,9 +92,12 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
 
       // Fetch fresh score after computation (POST /score/compute is triggered inside saveDailyLog)
       final latestScore = await _repository.getLatestScore();
-      final componentScores = _parseComponentScores(latestScore?.breakdown);
       final logs = await _repository.getDailyLogs();
       final scoreHistory = await _repository.getScoreHistory(limit: 30);
+      final componentScores = _parseComponentScores(
+        latestScore?.breakdown,
+        dailyLogs: logs,
+      );
 
       emit(state.copyWith(
         status: WellnessStatus.saveSuccess,
@@ -108,9 +118,12 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
 
       // Fetch fresh score after computation (POST /score/compute is triggered inside saveAudioAnalysis)
       final latestScore = await _repository.getLatestScore();
-      final componentScores = _parseComponentScores(latestScore?.breakdown);
       final analyses = await _repository.getAudioAnalyses();
       final scoreHistory = await _repository.getScoreHistory(limit: 30);
+      final componentScores = _parseComponentScores(
+        latestScore?.breakdown,
+        audioAnalyses: analyses,
+      );
 
       emit(state.copyWith(
         status: WellnessStatus.saveSuccess,
@@ -126,23 +139,94 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
 
   /// Parses the C/B/S/T component scores from backend breakdown map.
   /// Handles both integer and nested object formats.
-  Map<String, int> _parseComponentScores(Map<String, dynamic>? breakdown) {
-    if (breakdown == null || breakdown.isEmpty) return {};
+  Map<String, int> _parseComponentScores(
+    Map<String, dynamic>? breakdown, {
+    List<DailyLogEntity>? dailyLogs,
+    List<AudioAnalysisEntity>? audioAnalyses,
+  }) {
     final result = <String, int>{};
-    for (final key in ['C', 'B', 'S', 'T']) {
-      final val = breakdown[key];
-      if (val == null) continue;
-      if (val is num) {
-        result[key] = val.toInt();
-      } else if (val is Map) {
-        // Some backends return {"score": 77, "band": "fair"} per component
-        final inner = val['score'] ?? val['value'];
-        if (inner is num) result[key] = inner.toInt();
-      } else if (val is String) {
-        final parsed = int.tryParse(val);
-        if (parsed != null) result[key] = parsed;
+
+    int? extractVal(dynamic val) {
+      if (val == null) return null;
+      if (val is num && val > 0) return val.toInt();
+      if (val is Map) {
+        final inner = val['score'] ?? val['value'] ?? val['score_val'];
+        if (inner is num && inner > 0) return inner.toInt();
+        if (inner is String) {
+          final p = int.tryParse(inner);
+          if (p != null && p > 0) return p;
+        }
+      }
+      if (val is String) {
+        final p = int.tryParse(val);
+        if (p != null && p > 0) return p;
+      }
+      return null;
+    }
+
+    if (breakdown != null && breakdown.isNotEmpty) {
+      final keyAliases = {
+        'C': ['C', 'cough', 'cough_score', 'coughScore', 'cough_wellness_score'],
+        'B': ['B', 'breathing', 'breathing_score', 'breathingScore', 'breathing_wellness_score'],
+        'S': ['S', 'symptom', 'symptom_score', 'symptomScore', 'daily_checkin_score'],
+        'T': ['T', 'trend', 'trend_score', 'trendScore', 'trend_score_val'],
+      };
+
+      for (final compKey in ['C', 'B', 'S', 'T']) {
+        final aliases = keyAliases[compKey]!;
+        for (final alias in aliases) {
+          if (breakdown.containsKey(alias)) {
+            final v = extractVal(breakdown[alias]);
+            if (v != null) {
+              result[compKey] = v;
+              break;
+            }
+          }
+        }
       }
     }
+
+    // Fallbacks if backend component scores are uncomputed or null:
+    final logs = dailyLogs ?? state.dailyLogs;
+    final analyses = audioAnalyses ?? state.audioAnalyses;
+
+    // 1. Cough Score
+    if (!result.containsKey('C') && analyses.isNotEmpty) {
+      final coughAudio = analyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
+      if (coughAudio != null && coughAudio.lungsScore > 0) {
+        result['C'] = coughAudio.lungsScore;
+      }
+    }
+
+    // 2. Breathing Score
+    if (!result.containsKey('B') && analyses.isNotEmpty) {
+      final breathAudio = analyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
+      if (breathAudio != null && breathAudio.lungsScore > 0) {
+        result['B'] = breathAudio.lungsScore;
+      }
+    }
+
+    // 3. Symptom Score
+    if (!result.containsKey('S') && logs.isNotEmpty) {
+      final latestLog = logs.first;
+      final sumSymptoms = latestLog.breathlessness +
+          latestLog.activityLimitation +
+          latestLog.changeFromUsual +
+          latestLog.fever +
+          latestLog.chestTightness +
+          latestLog.chestDiscomfortBreathing +
+          latestLog.wheezing +
+          latestLog.coughSeverity +
+          latestLog.mucus +
+          latestLog.sleepDisruption;
+      result['S'] = (100 - (sumSymptoms / 30.0 * 100)).clamp(0, 100).round();
+    }
+
+    // 4. Trend Score
+    if (!result.containsKey('T') && result.containsKey('S')) {
+      result['T'] = result['S']!;
+    }
+
     return result;
   }
 }

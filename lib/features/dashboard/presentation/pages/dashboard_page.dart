@@ -253,8 +253,17 @@ class _DashboardPageState extends State<DashboardPage> {
     // Read score directly from backend latest score — single source of truth
     final scoreEntity = state.latestScore ??
         (state.scoreHistory.isNotEmpty ? state.scoreHistory.first : null);
-    final displayScore = (scoreEntity?.score ?? 0) > 0 ? scoreEntity!.score : null;
-    final scoreTime = scoreEntity?.timestamp;
+    int? displayScore = (scoreEntity?.score ?? 0) > 0 ? scoreEntity!.score : null;
+
+    if (displayScore == null && state.componentScores.isNotEmpty) {
+      final validComps = state.componentScores.values.where((v) => v > 0).toList();
+      if (validComps.isNotEmpty) {
+        displayScore = (validComps.reduce((a, b) => a + b) / validComps.length).round();
+      }
+    }
+
+    final scoreTime = scoreEntity?.timestamp ??
+        (state.dailyLogs.isNotEmpty ? state.dailyLogs.first.timestamp : (state.audioAnalyses.isNotEmpty ? state.audioAnalyses.first.timestamp : null));
     final trendScore = state.trendScore; // T component from backend breakdown
     final baselineMsg = (state.baselineStatus?['message'] as String?);
 
