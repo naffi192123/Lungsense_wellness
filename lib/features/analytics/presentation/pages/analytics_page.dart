@@ -130,13 +130,13 @@ class AnalyticsPage extends StatelessWidget {
       children: [
         Expanded(
           child: _buildMetricCard(
-            title: 'LATEST SCORE',
+            title: 'LATEST',
             value: '$latest',
             color: AppColors.primary,
             icon: Icons.speed_rounded,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
           child: _buildMetricCard(
             title: 'AVERAGE',
@@ -145,10 +145,10 @@ class AnalyticsPage extends StatelessWidget {
             icon: Icons.trending_up_rounded,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
           child: _buildMetricCard(
-            title: 'PEAK SCORE',
+            title: 'PEAK',
             value: '$highest',
             color: AppColors.secondary,
             icon: Icons.emoji_events_outlined,
@@ -165,7 +165,7 @@ class AnalyticsPage extends StatelessWidget {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -175,14 +175,33 @@ class AnalyticsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-              Icon(icon, color: color, size: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(icon, color: color, size: 15),
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -253,48 +272,61 @@ class AnalyticsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Custom Bar/Line Trend visualization
+          // Custom Bar/Line Trend visualization with horizontal scroll safety
           SizedBox(
             height: 180,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: chronological.map((item) {
-                final heightFactor = (item.score / 100.0).clamp(0.05, 1.0);
-                final dateLabel = "${item.timestamp.month}/${item.timestamp.day}";
+            child: chronological.length > 7
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: chronological.map((item) => _buildBarItem(item)).toList(),
+                    ),
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: chronological.map((item) => _buildBarItem(item)).toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                Color barColor = AppColors.supportingGreen;
-                if (item.score < 60) {
-                  barColor = AppColors.error;
-                } else if (item.score < 80) {
-                  barColor = AppColors.secondary;
-                }
+  Widget _buildBarItem(ScoreHistoryEntity item) {
+    final heightFactor = (item.score / 100.0).clamp(0.05, 1.0);
+    final dateLabel = "${item.timestamp.month}/${item.timestamp.day}";
 
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${item.score}',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: barColor),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      width: 24,
-                      height: 120 * heightFactor,
-                      decoration: BoxDecoration(
-                        color: barColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      dateLabel,
-                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                    ),
-                  ],
-                );
-              }).toList(),
+    Color barColor = AppColors.supportingGreen;
+    if (item.score < 60) {
+      barColor = AppColors.error;
+    } else if (item.score < 80) {
+      barColor = AppColors.secondary;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            '${item.score}',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: barColor),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 24,
+            height: 120 * heightFactor,
+            decoration: BoxDecoration(
+              color: barColor,
+              borderRadius: BorderRadius.circular(6),
             ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            dateLabel,
+            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
           ),
         ],
       ),
