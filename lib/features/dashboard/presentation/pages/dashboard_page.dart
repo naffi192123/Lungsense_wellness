@@ -31,7 +31,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _currentTabIndex = widget.initialTab;
-    // Fetch and synchronize real user data from backend
+    // Always fetch fresh score and history from backend on open
     context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
   }
 
@@ -58,12 +58,20 @@ class _DashboardPageState extends State<DashboardPage> {
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
           if (index == 1) {
-            context.push('/record');
+            context.push('/record').then((_) {
+              if (mounted) {
+                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+              }
+            });
             return;
           }
           setState(() {
             _currentTabIndex = index;
           });
+          if (index == 0 || index == 2) {
+            // Fresh refresh when switching to Home or History tab
+            context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+          }
         },
         items: const [
           BottomNavigationBarItem(
@@ -114,104 +122,120 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return BlocBuilder<WellnessBloc, WellnessState>(
       builder: (context, state) {
-        final latestScore = state.latestScore?.score ??
-            (state.scoreHistory.isNotEmpty ? state.scoreHistory.first.score : null);
+        final latestScoreEntity = state.latestScore ??
+            (state.scoreHistory.isNotEmpty ? state.scoreHistory.first : null);
 
         final recentAudio = state.audioAnalyses;
+        final isLoading = state.status == WellnessStatus.loading;
 
         return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Greeting Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 20,
-                          backgroundColor: AppColors.primary,
-                          child: Icon(Icons.person, color: AppColors.surface, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Welcome back,',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                            Text(
-                              name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.text),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 24),
-                      onPressed: () {
-                        context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Lungs Health Score Circular Dial Card
-                _buildLungsHealthScoreCard(latestScore),
-                const SizedBox(height: 20),
-
-                // 4 Specific Health Score Breakdown Cards
-                _buildFourScoreCards(state),
-                const SizedBox(height: 24),
-
-                // Quick Actions
-                const Text(
-                  'Quick Actions',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
-                ),
-                const SizedBox(height: 16),
-                _buildQuickActionsGrid(),
-                const SizedBox(height: 24),
-
-                // Continuous Auto-Scrolling Daily Tips Section
-                const Text(
-                  'Daily Respiratory Tips',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
-                ),
-                const SizedBox(height: 12),
-                const _DailyTipsCarousel(),
-                const SizedBox(height: 24),
-
-                // Recent Activity
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Recent Activity',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _currentTabIndex = 2; // Jump to History tab
-                        });
-                      },
-                      child: const Text(
-                        'See all',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: () async {
+              context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Greeting Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppColors.primary,
+                            child: Icon(Icons.person, color: AppColors.surface, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Welcome back,',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                name,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.text),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildRecentActivityList(recentAudio, state.dailyLogs),
-              ],
+                      IconButton(
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                              )
+                            : const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 24),
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                              },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Lungs Health Score Circular Dial Card
+                  _buildLungsHealthScoreCard(latestScoreEntity),
+                  const SizedBox(height: 20),
+
+                  // 4 Specific Health Score Breakdown Cards
+                  _buildFourScoreCards(state),
+                  const SizedBox(height: 24),
+
+                  // Quick Actions
+                  const Text(
+                    'Quick Actions',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildQuickActionsGrid(),
+                  const SizedBox(height: 24),
+
+                  // Continuous Auto-Scrolling Daily Tips Section
+                  const Text(
+                    'Daily Respiratory Tips',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                  ),
+                  const SizedBox(height: 12),
+                  const _DailyTipsCarousel(),
+                  const SizedBox(height: 24),
+
+                  // Recent Activity
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Activity',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentTabIndex = 2; // Jump to History tab
+                          });
+                        },
+                        child: const Text(
+                          'See all',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildRecentActivityList(recentAudio, state.dailyLogs),
+                ],
+              ),
             ),
           ),
         );
@@ -219,7 +243,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildLungsHealthScoreCard(int? score) {
+  Widget _buildLungsHealthScoreCard(ScoreHistoryEntity? scoreEntity) {
+    final score = scoreEntity?.score;
     final hasScore = score != null && score > 0;
     final displayScore = hasScore ? score : 0;
     final statusText = hasScore
@@ -279,6 +304,20 @@ class _DashboardPageState extends State<DashboardPage> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
+          if (hasScore && scoreEntity != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.access_time_rounded, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 4),
+                Text(
+                  'Updated ${_formatScoreTimestamp(scoreEntity.timestamp)}',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -287,50 +326,63 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildFourScoreCards(WellnessState state) {
     // 1. Cough Score
     int? coughScore = _extractBreakdownScore(state.latestScore?.breakdown, ['C', 'cough_score', 'cough']);
-    if (coughScore == null && state.audioAnalyses.isNotEmpty) {
+    DateTime? coughTime;
+    if (state.audioAnalyses.isNotEmpty) {
       final coughAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
       if (coughAudio != null) {
-        coughScore = coughAudio.lungsScore;
+        coughScore ??= coughAudio.lungsScore;
+        coughTime = coughAudio.timestamp;
       }
     }
+    coughTime ??= state.latestScore?.timestamp;
 
     // 2. Breathing Score
     int? breathingScore = _extractBreakdownScore(state.latestScore?.breakdown, ['B', 'breathing_score', 'breathing']);
-    if (breathingScore == null && state.audioAnalyses.isNotEmpty) {
+    DateTime? breathingTime;
+    if (state.audioAnalyses.isNotEmpty) {
       final breathingAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
       if (breathingAudio != null) {
-        breathingScore = breathingAudio.lungsScore;
+        breathingScore ??= breathingAudio.lungsScore;
+        breathingTime = breathingAudio.timestamp;
       }
     }
+    breathingTime ??= state.latestScore?.timestamp;
 
     // 3. Symptom Score
     int? symptomScore = _extractBreakdownScore(state.latestScore?.breakdown, ['S', 'symptom_score', 'symptom']);
-    if (symptomScore == null && state.dailyLogs.isNotEmpty) {
+    DateTime? symptomTime;
+    if (state.dailyLogs.isNotEmpty) {
       final latestLog = state.dailyLogs.first;
-      final sumSymptoms = latestLog.breathlessness +
-          latestLog.activityLimitation +
-          latestLog.changeFromUsual +
-          latestLog.fever +
-          latestLog.chestTightness +
-          latestLog.chestDiscomfortBreathing +
-          latestLog.wheezing +
-          latestLog.coughSeverity +
-          latestLog.mucus +
-          latestLog.sleepDisruption +
-          latestLog.chestPain;
-      final scoreVal = (100 - (sumSymptoms / 44.0 * 100)).clamp(0, 100).round();
-      symptomScore = scoreVal;
+      symptomTime = latestLog.timestamp;
+      if (symptomScore == null) {
+        final sumSymptoms = latestLog.breathlessness +
+            latestLog.activityLimitation +
+            latestLog.changeFromUsual +
+            latestLog.fever +
+            latestLog.chestTightness +
+            latestLog.chestDiscomfortBreathing +
+            latestLog.wheezing +
+            latestLog.coughSeverity +
+            latestLog.mucus +
+            latestLog.sleepDisruption +
+            latestLog.chestPain;
+        symptomScore = (100 - (sumSymptoms / 44.0 * 100)).clamp(0, 100).round();
+      }
     }
+    symptomTime ??= state.latestScore?.timestamp;
 
     // 4. Trend Score
     int? trendScore = _extractBreakdownScore(state.latestScore?.breakdown, ['T', 'trend_score', 'trend', 'trend_score_val']);
+    DateTime? trendTime = state.latestScore?.timestamp;
     if (trendScore == null && state.scoreHistory.length >= 2) {
       final latest = state.scoreHistory.first.score;
       final previous = state.scoreHistory[1].score;
       final diff = latest - previous;
       trendScore = (75 + diff * 2).clamp(0, 100).round();
+      trendTime = state.scoreHistory.first.timestamp;
     } else if (trendScore == null && state.latestScore != null && state.latestScore!.score > 0) {
       trendScore = state.latestScore!.score;
+      trendTime = state.latestScore!.timestamp;
     }
 
     return Column(
@@ -347,6 +399,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Cough Score',
                 score: coughScore,
+                timestamp: coughTime,
                 icon: Icons.sick_outlined,
                 color: AppColors.primary,
               ),
@@ -356,6 +409,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Breathing Score',
                 score: breathingScore,
+                timestamp: breathingTime,
                 icon: Icons.air_rounded,
                 color: AppColors.supportingGreen,
               ),
@@ -369,6 +423,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Symptom Score',
                 score: symptomScore,
+                timestamp: symptomTime,
                 icon: Icons.assignment_turned_in_outlined,
                 color: Colors.amber.shade800,
               ),
@@ -378,6 +433,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Trend Score',
                 score: trendScore,
+                timestamp: trendTime,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
               ),
@@ -391,6 +447,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildMetricCard({
     required String title,
     required int? score,
+    required DateTime? timestamp,
     required IconData icon,
     required Color color,
   }) {
@@ -415,14 +472,17 @@ class _DashboardPageState extends State<DashboardPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               Icon(icon, size: 20, color: color),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             hasScore ? '$score' : '--',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: AppColors.text),
@@ -445,9 +505,38 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ],
           ),
+          const SizedBox(height: 6),
+          Text(
+            _formatScoreTimestamp(hasScore ? timestamp : null),
+            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
+  }
+
+  String _formatScoreTimestamp(DateTime? timestamp) {
+    if (timestamp == null) return 'No data yet';
+    final now = DateTime.now();
+    final isToday = now.year == timestamp.year && now.month == timestamp.month && now.day == timestamp.day;
+    final isYesterday = now.subtract(const Duration(days: 1)).year == timestamp.year &&
+        now.subtract(const Duration(days: 1)).month == timestamp.month &&
+        now.subtract(const Duration(days: 1)).day == timestamp.day;
+
+    final hour = timestamp.hour > 12 ? timestamp.hour - 12 : (timestamp.hour == 0 ? 12 : timestamp.hour);
+    final minuteStr = timestamp.minute.toString().padLeft(2, '0');
+    final period = timestamp.hour >= 12 ? 'PM' : 'AM';
+    final timeStr = "$hour:$minuteStr $period";
+
+    if (isToday) {
+      return "Today, $timeStr";
+    } else if (isYesterday) {
+      return "Yesterday, $timeStr";
+    } else {
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return "${timestamp.day} ${months[timestamp.month - 1]}, $timeStr";
+    }
   }
 
   int? _extractBreakdownScore(Map<String, dynamic>? breakdown, List<String> keys) {
@@ -470,7 +559,12 @@ class _DashboardPageState extends State<DashboardPage> {
             subtitle: 'Cough & Breathing',
             icon: Icons.mic_none_outlined,
             color: AppColors.primary,
-            onTap: () => context.push('/record'),
+            onTap: () async {
+              await context.push('/record');
+              if (mounted) {
+                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+              }
+            },
           ),
         ),
         const SizedBox(width: 16),
@@ -480,7 +574,12 @@ class _DashboardPageState extends State<DashboardPage> {
             subtitle: 'Check symptoms',
             icon: Icons.edit_note_rounded,
             color: AppColors.supportingGreen,
-            onTap: () => context.push('/daily-log'),
+            onTap: () async {
+              await context.push('/daily-log');
+              if (mounted) {
+                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+              }
+            },
           ),
         ),
       ],
@@ -648,7 +747,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-/// Continuous Auto-Scrolling Respiratory Tips Carousel
+/// Auto-scrolling carousel demonstrating tips
 class _DailyTipsCarousel extends StatefulWidget {
   const _DailyTipsCarousel();
 
@@ -657,52 +756,44 @@ class _DailyTipsCarousel extends StatefulWidget {
 }
 
 class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
-  final PageController _pageController = PageController(viewportFraction: 0.92);
-  Timer? _timer;
+  late final PageController _pageController;
   int _currentPage = 0;
+  Timer? _timer;
 
-  final List<Map<String, String>> _tips = const [
+  final List<Map<String, String>> _tips = [
     {
-      'title': 'Pursed-Lip Breathing',
-      'body': 'Inhale slowly through your nose for 2 counts, then breathe out gently through pursed lips for 4 counts to keep airways open.',
-      'tag': 'Exercise',
+      'title': 'Stay Hydrated for Mucus Clearance',
+      'body': 'Drinking 2-3 liters of water per day thins lung mucus secretions and promotes natural airway clearing.',
+      'tag': 'HYDRATION',
     },
     {
-      'title': 'Stay Hydrated',
-      'body': 'Drinking 2+ liters of water daily thins mucus secretions, making it easier for your lungs to clear irritants.',
-      'tag': 'Hydration',
+      'title': 'Practice 4-7-8 Breathing',
+      'body': 'Inhale for 4 seconds, hold for 7, and exhale slowly for 8 to improve lung capacity and ease anxiety.',
+      'tag': 'EXERCISE',
     },
     {
-      'title': 'Diaphragmatic Breathing',
-      'body': 'Place one hand on your belly. Breathe deeply so your belly rises more than your chest. Strengthens diaphragm capacity.',
-      'tag': 'Wellness',
+      'title': 'Maintain Good Posture',
+      'body': 'Sitting upright expands your diaphragm and increases oxygen uptake by up to 30%.',
+      'tag': 'WELLNESS',
     },
     {
-      'title': 'Monitor Air Quality',
-      'body': 'Check local AQI before outdoor workouts. Avoid exercising near heavy traffic during peak pollution hours.',
-      'tag': 'Environment',
-    },
-    {
-      'title': 'Consistent Sleep Rest',
-      'body': '7-8 hours of sleep allows bronchial tissues to repair and supports stronger immune defense against respiratory infections.',
-      'tag': 'Sleep',
+      'title': 'Monitor Humidity Levels',
+      'body': 'Keeping indoor humidity between 40-50% protects airway mucosa from dryness and irritation.',
+      'tag': 'ENVIRONMENT',
     },
   ];
 
   @override
   void initState() {
     super.initState();
-    _startAutoScroll();
-  }
-
-  void _startAutoScroll() {
+    _pageController = PageController();
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_pageController.hasClients) {
         _currentPage = (_currentPage + 1) % _tips.length;
         _pageController.animateToPage(
           _currentPage,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOutCubic,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
         );
       }
     });
@@ -717,69 +808,105 @@ class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: _tips.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentPage = index;
-          });
-        },
-        itemBuilder: (context, index) {
-          final tip = _tips[index];
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4.0),
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withOpacity(0.08),
-                  AppColors.supportingGreen.withOpacity(0.06),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16.0),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      children: [
+        SizedBox(
+          height: 120,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: _tips.length,
+            itemBuilder: (context, index) {
+              final tip = _tips[index];
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.08),
+                      AppColors.supportingGreen.withOpacity(0.06),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16.0),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      tip['title']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tip['tag']!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            tip['title']!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 8),
+                    Text(
+                      tip['body']!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        height: 1.3,
                       ),
-                      child: Text(
-                        tip['tag']!,
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  tip['body']!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
-                ),
-              ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            _tips.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: _currentPage == index ? 16 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: _currentPage == index ? AppColors.primary : AppColors.border,
+                borderRadius: BorderRadius.circular(3),
+              ),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
