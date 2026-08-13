@@ -98,6 +98,10 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<DailyLogRemoteDataSource>(() => DailyLogRemoteDataSourceImpl(sl()));
   sl.registerLazySingleton<ScoreRemoteDataSource>(() => ScoreRemoteDataSourceImpl(sl()));
 
+  sl.registerLazySingleton<AudioRecordingRemoteDataSource>(
+    () => AudioRecordingRemoteDataSourceImpl(sl()),
+  );
+
   // Repositories
   sl.registerLazySingleton<OnboardingRepository>(() => OnboardingRepositoryImpl(
         remoteDataSource: sl(),
@@ -109,6 +113,7 @@ Future<void> initDependencies() async {
         scoreBox: scoreBox,
         dailyLogRemoteDataSource: sl(),
         scoreRemoteDataSource: sl(),
+        audioRecordingRemoteDataSource: sl(),
       ));
 
   // UseCases
@@ -153,11 +158,6 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<AudioRecorderService>(() => AudioRecorderService());
   sl.registerLazySingleton<AudioPlayerService>(() => AudioPlayerService());
   sl.registerLazySingleton<FilePickerService>(() => FilePickerService());
-
-  // DataSources
-  sl.registerLazySingleton<AudioRecordingRemoteDataSource>(
-    () => AudioRecordingRemoteDataSourceImpl(sl()),
-  );
 
   // Repositories
   sl.registerLazySingleton<AudioRecordingRepository>(

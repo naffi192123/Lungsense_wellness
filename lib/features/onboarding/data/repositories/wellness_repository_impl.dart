@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../daily_log/data/datasources/daily_log_remote_data_source.dart';
 import '../../../dashboard/data/datasources/score_remote_data_source.dart';
+import '../../../recording/data/datasources/audio_recording_remote_data_source.dart';
 import '../../domain/entities/wellness_entities.dart';
 import '../../domain/repositories/wellness_repository.dart';
 
@@ -11,6 +12,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
   final Box? scoreBox;
   final DailyLogRemoteDataSource? dailyLogRemoteDataSource;
   final ScoreRemoteDataSource? scoreRemoteDataSource;
+  final AudioRecordingRemoteDataSource? audioRecordingRemoteDataSource;
 
   WellnessRepositoryImpl({
     required this.checkInBox,
@@ -18,6 +20,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
     this.scoreBox,
     this.dailyLogRemoteDataSource,
     this.scoreRemoteDataSource,
+    this.audioRecordingRemoteDataSource,
   });
 
   @override
@@ -137,6 +140,54 @@ class WellnessRepositoryImpl implements WellnessRepository {
 
   @override
   Future<List<AudioAnalysisEntity>> getAudioAnalyses() async {
+    if (audioRecordingRemoteDataSource != null) {
+      try {
+        final remoteFeatures = await audioRecordingRemoteDataSource!.getRecordingFeatures();
+        for (var raw in remoteFeatures) {
+          final jobId = raw['job_id'] as String? ?? raw['id'] as String? ?? '';
+          if (jobId.isEmpty) continue;
+          final createdStr = raw['created_at']?.toString();
+          final dt = createdStr != null ? DateTime.tryParse(createdStr) ?? DateTime.now() : DateTime.now();
+          final recType = (raw['recording_type'] as String? ?? 'cough').toLowerCase() == 'cough' ? 'Cough' : 'Breathing';
+          final qScore = (raw['quality_score'] as num?)?.toDouble() ?? 0.95;
+          final qScoreInt = (qScore * 100).round();
+          final classification = raw['classification'] as String? ?? 'Optimal Respiratory Sound';
+
+          final existing = recordingsBox.get(jobId);
+          String? localPath;
+          if (existing != null && existing is Map) {
+            localPath = existing['localAudioPath'] as String?;
+          }
+
+          final entity = AudioAnalysisEntity(
+            id: jobId,
+            title: '$recType Recording',
+            type: recType,
+            status: (raw['status'] as String? ?? 'complete').toLowerCase(),
+            duration: (raw['duration_seconds'] as num?)?.toInt() ?? 12,
+            confidence: qScoreInt,
+            lungsScore: qScoreInt,
+            insight: 'Acoustic parameters processed: Breathing Rate = ${raw['breathing_rate_bpm'] != null ? '${raw['breathing_rate_bpm']} BPM' : 'N/A'}, Dominant Frequency = ${raw['dominant_frequency_hz'] != null ? '${raw['dominant_frequency_hz']} Hz' : 'N/A'}, Classification = $classification.',
+            intensity: 'Normal',
+            breathingRate: (raw['breathing_rate_bpm'] as num?)?.toInt() ?? 0,
+            rhythm: classification,
+            signalQuality: 'Quality: $qScoreInt%',
+            backgroundNoise: 'Low',
+            timestamp: dt,
+            tags: ['FastAPI Engine', classification],
+            localAudioPath: localPath,
+            jobId: jobId,
+            qualityScore: qScore,
+            dominantFrequencyHz: (raw['dominant_frequency_hz'] as num?)?.toDouble(),
+            rmsEnergy: (raw['rms_energy'] as num?)?.toDouble(),
+            classification: classification,
+            spectralSummary: raw['spectral_summary'] is Map ? Map<String, dynamic>.from(raw['spectral_summary']) : null,
+          );
+          await recordingsBox.put(entity.id, _audioAnalysisToMap(entity));
+        }
+      } catch (_) {}
+    }
+
     final List<AudioAnalysisEntity> list = [];
     for (var key in recordingsBox.keys) {
       final raw = recordingsBox.get(key);
@@ -366,7 +417,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
       jobId: map['jobId'] as String?,
       qualityScore: (map['qualityScore'] as num?)?.toDouble(),
       dominantFrequencyHz: (map['dominantFrequencyHz'] as num?)?.toDouble(),
-      rmsEnergy: (map['rmsEnergy'] as num?)?.toDouble(),
+      rmsEnergy: (map['rms_energy'] ?? map['rmsEnergy'] as num?)?.toDouble(),
       classification: map['classification'] as String?,
       errorMessage: map['errorMessage'] as String?,
       spectralSummary: map['spectralSummary'] is Map ? Map<String, dynamic>.from(map['spectralSummary']) : null,

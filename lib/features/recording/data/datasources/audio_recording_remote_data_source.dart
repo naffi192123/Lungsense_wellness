@@ -9,6 +9,7 @@ abstract class AudioRecordingRemoteDataSource {
   Future<ConsentEntity> recordConsent({required String consentType, required bool granted});
   Future<AudioJobEntity> uploadAudio({required String path, required String recordingType});
   Future<AudioJobEntity> getJobStatus(String jobId);
+  Future<List<Map<String, dynamic>>> getRecordingFeatures();
 }
 
 class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSource {
@@ -130,6 +131,22 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecordingFeatures() async {
+    try {
+      final response = await apiClient.get('/recordings/features');
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }
