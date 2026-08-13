@@ -112,16 +112,16 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return AudioJobEntity(
-          jobId: data['job_id'] as String? ?? jobId,
+          jobId: data['job_id'] as String? ?? data['id'] as String? ?? jobId,
           status: data['status'] as String? ?? 'processing',
           error: data['error'] as String?,
           breathingRateBpm: (data['breathing_rate_bpm'] as num?)?.toDouble(),
           dominantFrequencyHz: (data['dominant_frequency_hz'] as num?)?.toDouble(),
           rmsEnergy: (data['rms_energy'] as num?)?.toDouble(),
           qualityScore: (data['quality_score'] as num?)?.toDouble(),
-          classification: data['classification'] as String?,
+          classification: data['classification'] as String? ?? (data['quality_score'] != null ? 'Acoustic Analysis Complete' : null),
           durationSeconds: (data['duration_seconds'] as num?)?.toDouble(),
-          spectralSummary: data['spectral_summary'] as Map<String, dynamic>?,
+          spectralSummary: data['spectral_summary'] is Map ? Map<String, dynamic>.from(data['spectral_summary']) : (data['quality_breakdown'] is Map ? Map<String, dynamic>.from(data['quality_breakdown']) : null),
         );
       } else {
         final data = jsonDecode(response.body);

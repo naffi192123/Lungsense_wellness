@@ -133,7 +133,7 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
   @override
   Future<Map<String, dynamic>> getSymptomScore({String? date}) async {
     try {
-      final query = date != null ? '?date=$date' : '';
+      final query = date != null ? '?on=$date' : '';
       final response = await apiClient.get('/score/symptom$query');
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
