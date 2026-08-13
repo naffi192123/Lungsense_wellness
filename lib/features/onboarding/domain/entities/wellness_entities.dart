@@ -149,6 +149,8 @@ class AudioAnalysisEntity extends Equatable {
 class ScoreHistoryEntity extends Equatable {
   final String id;
   final int score;
+  final double? lungWellnessScore;
+  final double? trendScore;
   final String band;
   final String? message;
   final Map<String, dynamic>? breakdown;
@@ -159,6 +161,8 @@ class ScoreHistoryEntity extends Equatable {
   const ScoreHistoryEntity({
     required this.id,
     required this.score,
+    this.lungWellnessScore,
+    this.trendScore,
     required this.band,
     this.message,
     this.breakdown,
@@ -171,6 +175,8 @@ class ScoreHistoryEntity extends Equatable {
   List<Object?> get props => [
         id,
         score,
+        lungWellnessScore,
+        trendScore,
         band,
         message,
         breakdown,

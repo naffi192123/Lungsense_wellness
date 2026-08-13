@@ -271,21 +271,28 @@ class WellnessRepositoryImpl implements WellnessRepository {
     if (scoreRemoteDataSource != null) {
       try {
         var remote = await scoreRemoteDataSource!.getLatestScore();
-        if (remote == null || (remote['score'] == null && remote['final_score'] == null && remote['wellness_score'] == null)) {
+        if (remote == null || (remote['lung_wellness_score'] == null && remote['score'] == null && remote['final_score'] == null)) {
           // If no score computed yet on backend, try computing via POST /score/compute
           try {
             final computed = await scoreRemoteDataSource!.computeScore();
-            if (computed.isNotEmpty && (computed['score'] != null || computed['final_score'] != null || computed['wellness_score'] != null)) {
+            if (computed.isNotEmpty && (computed['lung_wellness_score'] != null || computed['score'] != null || computed['final_score'] != null)) {
               remote = computed;
             }
           } catch (_) {}
         }
 
         if (remote != null) {
-          final rawScore = remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score'];
-          final intScore = rawScore != null
-              ? (rawScore is num ? rawScore.toInt() : int.tryParse(rawScore.toString()) ?? 0)
-              : 0;
+          final rawLungScore = remote['lung_wellness_score'] ?? remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score'];
+          final double? lungWellnessScore = rawLungScore != null
+              ? (rawLungScore is num ? rawLungScore.toDouble() : double.tryParse(rawLungScore.toString()))
+              : null;
+
+          final rawTrendScore = remote['trend_score'] ?? remote['trendScore'];
+          final double? trendScore = rawTrendScore != null
+              ? (rawTrendScore is num ? rawTrendScore.toDouble() : double.tryParse(rawTrendScore.toString()))
+              : null;
+
+          final int intScore = (lungWellnessScore ?? 0).round();
 
           final breakdownMap = <String, dynamic>{};
           if (remote['breakdown'] is Map) {
@@ -306,7 +313,9 @@ class WellnessRepositoryImpl implements WellnessRepository {
           final entity = ScoreHistoryEntity(
             id: remote['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
             score: intScore,
-            band: remote['band'] as String? ?? 'good',
+            lungWellnessScore: lungWellnessScore,
+            trendScore: trendScore,
+            band: remote['band'] as String? ?? (intScore >= 80 ? 'good' : (intScore >= 60 ? 'fair' : 'attention')),
             message: remote['message'] as String?,
             breakdown: breakdownMap.isNotEmpty ? breakdownMap : null,
             sessionNumber: (remote['session_number'] as num?)?.toInt(),
@@ -319,6 +328,8 @@ class WellnessRepositoryImpl implements WellnessRepository {
             await scoreBox!.put('latest', {
               'id': entity.id,
               'score': entity.score,
+              'lungWellnessScore': entity.lungWellnessScore,
+              'trendScore': entity.trendScore,
               'band': entity.band,
               'message': entity.message,
               'breakdown': entity.breakdown,

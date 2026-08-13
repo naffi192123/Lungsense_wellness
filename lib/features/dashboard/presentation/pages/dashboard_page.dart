@@ -250,33 +250,31 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildLungsHealthScoreCard(WellnessState state) {
-    // Read score directly from backend latest score — single source of truth
+    // Single source of truth from GET /score/latest
     final scoreEntity = state.latestScore ??
         (state.scoreHistory.isNotEmpty ? state.scoreHistory.first : null);
-    int? displayScore = (scoreEntity?.score ?? 0) > 0 ? scoreEntity!.score : null;
 
-    if (displayScore == null && state.componentScores.isNotEmpty) {
-      final validComps = state.componentScores.values.where((v) => v > 0).toList();
-      if (validComps.isNotEmpty) {
-        displayScore = (validComps.reduce((a, b) => a + b) / validComps.length).round();
-      }
-    }
+    final double? lungWellnessScore = scoreEntity?.lungWellnessScore ??
+        (scoreEntity?.score != null && scoreEntity!.score > 0 ? scoreEntity.score.toDouble() : null);
+    final double? trendScore = scoreEntity?.trendScore ?? state.trendScore?.toDouble();
+    final String? baselineStatus = scoreEntity?.baselineStatus ?? state.baselineStatus?['status']?.toString();
+    final DateTime? scoreTime = scoreEntity?.timestamp;
 
-    final scoreTime = scoreEntity?.timestamp ??
-        (state.dailyLogs.isNotEmpty ? state.dailyLogs.first.timestamp : (state.audioAnalyses.isNotEmpty ? state.audioAnalyses.first.timestamp : null));
-    final trendScore = state.trendScore; // T component from backend breakdown
-    final baselineMsg = (state.baselineStatus?['message'] as String?);
-
-    final hasScore = displayScore != null;
-    final finalScoreVal = hasScore ? displayScore : 0;
+    final hasScore = lungWellnessScore != null && lungWellnessScore > 0;
+    final displayScoreVal = hasScore ? lungWellnessScore : 0.0;
     final statusText = hasScore
-        ? (finalScoreVal >= 80 ? 'EXCELLENT' : (finalScoreVal >= 60 ? 'FAIR' : 'ATTENTION'))
+        ? (displayScoreVal >= 80 ? 'EXCELLENT' : (displayScoreVal >= 60 ? 'FAIR' : 'ATTENTION'))
         : 'NO SCORE YET';
     final statusColor = hasScore
-        ? (finalScoreVal >= 80
+        ? (displayScoreVal >= 80
             ? AppColors.supportingGreen
-            : (finalScoreVal >= 60 ? AppColors.secondary : AppColors.error))
+            : (displayScoreVal >= 60 ? AppColors.secondary : AppColors.error))
         : AppColors.textSecondary;
+
+    // Formatting lung_wellness_score to 1 decimal place if fractional, else int
+    final scoreStr = hasScore
+        ? (lungWellnessScore % 1 == 0 ? lungWellnessScore.toInt().toString() : lungWellnessScore.toStringAsFixed(1))
+        : '--';
 
     return Container(
       width: double.infinity,
@@ -295,7 +293,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 height: 140,
                 width: 140,
                 child: CircularProgressIndicator(
-                  value: hasScore ? (finalScoreVal / 100.0) : 0.0,
+                  value: hasScore ? (displayScoreVal / 100.0) : 0.0,
                   strokeWidth: 10,
                   backgroundColor: AppColors.border,
                   valueColor: AlwaysStoppedAnimation<Color>(statusColor),
@@ -304,8 +302,12 @@ class _DashboardPageState extends State<DashboardPage> {
               Column(
                 children: [
                   Text(
-                    hasScore ? '$finalScoreVal' : '--',
-                    style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppColors.text),
+                    scoreStr,
+                    style: TextStyle(
+                      fontSize: scoreStr.length > 4 ? 32 : 40,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
                   ),
                   Text(
                     statusText,
@@ -323,12 +325,12 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 6),
           Text(
             hasScore
-                ? (scoreEntity?.message ?? 'Score computed from your latest symptom and acoustic screening.')
+                ? (scoreEntity?.message ?? 'Score computed fresh from backend.')
                 : 'Complete your symptom check-in and audio recordings to compute today\'s score.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
-          // Trend Score chip — shown when T component is available from backend
+          // Trend Score chip — mapped directly from trend_score
           if (trendScore != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -344,7 +346,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   const Icon(Icons.trending_up_rounded, size: 15, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Text(
-                    'Trend Score: $trendScore',
+                    'Trend Score: ${trendScore % 1 == 0 ? trendScore.toInt() : trendScore.toStringAsFixed(1)}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -355,13 +357,13 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
           ],
-          // Baseline initializing message
-          if (!hasScore && baselineMsg != null) ...[
-            const SizedBox(height: 10),
+          // Baseline status display
+          if (baselineStatus != null && baselineStatus.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Text(
-              baselineMsg,
+              'Baseline Status: ${baselineStatus.toUpperCase()}',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
             ),
           ],
           if (hasScore && scoreTime != null) ...[
