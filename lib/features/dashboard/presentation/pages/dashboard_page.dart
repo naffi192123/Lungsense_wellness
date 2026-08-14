@@ -517,13 +517,11 @@ class _DashboardPageState extends State<DashboardPage> {
   // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
   Widget _buildQuickActionsGrid() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildQuickActionCard(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: _buildQuickActionCard(
             title: 'Cough',
             subtitle: 'Record your\ncough',
             icon: Icons.mic_rounded,
@@ -538,8 +536,10 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             },
           ),
-          const SizedBox(width: 12),
-          _buildQuickActionCard(
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildQuickActionCard(
             title: 'Breathing',
             subtitle: 'Record your\nbreathing',
             icon: Icons.air_rounded,
@@ -554,8 +554,10 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             },
           ),
-          const SizedBox(width: 12),
-          _buildQuickActionCard(
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildQuickActionCard(
             title: 'How are you\nfeeling today?',
             subtitle: 'Log your\nsymptoms',
             icon: Icons.sentiment_satisfied_alt_rounded,
@@ -570,8 +572,8 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -585,11 +587,9 @@ class _DashboardPageState extends State<DashboardPage> {
     required Color arrowColor,
     required VoidCallback onTap,
   }) {
-    const double cardWidth = 158;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: cardWidth,
         decoration: BoxDecoration(
           color: cardBgColor,
           borderRadius: BorderRadius.circular(20),
@@ -610,14 +610,14 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             // Card content
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 18, 14, 52),
+              padding: const EdgeInsets.fromLTRB(10, 14, 10, 44),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Gradient circular icon
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -627,34 +627,34 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: iconGradientColors.last.withValues(alpha: 0.30),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          color: iconGradientColors.last.withValues(alpha: 0.28),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
-                    child: Icon(icon, color: Colors.white, size: 26),
+                    child: Icon(icon, color: Colors.white, size: 20),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   // Title
                   Text(
                     title,
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      fontSize: 14.5,
+                      fontSize: 12,
                       color: Color(0xFF1C2B3A),
                       height: 1.25,
                       letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   // Subtitle
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 10.5,
                       color: const Color(0xFF1C2B3A).withValues(alpha: 0.55),
-                      height: 1.35,
+                      height: 1.3,
                     ),
                   ),
                 ],
@@ -662,11 +662,11 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             // Bottom-right circular arrow button
             Positioned(
-              bottom: 12,
-              right: 12,
+              bottom: 10,
+              right: 10,
               child: Container(
-                width: 34,
-                height: 34,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: arrowColor.withValues(alpha: 0.12),
@@ -674,7 +674,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Icon(
                   Icons.arrow_forward_rounded,
                   color: arrowColor,
-                  size: 18,
+                  size: 15,
                 ),
               ),
             ),
