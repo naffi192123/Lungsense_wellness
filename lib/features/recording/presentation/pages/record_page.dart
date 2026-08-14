@@ -15,14 +15,19 @@ import '../bloc/audio_recording_state.dart';
 
 /// Interactive audio recording and acoustic screening page.
 class RecordPage extends StatefulWidget {
-  const RecordPage({super.key});
+  final int initialTab;
+
+  const RecordPage({
+    super.key,
+    this.initialTab = 0,
+  });
 
   @override
   State<RecordPage> createState() => _RecordPageState();
 }
 
 class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateMixin {
-  int _selectedTabIndex = 0; // 0 = Cough, 1 = Breathing
+  late int _selectedTabIndex; // 0 = Cough, 1 = Breathing
   late final AudioPlayerService _audioPlayerService;
 
   StreamSubscription<PlayerState>? _playerStateSubscription;
@@ -36,6 +41,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = (widget.initialTab >= 0 && widget.initialTab <= 1) ? widget.initialTab : 0;
     _audioPlayerService = sl<AudioPlayerService>();
 
     _playerStateSubscription = _audioPlayerService.stateStream.listen((state) {

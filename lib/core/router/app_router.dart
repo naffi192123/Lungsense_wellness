@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../di/injection_container.dart';
@@ -158,13 +157,33 @@ abstract class AppRouter {
       GoRoute(
         path: recordPath,
         name: recordName,
-        builder: (context, state) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
-            BlocProvider(create: (context) => sl<WellnessBloc>()),
-          ],
-          child: const RecordPage(),
-        ),
+        builder: (context, state) {
+          final tabParam = state.uri.queryParameters['tab'];
+          final typeParam = state.uri.queryParameters['type'];
+          int initialTab = 0;
+          if (tabParam != null) {
+            initialTab = int.tryParse(tabParam) ?? 0;
+          } else if (typeParam != null) {
+            initialTab = typeParam.toLowerCase() == 'breathing' ? 1 : 0;
+          } else if (state.extra is Map) {
+            final extra = state.extra as Map;
+            if (extra['tab'] != null) {
+              initialTab = (extra['tab'] as int?) ?? 0;
+            } else if (extra['type'] != null) {
+              initialTab = extra['type'] == 'breathing' ? 1 : 0;
+            }
+          } else if (state.extra is int) {
+            initialTab = state.extra as int;
+          }
+
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
+              BlocProvider(create: (context) => sl<WellnessBloc>()),
+            ],
+            child: RecordPage(initialTab: initialTab),
+          );
+        },
       ),
       GoRoute(
         path: historyDetailsPath,

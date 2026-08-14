@@ -531,7 +531,7 @@ class _DashboardPageState extends State<DashboardPage> {
             waveColor: const Color(0xFFB9E4B9),
             arrowColor: const Color(0xFF43A047),
             onTap: () async {
-              await context.push('/record');
+              await context.push('/record?tab=0');
               if (mounted) {
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
@@ -549,7 +549,7 @@ class _DashboardPageState extends State<DashboardPage> {
             waveColor: const Color(0xFFACE0DC),
             arrowColor: const Color(0xFF00897B),
             onTap: () async {
-              await context.push('/record');
+              await context.push('/record?tab=1');
               if (mounted) {
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
