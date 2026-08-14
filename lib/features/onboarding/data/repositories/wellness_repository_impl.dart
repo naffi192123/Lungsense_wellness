@@ -282,16 +282,13 @@ class WellnessRepositoryImpl implements WellnessRepository {
         }
 
         if (remote != null) {
-          final rawLungScore = remote['lung_wellness_score'] ?? remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score'];
-          final double? lungWellnessScore = rawLungScore != null
-              ? (rawLungScore is num ? rawLungScore.toDouble() : double.tryParse(rawLungScore.toString()))
-              : null;
+          final double? lungWellnessScore = _parseDouble(remote['lung_wellness_score'] ?? remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score']);
+          final double? coughScore = _parseDouble(remote['cough_score'] ?? remote['coughScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['C'] : null));
+          final double? breathingScore = _parseDouble(remote['breathing_score'] ?? remote['breathingScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['B'] : null));
+          final double? symptomScore = _parseDouble(remote['symptom_score'] ?? remote['symptomScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['S'] : null));
+          final double? trendScore = _parseDouble(remote['trend_score'] ?? remote['trendScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['T'] : null));
 
-          final rawTrendScore = remote['trend_score'] ?? remote['trendScore'];
-          final double? trendScore = rawTrendScore != null
-              ? (rawTrendScore is num ? rawTrendScore.toDouble() : double.tryParse(rawTrendScore.toString()))
-              : null;
-
+          final String? message = remote['message'] as String? ?? (remote['breakdown'] is Map ? remote['breakdown']['message'] as String? : null);
           final int intScore = (lungWellnessScore ?? 0).round();
 
           final breakdownMap = <String, dynamic>{};
@@ -310,25 +307,34 @@ class WellnessRepositoryImpl implements WellnessRepository {
             }
           }
 
+          final String? createdAtStr = remote['created_at']?.toString() ?? remote['timestamp']?.toString();
+          final DateTime timestamp = createdAtStr != null
+              ? (DateTime.tryParse(createdAtStr)?.toLocal() ?? DateTime.now())
+              : DateTime.now();
+
           final entity = ScoreHistoryEntity(
             id: remote['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
             score: intScore,
             lungWellnessScore: lungWellnessScore,
+            coughScore: coughScore,
+            breathingScore: breathingScore,
+            symptomScore: symptomScore,
             trendScore: trendScore,
             band: remote['band'] as String? ?? (intScore >= 80 ? 'good' : (intScore >= 60 ? 'fair' : 'attention')),
-            message: remote['message'] as String?,
+            message: message,
             breakdown: breakdownMap.isNotEmpty ? breakdownMap : null,
             sessionNumber: (remote['session_number'] as num?)?.toInt(),
             baselineStatus: remote['baseline_status'] as String?,
-            timestamp: remote['created_at'] != null
-                ? DateTime.tryParse(remote['created_at'].toString()) ?? DateTime.now()
-                : (remote['timestamp'] != null ? DateTime.tryParse(remote['timestamp'].toString()) ?? DateTime.now() : DateTime.now()),
+            timestamp: timestamp,
           );
           if (scoreBox != null) {
             await scoreBox!.put('latest', {
               'id': entity.id,
               'score': entity.score,
               'lungWellnessScore': entity.lungWellnessScore,
+              'coughScore': entity.coughScore,
+              'breathingScore': entity.breathingScore,
+              'symptomScore': entity.symptomScore,
               'trendScore': entity.trendScore,
               'band': entity.band,
               'message': entity.message,

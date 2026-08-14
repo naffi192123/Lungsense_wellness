@@ -150,6 +150,9 @@ class ScoreHistoryEntity extends Equatable {
   final String id;
   final int score;
   final double? lungWellnessScore;
+  final double? coughScore;
+  final double? breathingScore;
+  final double? symptomScore;
   final double? trendScore;
   final String band;
   final String? message;
@@ -162,6 +165,9 @@ class ScoreHistoryEntity extends Equatable {
     required this.id,
     required this.score,
     this.lungWellnessScore,
+    this.coughScore,
+    this.breathingScore,
+    this.symptomScore,
     this.trendScore,
     required this.band,
     this.message,
@@ -176,6 +182,9 @@ class ScoreHistoryEntity extends Equatable {
         id,
         score,
         lungWellnessScore,
+        coughScore,
+        breathingScore,
+        symptomScore,
         trendScore,
         band,
         message,

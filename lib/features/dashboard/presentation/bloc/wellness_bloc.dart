@@ -25,7 +25,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     try {
       // 1. Fetch latest score first (fastest, most important for home screen)
       final latestScore = await _repository.getLatestScore();
-      final componentScores = _parseComponentScores(latestScore?.breakdown);
+      final componentScores = _parseComponentScores(latestScore);
 
       // Emit score immediately so the dial updates without waiting for heavy data
       emit(state.copyWith(
@@ -48,7 +48,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       final baselineStatus = results[3] as Map<String, dynamic>?;
 
       final fullComponentScores = _parseComponentScores(
-        latestScore?.breakdown,
+        latestScore,
         dailyLogs: logs,
         audioAnalyses: analyses,
       );
@@ -73,7 +73,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     emit(state.copyWith(status: WellnessStatus.scoreLoading));
     try {
       final latestScore = await _repository.getLatestScore();
-      final componentScores = _parseComponentScores(latestScore?.breakdown);
+      final componentScores = _parseComponentScores(latestScore);
       emit(state.copyWith(
         status: WellnessStatus.success,
         latestScore: latestScore,
@@ -95,7 +95,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       final logs = await _repository.getDailyLogs();
       final scoreHistory = await _repository.getScoreHistory(limit: 30);
       final componentScores = _parseComponentScores(
-        latestScore?.breakdown,
+        latestScore,
         dailyLogs: logs,
       );
 
@@ -121,7 +121,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       final analyses = await _repository.getAudioAnalyses();
       final scoreHistory = await _repository.getScoreHistory(limit: 30);
       final componentScores = _parseComponentScores(
-        latestScore?.breakdown,
+        latestScore,
         audioAnalyses: analyses,
       );
 
@@ -140,7 +140,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
   /// Parses the C/B/S/T component scores from backend breakdown map.
   /// Handles both integer and nested object formats.
   Map<String, int> _parseComponentScores(
-    Map<String, dynamic>? breakdown, {
+    ScoreHistoryEntity? latestScore, {
     List<DailyLogEntity>? dailyLogs,
     List<AudioAnalysisEntity>? audioAnalyses,
   }) {
@@ -164,22 +164,40 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       return null;
     }
 
-    if (breakdown != null && breakdown.isNotEmpty) {
-      final keyAliases = {
-        'C': ['C', 'cough', 'cough_score', 'coughScore', 'cough_wellness_score'],
-        'B': ['B', 'breathing', 'breathing_score', 'breathingScore', 'breathing_wellness_score'],
-        'S': ['S', 'symptom', 'symptom_score', 'symptomScore', 'daily_checkin_score'],
-        'T': ['T', 'trend', 'trend_score', 'trendScore', 'trend_score_val'],
-      };
+    if (latestScore != null) {
+      if (latestScore.coughScore != null) {
+        result['C'] = latestScore.coughScore!.round();
+      }
+      if (latestScore.breathingScore != null) {
+        result['B'] = latestScore.breathingScore!.round();
+      }
+      if (latestScore.symptomScore != null) {
+        result['S'] = latestScore.symptomScore!.round();
+      }
+      if (latestScore.trendScore != null) {
+        result['T'] = latestScore.trendScore!.round();
+      }
 
-      for (final compKey in ['C', 'B', 'S', 'T']) {
-        final aliases = keyAliases[compKey]!;
-        for (final alias in aliases) {
-          if (breakdown.containsKey(alias)) {
-            final v = extractVal(breakdown[alias]);
-            if (v != null) {
-              result[compKey] = v;
-              break;
+      final breakdown = latestScore.breakdown;
+      if (breakdown != null && breakdown.isNotEmpty) {
+        final keyAliases = {
+          'C': ['C', 'cough', 'cough_score', 'coughScore', 'cough_wellness_score'],
+          'B': ['B', 'breathing', 'breathing_score', 'breathingScore', 'breathing_wellness_score'],
+          'S': ['S', 'symptom', 'symptom_score', 'symptomScore', 'daily_checkin_score'],
+          'T': ['T', 'trend', 'trend_score', 'trendScore', 'trend_score_val'],
+        };
+
+        for (final compKey in ['C', 'B', 'S', 'T']) {
+          if (!result.containsKey(compKey)) {
+            final aliases = keyAliases[compKey]!;
+            for (final alias in aliases) {
+              if (breakdown.containsKey(alias)) {
+                final v = extractVal(breakdown[alias]);
+                if (v != null) {
+                  result[compKey] = v;
+                  break;
+                }
+              }
             }
           }
         }
