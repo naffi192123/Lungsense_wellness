@@ -405,7 +405,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 timestamp: scoreTime,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
-                showStatusLabel: false,
+                customStatusText: 'Personal trend',
               ),
             ),
           ],
@@ -421,7 +421,6 @@ class _DashboardPageState extends State<DashboardPage> {
     required IconData icon,
     required Color color,
     String? customStatusText,
-    bool showStatusLabel = true,
   }) {
     final hasScore = score != null && score > 0;
     final statusText = customStatusText ??
@@ -429,7 +428,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
             : 'No logs yet');
     final statusColor = customStatusText != null
-        ? AppColors.secondary
+        ? AppColors.primary
         : (hasScore
             ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
             : AppColors.textSecondary);
@@ -462,26 +461,24 @@ class _DashboardPageState extends State<DashboardPage> {
             hasScore ? '$score' : '--',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: AppColors.text),
           ),
-          if (showStatusLabel) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  statusText,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
-                ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                statusText,
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
+              ),
+            ],
+          ),
           const SizedBox(height: 6),
           Text(
             _formatScoreTimestamp(hasScore ? timestamp : null),
