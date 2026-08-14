@@ -518,13 +518,20 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildQuickActionsGrid() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _buildActionTile(
-            title: 'Record Audio',
-            subtitle: 'Cough & Breathing',
-            icon: Icons.mic_none_outlined,
-            color: AppColors.primary,
+          child: _buildQuickActionCard(
+            title: 'Record Cough\n& Breathing',
+            subtitle: 'Record your cough or\ntake a breathing test',
+            buttonText: 'Start Recording',
+            icon: Icons.mic_rounded,
+            cardBgColor: const Color(0xFFF4FAEB),
+            borderColor: AppColors.primary.withValues(alpha: 0.22),
+            buttonColor: AppColors.primary,
+            iconColor: AppColors.primary,
+            bgDecorationIconLeft: Icons.graphic_eq_rounded,
+            bgDecorationIconRight: Icons.graphic_eq_rounded,
             onTap: () async {
               await context.push('/record');
               if (mounted) {
@@ -534,13 +541,19 @@ class _DashboardPageState extends State<DashboardPage> {
             },
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 14),
         Expanded(
-          child: _buildActionTile(
-            title: 'Daily Log',
-            subtitle: 'Check symptoms',
-            icon: Icons.edit_note_rounded,
-            color: AppColors.supportingGreen,
+          child: _buildQuickActionCard(
+            title: 'Daily Log\nSymptoms',
+            subtitle: 'Log your symptoms\nand how you feel',
+            buttonText: 'Log Symptoms',
+            icon: Icons.assignment_turned_in_outlined,
+            cardBgColor: const Color(0xFFE9F7F8),
+            borderColor: AppColors.secondary.withValues(alpha: 0.22),
+            buttonColor: AppColors.secondary,
+            iconColor: AppColors.secondary,
+            bgDecorationIconLeft: Icons.eco_outlined,
+            bgDecorationIconRight: Icons.chat_bubble_outline_rounded,
             onTap: () async {
               await context.push('/daily-log');
               if (mounted) {
@@ -554,45 +567,123 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildActionTile({
+  Widget _buildQuickActionCard({
     required String title,
     required String subtitle,
+    required String buttonText,
     required IconData icon,
-    required Color color,
+    required Color cardBgColor,
+    required Color borderColor,
+    required Color buttonColor,
+    required Color iconColor,
+    required IconData bgDecorationIconLeft,
+    required IconData bgDecorationIconRight,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16.0),
+      borderRadius: BorderRadius.circular(24.0),
       child: Container(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(color: AppColors.border),
+          color: cardBgColor,
+          borderRadius: BorderRadius.circular(24.0),
+          border: Border.all(color: borderColor, width: 1.2),
         ),
-        child: Row(
+        child: Column(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: color.withValues(alpha: 0.12),
-              child: Icon(icon, color: color, size: 20),
+            // Top Header Graphic with Circle Icon & Decorative Background Accents
+            SizedBox(
+              height: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    left: 6,
+                    child: Icon(
+                      bgDecorationIconLeft,
+                      size: 26,
+                      color: iconColor.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  Positioned(
+                    right: 6,
+                    child: Icon(
+                      bgDecorationIconRight,
+                      size: 26,
+                      color: iconColor.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: iconColor, size: 28),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+
+            // Main Card Title
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: AppColors.text,
+                height: 1.25,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Card Description Subtitle
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11.5,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Bottom Full-Width Pill Action Button
+            Container(
+              width: double.infinity,
+              height: 42,
+              decoration: BoxDecoration(
+                color: buttonColor,
+                borderRadius: BorderRadius.circular(24.0),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
-                    overflow: TextOverflow.ellipsis,
+                    buttonText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.5,
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white,
+                    size: 18,
                   ),
                 ],
               ),
