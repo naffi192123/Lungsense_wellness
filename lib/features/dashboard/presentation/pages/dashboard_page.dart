@@ -350,23 +350,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildFourScoreCards(WellnessState state) {
-    // All four component scores read directly from backend breakdown (C/B/S/T)
-    // Populated by WellnessBloc._parseComponentScores after GET /score/latest
-    final scoreTime = state.latestScore?.timestamp;
-
-    // Fallback timestamps from individual recordings/logs when available
-    DateTime? coughTime = scoreTime;
-    DateTime? breathingTime = scoreTime;
-    DateTime? symptomTime = scoreTime;
-    if (state.audioAnalyses.isNotEmpty) {
-      final coughAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
-      if (coughAudio != null) coughTime = coughAudio.timestamp;
-      final breathAudio = state.audioAnalyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
-      if (breathAudio != null) breathingTime = breathAudio.timestamp;
-    }
-    if (state.dailyLogs.isNotEmpty) {
-      symptomTime = state.dailyLogs.first.timestamp;
-    }
+    // Aligned timestamp from GET /score/latest response
+    final scoreTime = state.latestScore?.timestamp ??
+        (state.scoreHistory.isNotEmpty ? state.scoreHistory.first.timestamp : null);
 
     final isInitializing = state.latestScore?.baselineStatus?.toLowerCase() == 'initializing' || state.trendScore == null;
 
@@ -384,7 +370,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Cough Score',
                 score: state.coughScore,
-                timestamp: coughTime,
+                timestamp: scoreTime,
                 icon: Icons.sick_outlined,
                 color: AppColors.primary,
               ),
@@ -394,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Breathing Score',
                 score: state.breathingScore,
-                timestamp: breathingTime,
+                timestamp: scoreTime,
                 icon: Icons.air_rounded,
                 color: AppColors.supportingGreen,
               ),
@@ -408,7 +394,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Symptom Score',
                 score: state.symptomScore,
-                timestamp: symptomTime,
+                timestamp: scoreTime,
                 icon: Icons.assignment_turned_in_outlined,
                 color: Colors.amber.shade800,
               ),
