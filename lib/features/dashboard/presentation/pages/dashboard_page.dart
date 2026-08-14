@@ -12,6 +12,8 @@ import '../bloc/wellness_event.dart';
 import '../bloc/wellness_state.dart';
 import '../../../history/presentation/pages/history_page.dart';
 import '../../../analytics/presentation/pages/analytics_page.dart';
+import '../../../analytics/presentation/bloc/analytics_bloc.dart';
+import '../../../analytics/presentation/bloc/analytics_event.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
 
@@ -77,6 +79,9 @@ class _DashboardPageState extends State<DashboardPage> {
           } else if (index == 2) {
             // History tab needs full data
             context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+          } else if (index == 3) {
+            // Analytics tab — always fetch fresh analytics data
+            context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
           }
         },
         items: const [

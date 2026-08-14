@@ -11,6 +11,7 @@ import '../../features/auth/presentation/pages/email_verification_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/dashboard/presentation/bloc/wellness_bloc.dart';
+import '../../features/analytics/presentation/bloc/analytics_bloc.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import '../../features/daily_log/presentation/pages/daily_log_page.dart';
@@ -133,6 +134,7 @@ abstract class AppRouter {
             providers: [
               BlocProvider(create: (context) => sl<WellnessBloc>()),
               BlocProvider(create: (context) => sl<AuthBloc>()),
+              BlocProvider(create: (context) => sl<AnalyticsBloc>()),
             ],
             child: DashboardPage(initialTab: initialTab),
           );

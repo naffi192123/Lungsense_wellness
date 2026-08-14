@@ -22,4 +22,7 @@ abstract class WellnessRepository {
 
   /// Fetch baseline lifecycle progress status.
   Future<Map<String, dynamic>> getBaselineStatus();
+
+  /// Fetch visual classification bands from the backend.
+  Future<Map<String, dynamic>> getScoreBands();
 }

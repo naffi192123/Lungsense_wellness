@@ -362,6 +362,23 @@ class WellnessRepositoryImpl implements WellnessRepository {
     return {'status': 'initializing', 'message': 'Complete screening sessions to activate trend scoring.'};
   }
 
+  @override
+  Future<Map<String, dynamic>> getScoreBands() async {
+    if (scoreRemoteDataSource != null) {
+      try {
+        return await scoreRemoteDataSource!.getScoreBands();
+      } catch (_) {}
+    }
+    // Fallback to backend-defined defaults
+    return {
+      'bands': [
+        {'band': 'low', 'label': 'Needs Attention', 'min': 0, 'max': 40},
+        {'band': 'moderate', 'label': 'Room to Improve', 'min': 41, 'max': 70},
+        {'band': 'good', 'label': 'Doing Well', 'min': 71, 'max': 100},
+      ]
+    };
+  }
+
   // Serializers with safe conversion helpers
   double _toDouble(dynamic val) {
     if (val == null) return 0.0;
