@@ -22,13 +22,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   @override
   void initState() {
     super.initState();
-    // Trigger initial data load when the page is first built
+    // Trigger fresh data load when the page is opened/mounted
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final bloc = context.read<AnalyticsBloc>();
-        if (bloc.state.status == AnalyticsStatus.initial) {
-          bloc.add(const AnalyticsLoadEvent());
-        }
+        context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
       }
     });
   }
@@ -389,7 +386,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           child: _buildMetricCard(
             title: 'LATEST',
             value: latest,
-            subtitle: 'Lung Wellness Score',
+            subtitle: 'Wellness Score',
             color: AppColors.primary,
             bgColor: AppColors.primary.withValues(alpha: 0.07),
             icon: Icons.speed_rounded,

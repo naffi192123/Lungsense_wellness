@@ -60,12 +60,14 @@ class _DashboardPageState extends State<DashboardPage> {
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
           if (index == 1) {
-            // Capture bloc reference before async gap to avoid BuildContext warning
-            final bloc = context.read<WellnessBloc>();
+            // Capture bloc references before async gap to avoid BuildContext warning
+            final wellnessBloc = context.read<WellnessBloc>();
+            final analyticsBloc = context.read<AnalyticsBloc>();
             context.push('/record').then((_) {
               if (mounted) {
-                // After recording, fetch fresh score from GET /score/latest
-                bloc.add(const WellnessFetchScoreEvent());
+                // After recording, fetch fresh score and refresh analytics
+                wellnessBloc.add(const WellnessFetchScoreEvent());
+                analyticsBloc.add(const AnalyticsLoadEvent());
               }
             });
             return;
@@ -539,6 +541,7 @@ class _DashboardPageState extends State<DashboardPage> {
               await context.push('/record?tab=0');
               if (mounted) {
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
               }
             },
           ),
@@ -557,6 +560,7 @@ class _DashboardPageState extends State<DashboardPage> {
               await context.push('/record?tab=1');
               if (mounted) {
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
               }
             },
           ),
@@ -575,6 +579,7 @@ class _DashboardPageState extends State<DashboardPage> {
               await context.push('/daily-log');
               if (mounted) {
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
               }
             },
           ),

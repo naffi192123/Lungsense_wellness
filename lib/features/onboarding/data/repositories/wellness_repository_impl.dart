@@ -206,28 +206,51 @@ class WellnessRepositoryImpl implements WellnessRepository {
         final remote = await scoreRemoteDataSource!.getScoreHistory(limit: limit, offset: offset);
         final List<ScoreHistoryEntity> result = [];
         for (var item in remote) {
-          final rawScore = item['score'] ?? item['final_score'] ?? item['wellness_score'] ?? item['total_score'];
-          final intScore = rawScore != null
-              ? (rawScore is num ? rawScore.toInt() : int.tryParse(rawScore.toString()) ?? 0)
-              : 0;
+          final double? lungWellnessScore = _parseDouble(
+            item['lung_wellness_score'] ?? item['score'] ?? item['final_score'] ?? item['wellness_score'] ?? item['total_score'],
+          );
+          final double? coughScore = _parseDouble(
+            item['cough_score'] ?? (item['breakdown'] is Map ? item['breakdown']['C'] : null) ?? (item['components'] is Map ? item['components']['cough'] : null),
+          );
+          final double? breathingScore = _parseDouble(
+            item['breathing_score'] ?? (item['breakdown'] is Map ? item['breakdown']['B'] : null) ?? (item['components'] is Map ? item['components']['breathing'] : null),
+          );
+          final double? symptomScore = _parseDouble(
+            item['symptom_score'] ?? (item['breakdown'] is Map ? item['breakdown']['S'] : null) ?? (item['components'] is Map ? item['components']['symptom'] : null),
+          );
+          final double? trendScore = _parseDouble(
+            item['trend_score'] ?? (item['breakdown'] is Map ? item['breakdown']['T'] : null) ?? (item['components'] is Map ? item['components']['trend'] : null),
+          );
+
+          final int intScore = (lungWellnessScore ?? 0).round();
 
           final entity = ScoreHistoryEntity(
             id: item['id'] as String? ?? item['created_at']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
             score: intScore,
-            band: item['band'] as String? ?? 'good',
+            lungWellnessScore: lungWellnessScore,
+            coughScore: coughScore,
+            breathingScore: breathingScore,
+            symptomScore: symptomScore,
+            trendScore: trendScore,
+            band: item['band'] as String? ?? (intScore >= 71 ? 'good' : (intScore >= 41 ? 'moderate' : 'low')),
             message: item['message'] as String?,
             breakdown: item['breakdown'] is Map
                 ? Map<String, dynamic>.from(item['breakdown'])
                 : (item['components'] is Map ? Map<String, dynamic>.from(item['components']) : null),
             sessionNumber: (item['session_number'] as num?)?.toInt(),
             baselineStatus: item['baseline_status'] as String?,
-            timestamp: item['created_at'] != null ? DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+            timestamp: item['created_at'] != null ? (DateTime.tryParse(item['created_at'].toString())?.toLocal() ?? DateTime.now()) : DateTime.now(),
           );
           result.add(entity);
           if (scoreBox != null) {
             await scoreBox!.put(entity.id, {
               'id': entity.id,
               'score': entity.score,
+              'lungWellnessScore': entity.lungWellnessScore,
+              'coughScore': entity.coughScore,
+              'breathingScore': entity.breathingScore,
+              'symptomScore': entity.symptomScore,
+              'trendScore': entity.trendScore,
               'band': entity.band,
               'message': entity.message,
               'breakdown': entity.breakdown,
@@ -245,12 +268,18 @@ class WellnessRepositoryImpl implements WellnessRepository {
     if (scoreBox != null) {
       final List<ScoreHistoryEntity> list = [];
       for (var key in scoreBox!.keys) {
+        if (key == 'latest') continue;
         final raw = scoreBox!.get(key);
         if (raw != null) {
           final map = Map<String, dynamic>.from(raw);
           list.add(ScoreHistoryEntity(
             id: map['id'] as String? ?? '',
             score: (map['score'] as num?)?.toInt() ?? 0,
+            lungWellnessScore: _parseDouble(map['lungWellnessScore']),
+            coughScore: _parseDouble(map['coughScore']),
+            breathingScore: _parseDouble(map['breathingScore']),
+            symptomScore: _parseDouble(map['symptomScore']),
+            trendScore: _parseDouble(map['trendScore']),
             band: map['band'] as String? ?? 'good',
             message: map['message'] as String?,
             breakdown: map['breakdown'] is Map ? Map<String, dynamic>.from(map['breakdown']) : null,
