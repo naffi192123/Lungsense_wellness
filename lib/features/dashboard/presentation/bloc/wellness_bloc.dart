@@ -204,47 +204,6 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       }
     }
 
-    // Fallbacks if backend component scores are uncomputed or null:
-    final logs = dailyLogs ?? state.dailyLogs;
-    final analyses = audioAnalyses ?? state.audioAnalyses;
-
-    // 1. Cough Score
-    if (!result.containsKey('C') && analyses.isNotEmpty) {
-      final coughAudio = analyses.where((a) => a.type.toLowerCase() == 'cough').firstOrNull;
-      if (coughAudio != null && coughAudio.lungsScore > 0) {
-        result['C'] = coughAudio.lungsScore;
-      }
-    }
-
-    // 2. Breathing Score
-    if (!result.containsKey('B') && analyses.isNotEmpty) {
-      final breathAudio = analyses.where((a) => a.type.toLowerCase() == 'breathing').firstOrNull;
-      if (breathAudio != null && breathAudio.lungsScore > 0) {
-        result['B'] = breathAudio.lungsScore;
-      }
-    }
-
-    // 3. Symptom Score
-    if (!result.containsKey('S') && logs.isNotEmpty) {
-      final latestLog = logs.first;
-      final sumSymptoms = latestLog.breathlessness +
-          latestLog.activityLimitation +
-          latestLog.changeFromUsual +
-          latestLog.fever +
-          latestLog.chestTightness +
-          latestLog.chestDiscomfortBreathing +
-          latestLog.wheezing +
-          latestLog.coughSeverity +
-          latestLog.mucus +
-          latestLog.sleepDisruption;
-      result['S'] = (100 - (sumSymptoms / 30.0 * 100)).clamp(0, 100).round();
-    }
-
-    // 4. Trend Score
-    if (!result.containsKey('T') && result.containsKey('S')) {
-      result['T'] = result['S']!;
-    }
-
     return result;
   }
 }

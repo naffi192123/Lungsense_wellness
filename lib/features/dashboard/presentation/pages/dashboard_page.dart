@@ -324,9 +324,11 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            hasScore
-                ? (scoreEntity?.message ?? 'Score computed fresh from backend.')
-                : 'Complete your symptom check-in and audio recordings to compute today\'s score.',
+            (scoreEntity?.message != null && scoreEntity!.message!.isNotEmpty)
+                ? scoreEntity.message!
+                : (hasScore
+                    ? 'Score computed fresh from backend.'
+                    : 'No score computed yet. Complete your symptom check-in and audio recordings to compute today\'s score.'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
