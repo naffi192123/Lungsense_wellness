@@ -354,8 +354,6 @@ class _DashboardPageState extends State<DashboardPage> {
     final scoreTime = state.latestScore?.timestamp ??
         (state.scoreHistory.isNotEmpty ? state.scoreHistory.first.timestamp : null);
 
-    final isInitializing = state.latestScore?.baselineStatus?.toLowerCase() == 'initializing' || state.trendScore == null;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -403,11 +401,10 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: _buildMetricCard(
                 title: 'Trend Score',
-                score: isInitializing ? null : state.trendScore,
+                score: state.trendScore,
                 timestamp: scoreTime,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
-                customStatusText: isInitializing ? 'Initializing' : null,
               ),
             ),
           ],
