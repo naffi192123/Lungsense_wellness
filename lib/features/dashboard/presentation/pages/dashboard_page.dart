@@ -405,6 +405,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 timestamp: scoreTime,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
+                showStatusLabel: false,
               ),
             ),
           ],
@@ -420,6 +421,7 @@ class _DashboardPageState extends State<DashboardPage> {
     required IconData icon,
     required Color color,
     String? customStatusText,
+    bool showStatusLabel = true,
   }) {
     final hasScore = score != null && score > 0;
     final statusText = customStatusText ??
@@ -460,24 +462,26 @@ class _DashboardPageState extends State<DashboardPage> {
             hasScore ? '$score' : '--',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: AppColors.text),
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
+          if (showStatusLabel) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                statusText,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
-              ),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Text(
+                  statusText,
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 6),
           Text(
             _formatScoreTimestamp(hasScore ? timestamp : null),
