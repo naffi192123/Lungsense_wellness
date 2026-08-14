@@ -517,7 +517,8 @@ class _DashboardPageState extends State<DashboardPage> {
   // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
   Widget _buildQuickActionsGrid() {
-    return Row(
+    return IntrinsicHeight(
+      child: Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
@@ -574,6 +575,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
       ],
+      ),
     );
   }
 
