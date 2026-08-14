@@ -480,4 +480,11 @@ class WellnessRepositoryImpl implements WellnessRepository {
       spectralSummary: map['spectralSummary'] is Map ? Map<String, dynamic>.from(map['spectralSummary']) : null,
     );
   }
+
+  double? _parseDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    if (val is String) return double.tryParse(val);
+    return null;
+  }
 }
