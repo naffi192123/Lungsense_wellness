@@ -517,175 +517,165 @@ class _DashboardPageState extends State<DashboardPage> {
   // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
   Widget _buildQuickActionsGrid() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _buildQuickActionCard(
-            title: 'Record Cough\n& Breathing',
-            subtitle: 'Record your cough or\ntake a breathing test',
-            buttonText: 'Start Recording',
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildQuickActionCard(
+            title: 'Cough',
+            subtitle: 'Record your\ncough',
             icon: Icons.mic_rounded,
-            cardBgColor: const Color(0xFFF4FAEB),
-            borderColor: AppColors.primary.withValues(alpha: 0.22),
-            buttonColor: AppColors.primary,
-            iconColor: AppColors.primary,
-            bgDecorationIconLeft: Icons.graphic_eq_rounded,
-            bgDecorationIconRight: Icons.graphic_eq_rounded,
+            cardBgColor: const Color(0xFFF0FAF0),
+            iconGradientColors: [const Color(0xFF7BC67E), const Color(0xFF43A047)],
+            waveColor: const Color(0xFFB9E4B9),
+            arrowColor: const Color(0xFF43A047),
             onTap: () async {
               await context.push('/record');
               if (mounted) {
-                // After recording, fetch fresh score from GET /score/latest
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
             },
           ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: _buildQuickActionCard(
-            title: 'Daily Log\nSymptoms',
-            subtitle: 'Log your symptoms\nand how you feel',
-            buttonText: 'Log Symptoms',
-            icon: Icons.assignment_turned_in_outlined,
-            cardBgColor: const Color(0xFFE9F7F8),
-            borderColor: AppColors.secondary.withValues(alpha: 0.22),
-            buttonColor: AppColors.secondary,
-            iconColor: AppColors.secondary,
-            bgDecorationIconLeft: Icons.eco_outlined,
-            bgDecorationIconRight: Icons.chat_bubble_outline_rounded,
+          const SizedBox(width: 12),
+          _buildQuickActionCard(
+            title: 'Breathing',
+            subtitle: 'Record your\nbreathing',
+            icon: Icons.air_rounded,
+            cardBgColor: const Color(0xFFE8F7F8),
+            iconGradientColors: [const Color(0xFF4ECDC4), const Color(0xFF00897B)],
+            waveColor: const Color(0xFFACE0DC),
+            arrowColor: const Color(0xFF00897B),
+            onTap: () async {
+              await context.push('/record');
+              if (mounted) {
+                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+              }
+            },
+          ),
+          const SizedBox(width: 12),
+          _buildQuickActionCard(
+            title: 'How are you\nfeeling today?',
+            subtitle: 'Log your\nsymptoms',
+            icon: Icons.sentiment_satisfied_alt_rounded,
+            cardBgColor: const Color(0xFFF3EFFA),
+            iconGradientColors: [const Color(0xFFB39DDB), const Color(0xFF7E57C2)],
+            waveColor: const Color(0xFFCFBEEA),
+            arrowColor: const Color(0xFF7E57C2),
             onTap: () async {
               await context.push('/daily-log');
               if (mounted) {
-                // After symptom log, fetch fresh score from GET /score/latest
                 context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
               }
             },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildQuickActionCard({
     required String title,
     required String subtitle,
-    required String buttonText,
     required IconData icon,
     required Color cardBgColor,
-    required Color borderColor,
-    required Color buttonColor,
-    required Color iconColor,
-    required IconData bgDecorationIconLeft,
-    required IconData bgDecorationIconRight,
+    required List<Color> iconGradientColors,
+    required Color waveColor,
+    required Color arrowColor,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    const double cardWidth = 158;
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24.0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        width: cardWidth,
         decoration: BoxDecoration(
           color: cardBgColor,
-          borderRadius: BorderRadius.circular(24.0),
-          border: Border.all(color: borderColor, width: 1.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: arrowColor.withValues(alpha: 0.15), width: 1),
         ),
-        child: Column(
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
           children: [
-            // Top Header Graphic with Circle Icon & Decorative Background Accents
-            SizedBox(
-              height: 64,
-              child: Stack(
-                alignment: Alignment.center,
+            // Wave decoration at bottom
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: CustomPaint(
+                size: const Size(double.infinity, 48),
+                painter: _WavePainter(color: waveColor.withValues(alpha: 0.55)),
+              ),
+            ),
+            // Card content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 52),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Positioned(
-                    left: 6,
-                    child: Icon(
-                      bgDecorationIconLeft,
-                      size: 26,
-                      color: iconColor.withValues(alpha: 0.16),
-                    ),
-                  ),
-                  Positioned(
-                    right: 6,
-                    child: Icon(
-                      bgDecorationIconRight,
-                      size: 26,
-                      color: iconColor.withValues(alpha: 0.16),
-                    ),
-                  ),
+                  // Gradient circular icon
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: iconGradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
+                          color: iconGradientColors.last.withValues(alpha: 0.30),
+                          blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Icon(icon, color: iconColor, size: 28),
+                    child: Icon(icon, color: Colors.white, size: 26),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Main Card Title
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: AppColors.text,
-                height: 1.25,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Card Description Subtitle
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11.5,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Bottom Full-Width Pill Action Button
-            Container(
-              width: double.infinity,
-              height: 42,
-              decoration: BoxDecoration(
-                color: buttonColor,
-                borderRadius: BorderRadius.circular(24.0),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+                  const SizedBox(height: 14),
+                  // Title
                   Text(
-                    buttonText,
+                    title,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14.5,
+                      color: Color(0xFF1C2B3A),
+                      height: 1.25,
+                      letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.white,
-                    size: 18,
+                  const SizedBox(height: 5),
+                  // Subtitle
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: const Color(0xFF1C2B3A).withValues(alpha: 0.55),
+                      height: 1.35,
+                    ),
                   ),
                 ],
+              ),
+            ),
+            // Bottom-right circular arrow button
+            Positioned(
+              bottom: 12,
+              right: 12,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: arrowColor.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: arrowColor,
+                  size: 18,
+                ),
               ),
             ),
           ],
@@ -968,4 +958,53 @@ class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
       ],
     );
   }
+}
+
+/// Paints a soft wave shape used as decoration at the bottom of Quick Action cards.
+class _WavePainter extends CustomPainter {
+  final Color color;
+  const _WavePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, size.height * 0.55);
+    path.cubicTo(
+      size.width * 0.25, size.height * 0.15,
+      size.width * 0.55, size.height * 0.85,
+      size.width * 0.80, size.height * 0.40,
+    );
+    path.cubicTo(
+      size.width * 0.90, size.height * 0.20,
+      size.width * 0.96, size.height * 0.50,
+      size.width, size.height * 0.38,
+    );
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    canvas.drawPath(path, paint);
+
+    // Second lighter wave layer
+    final paint2 = Paint()
+      ..color = color.withValues(alpha: color.a * 0.5)
+      ..style = PaintingStyle.fill;
+    final path2 = Path();
+    path2.moveTo(0, size.height * 0.75);
+    path2.cubicTo(
+      size.width * 0.30, size.height * 0.35,
+      size.width * 0.65, size.height * 0.95,
+      size.width, size.height * 0.55,
+    );
+    path2.lineTo(size.width, size.height);
+    path2.lineTo(0, size.height);
+    path2.close();
+    canvas.drawPath(path2, paint2);
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) => old.color != color;
 }
