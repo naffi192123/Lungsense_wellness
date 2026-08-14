@@ -111,17 +111,80 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
       final response = await apiClient.get('/recordings/jobs/$jobId');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data is! Map<String, dynamic> && data is! Map) {
+          throw const ServerException('Invalid response format from audio job status');
+        }
+        final map = Map<String, dynamic>.from(data as Map);
+
+        // Parse segmentation and cough event count
+        Map<String, dynamic>? segmentationMap;
+        int? coughEvents;
+        if (map['segmentation'] is Map) {
+          segmentationMap = Map<String, dynamic>.from(map['segmentation'] as Map);
+          if (segmentationMap['cough_event_count'] != null) {
+            coughEvents = (segmentationMap['cough_event_count'] as num?)?.toInt();
+          } else if (segmentationMap['cough_events'] is List) {
+            coughEvents = (segmentationMap['cough_events'] as List).length;
+          }
+        }
+        if (coughEvents == null && map['cough_event_count'] != null) {
+          coughEvents = (map['cough_event_count'] as num?)?.toInt();
+        }
+
+        // Parse MFCC means
+        List<double>? mfccList;
+        if (map['mfcc_means'] is List) {
+          mfccList = (map['mfcc_means'] as List)
+              .whereType<num>()
+              .map((n) => n.toDouble())
+              .toList();
+        }
+
+        // Parse spectral summary
+        Map<String, dynamic>? spectral;
+        if (map['spectral_summary'] is Map) {
+          spectral = Map<String, dynamic>.from(map['spectral_summary'] as Map);
+        }
+
+        // Parse quality breakdown
+        Map<String, dynamic>? qualityBreakdown;
+        if (map['quality_breakdown'] is Map) {
+          qualityBreakdown = Map<String, dynamic>.from(map['quality_breakdown'] as Map);
+        }
+
+        DateTime? created;
+        if (map['created_at'] != null) {
+          created = DateTime.tryParse(map['created_at'].toString())?.toLocal();
+        }
+
+        DateTime? completed;
+        if (map['completed_at'] != null) {
+          completed = DateTime.tryParse(map['completed_at'].toString())?.toLocal();
+        }
+
         return AudioJobEntity(
-          jobId: data['job_id'] as String? ?? data['id'] as String? ?? jobId,
-          status: data['status'] as String? ?? 'processing',
-          error: data['error'] as String?,
-          breathingRateBpm: (data['breathing_rate_bpm'] as num?)?.toDouble(),
-          dominantFrequencyHz: (data['dominant_frequency_hz'] as num?)?.toDouble(),
-          rmsEnergy: (data['rms_energy'] as num?)?.toDouble(),
-          qualityScore: (data['quality_score'] as num?)?.toDouble(),
-          classification: data['classification'] as String? ?? (data['quality_score'] != null ? 'Acoustic Analysis Complete' : null),
-          durationSeconds: (data['duration_seconds'] as num?)?.toDouble(),
-          spectralSummary: data['spectral_summary'] is Map ? Map<String, dynamic>.from(data['spectral_summary']) : (data['quality_breakdown'] is Map ? Map<String, dynamic>.from(data['quality_breakdown']) : null),
+          jobId: map['job_id'] as String? ?? map['id'] as String? ?? jobId,
+          status: map['status'] as String? ?? 'processing',
+          recordingType: map['recording_type'] as String?,
+          message: map['message'] as String?,
+          error: map['error'] as String?,
+          breathingRateBpm: (map['breathing_rate_bpm'] as num?)?.toDouble(),
+          breathCycleSeconds: (map['breath_cycle_seconds'] as num?)?.toDouble(),
+          dominantFrequencyHz: (map['dominant_frequency_hz'] as num?)?.toDouble(),
+          rmsEnergy: (map['rms_energy'] as num?)?.toDouble(),
+          zeroCrossingRate: (map['zero_crossing_rate'] as num?)?.toDouble(),
+          qualityScore: (map['quality_score'] as num?)?.toDouble(),
+          classification: map['classification'] as String?,
+          durationSeconds: (map['duration_seconds'] as num?)?.toDouble(),
+          spectralSummary: spectral,
+          qualityBreakdown: qualityBreakdown,
+          segmentation: segmentationMap,
+          coughEventCount: coughEvents,
+          mfccMeans: mfccList,
+          mfccDeltaMean: (map['mfcc_delta_mean'] as num?)?.toDouble(),
+          mfccDelta2Mean: (map['mfcc_delta2_mean'] as num?)?.toDouble(),
+          createdAt: created,
+          completedAt: completed,
         );
       } else {
         final data = jsonDecode(response.body);

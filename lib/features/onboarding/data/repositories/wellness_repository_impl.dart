@@ -147,11 +147,58 @@ class WellnessRepositoryImpl implements WellnessRepository {
           final jobId = raw['job_id'] as String? ?? raw['id'] as String? ?? '';
           if (jobId.isEmpty) continue;
           final createdStr = raw['created_at']?.toString();
-          final dt = createdStr != null ? DateTime.tryParse(createdStr) ?? DateTime.now() : DateTime.now();
+          final dt = createdStr != null ? DateTime.tryParse(createdStr)?.toLocal() ?? DateTime.now() : DateTime.now();
+          final completedStr = raw['completed_at']?.toString();
+          final completedDt = completedStr != null ? DateTime.tryParse(completedStr)?.toLocal() : null;
+
           final recType = (raw['recording_type'] as String? ?? 'cough').toLowerCase() == 'cough' ? 'Cough' : 'Breathing';
-          final qScore = (raw['quality_score'] as num?)?.toDouble() ?? 0.95;
-          final qScoreInt = (qScore * 100).round();
-          final classification = raw['classification'] as String? ?? 'Optimal Respiratory Sound';
+          final double? qScore = _parseDouble(raw['quality_score']);
+          final double normalizedQ = qScore != null ? (qScore <= 1.0 && qScore > 0 ? qScore * 100.0 : qScore) : 85.0;
+          final qScoreInt = normalizedQ.round();
+          final classification = raw['classification'] as String? ?? 'Acoustic Signature Processed';
+
+          final double? durationSec = _parseDouble(raw['duration_seconds']);
+          final double? breathingRateBpm = _parseDouble(raw['breathing_rate_bpm']);
+          final double? breathCycleSec = _parseDouble(raw['breath_cycle_seconds']);
+          final double? dominantFreq = _parseDouble(raw['dominant_frequency_hz']);
+          final double? rms = _parseDouble(raw['rms_energy']);
+          final double? zcr = _parseDouble(raw['zero_crossing_rate']);
+
+          // Parse segmentation and cough event count
+          Map<String, dynamic>? segmentationMap;
+          int? coughEvents;
+          if (raw['segmentation'] is Map) {
+            segmentationMap = Map<String, dynamic>.from(raw['segmentation'] as Map);
+            if (segmentationMap['cough_event_count'] != null) {
+              coughEvents = (segmentationMap['cough_event_count'] as num?)?.toInt();
+            } else if (segmentationMap['cough_events'] is List) {
+              coughEvents = (segmentationMap['cough_events'] as List).length;
+            }
+          }
+          if (coughEvents == null && raw['cough_event_count'] != null) {
+            coughEvents = (raw['cough_event_count'] as num?)?.toInt();
+          }
+
+          // Parse spectral summary
+          Map<String, dynamic>? spectral;
+          if (raw['spectral_summary'] is Map) {
+            spectral = Map<String, dynamic>.from(raw['spectral_summary'] as Map);
+          }
+
+          // Parse quality breakdown
+          Map<String, dynamic>? qualityBreakdown;
+          if (raw['quality_breakdown'] is Map) {
+            qualityBreakdown = Map<String, dynamic>.from(raw['quality_breakdown'] as Map);
+          }
+
+          // Parse MFCC means
+          List<double>? mfccList;
+          if (raw['mfcc_means'] is List) {
+            mfccList = (raw['mfcc_means'] as List)
+                .whereType<num>()
+                .map((n) => n.toDouble())
+                .toList();
+          }
 
           final existing = recordingsBox.get(jobId);
           String? localPath;
@@ -164,24 +211,34 @@ class WellnessRepositoryImpl implements WellnessRepository {
             title: '$recType Recording',
             type: recType,
             status: (raw['status'] as String? ?? 'complete').toLowerCase(),
-            duration: (raw['duration_seconds'] as num?)?.toInt() ?? 12,
+            duration: (durationSec ?? 12).toInt(),
+            durationSeconds: durationSec,
             confidence: qScoreInt,
             lungsScore: qScoreInt,
-            insight: 'Acoustic parameters processed: Breathing Rate = ${raw['breathing_rate_bpm'] != null ? '${raw['breathing_rate_bpm']} BPM' : 'N/A'}, Dominant Frequency = ${raw['dominant_frequency_hz'] != null ? '${raw['dominant_frequency_hz']} Hz' : 'N/A'}, Classification = $classification.',
+            insight: 'Acoustic parameters processed: Breathing Rate = ${breathingRateBpm != null ? '${breathingRateBpm.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${dominantFreq != null ? '${dominantFreq.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
             intensity: 'Normal',
-            breathingRate: (raw['breathing_rate_bpm'] as num?)?.toInt() ?? 0,
+            breathingRate: (breathingRateBpm ?? 0).toInt(),
+            breathingRateBpm: breathingRateBpm,
+            breathCycleSeconds: breathCycleSec,
+            coughEventCount: coughEvents,
             rhythm: classification,
             signalQuality: 'Quality: $qScoreInt%',
             backgroundNoise: 'Low',
             timestamp: dt,
+            completedAt: completedDt,
             tags: ['FastAPI Engine', classification],
             localAudioPath: localPath,
             jobId: jobId,
             qualityScore: qScore,
-            dominantFrequencyHz: (raw['dominant_frequency_hz'] as num?)?.toDouble(),
-            rmsEnergy: (raw['rms_energy'] as num?)?.toDouble(),
+            dominantFrequencyHz: dominantFreq,
+            rmsEnergy: rms,
+            zeroCrossingRate: zcr,
             classification: classification,
-            spectralSummary: raw['spectral_summary'] is Map ? Map<String, dynamic>.from(raw['spectral_summary']) : null,
+            errorMessage: raw['error'] as String?,
+            spectralSummary: spectral,
+            qualityBreakdown: qualityBreakdown,
+            segmentation: segmentationMap,
+            mfccMeans: mfccList,
           );
           await recordingsBox.put(entity.id, _audioAnalysisToMap(entity));
         }
@@ -478,24 +535,33 @@ class WellnessRepositoryImpl implements WellnessRepository {
       'type': analysis.type,
       'status': analysis.status,
       'duration': analysis.duration,
+      'durationSeconds': analysis.durationSeconds,
       'confidence': analysis.confidence,
       'lungsScore': analysis.lungsScore,
       'insight': analysis.insight,
       'intensity': analysis.intensity,
       'breathingRate': analysis.breathingRate,
+      'breathingRateBpm': analysis.breathingRateBpm,
+      'breathCycleSeconds': analysis.breathCycleSeconds,
+      'coughEventCount': analysis.coughEventCount,
       'rhythm': analysis.rhythm,
       'signalQuality': analysis.signalQuality,
       'backgroundNoise': analysis.backgroundNoise,
       'timestamp': analysis.timestamp.toIso8601String(),
+      'completedAt': analysis.completedAt?.toIso8601String(),
       'tags': analysis.tags,
       'localAudioPath': analysis.localAudioPath,
       'jobId': analysis.jobId,
       'qualityScore': analysis.qualityScore,
       'dominantFrequencyHz': analysis.dominantFrequencyHz,
       'rmsEnergy': analysis.rmsEnergy,
+      'zeroCrossingRate': analysis.zeroCrossingRate,
       'classification': analysis.classification,
       'errorMessage': analysis.errorMessage,
       'spectralSummary': analysis.spectralSummary,
+      'qualityBreakdown': analysis.qualityBreakdown,
+      'segmentation': analysis.segmentation,
+      'mfccMeans': analysis.mfccMeans,
     };
   }
 
@@ -506,24 +572,33 @@ class WellnessRepositoryImpl implements WellnessRepository {
       type: map['type'] as String? ?? '',
       status: map['status'] as String? ?? 'complete',
       duration: (map['duration'] as num?)?.toInt() ?? 0,
+      durationSeconds: _parseDouble(map['durationSeconds']),
       confidence: (map['confidence'] as num?)?.toInt() ?? 0,
       lungsScore: (map['lungsScore'] as num?)?.toInt() ?? 0,
       insight: map['insight'] as String? ?? '',
       intensity: map['intensity'] as String? ?? '',
       breathingRate: (map['breathingRate'] as num?)?.toInt() ?? 0,
+      breathingRateBpm: _parseDouble(map['breathingRateBpm']),
+      breathCycleSeconds: _parseDouble(map['breathCycleSeconds']),
+      coughEventCount: (map['coughEventCount'] as num?)?.toInt(),
       rhythm: map['rhythm'] as String? ?? '',
       signalQuality: map['signalQuality'] as String? ?? '',
       backgroundNoise: map['backgroundNoise'] as String? ?? '',
       timestamp: map['timestamp'] != null ? DateTime.tryParse(map['timestamp']) ?? DateTime.now() : DateTime.now(),
+      completedAt: map['completedAt'] != null ? DateTime.tryParse(map['completedAt']) : null,
       tags: List<String>.from(map['tags'] ?? []),
       localAudioPath: map['localAudioPath'] as String?,
       jobId: map['jobId'] as String?,
-      qualityScore: (map['qualityScore'] as num?)?.toDouble(),
-      dominantFrequencyHz: (map['dominantFrequencyHz'] as num?)?.toDouble(),
-      rmsEnergy: (map['rms_energy'] ?? map['rmsEnergy'] as num?)?.toDouble(),
+      qualityScore: _parseDouble(map['qualityScore']),
+      dominantFrequencyHz: _parseDouble(map['dominantFrequencyHz']),
+      rmsEnergy: _parseDouble(map['rms_energy'] ?? map['rmsEnergy']),
+      zeroCrossingRate: _parseDouble(map['zeroCrossingRate']),
       classification: map['classification'] as String?,
       errorMessage: map['errorMessage'] as String?,
       spectralSummary: map['spectralSummary'] is Map ? Map<String, dynamic>.from(map['spectralSummary']) : null,
+      qualityBreakdown: map['qualityBreakdown'] is Map ? Map<String, dynamic>.from(map['qualityBreakdown']) : null,
+      segmentation: map['segmentation'] is Map ? Map<String, dynamic>.from(map['segmentation']) : null,
+      mfccMeans: map['mfccMeans'] is List ? (map['mfccMeans'] as List).whereType<num>().map((n) => n.toDouble()).toList() : null,
     );
   }
 

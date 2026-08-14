@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_state.dart';
-import '../../../onboarding/domain/entities/wellness_entities.dart';
 
 /// Screen listing real historical symptom check-ins, audio logs, and wellness scores.
 class HistoryPage extends StatelessWidget {
@@ -120,7 +119,7 @@ class HistoryPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -187,7 +186,7 @@ class HistoryPage extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(10.0),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
+            color: iconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12.0),
           ),
           child: Icon(icon, color: iconColor, size: 22),
@@ -220,7 +219,7 @@ class HistoryPage extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.supportingGreen.withOpacity(0.12),
+                  color: AppColors.supportingGreen.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

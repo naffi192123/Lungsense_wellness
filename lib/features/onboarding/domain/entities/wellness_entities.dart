@@ -85,11 +85,20 @@ class AudioAnalysisEntity extends Equatable {
   final String? localAudioPath;
   final String? jobId;
   final double? qualityScore;
+  final double? durationSeconds;
+  final double? breathingRateBpm;
+  final double? breathCycleSeconds;
+  final int? coughEventCount;
   final double? dominantFrequencyHz;
   final double? rmsEnergy;
+  final double? zeroCrossingRate;
   final String? classification;
   final String? errorMessage;
   final Map<String, dynamic>? spectralSummary;
+  final Map<String, dynamic>? qualityBreakdown;
+  final Map<String, dynamic>? segmentation;
+  final List<double>? mfccMeans;
+  final DateTime? completedAt;
 
   const AudioAnalysisEntity({
     required this.id,
@@ -97,25 +106,67 @@ class AudioAnalysisEntity extends Equatable {
     required this.type,
     this.status = 'complete',
     required this.duration,
+    this.durationSeconds,
     required this.confidence,
     required this.lungsScore,
     required this.insight,
     required this.intensity,
     required this.breathingRate,
+    this.breathingRateBpm,
+    this.breathCycleSeconds,
+    this.coughEventCount,
     required this.rhythm,
     required this.signalQuality,
     required this.backgroundNoise,
     required this.timestamp,
+    this.completedAt,
     required this.tags,
     this.localAudioPath,
     this.jobId,
     this.qualityScore,
     this.dominantFrequencyHz,
     this.rmsEnergy,
+    this.zeroCrossingRate,
     this.classification,
     this.errorMessage,
     this.spectralSummary,
+    this.qualityBreakdown,
+    this.segmentation,
+    this.mfccMeans,
   });
+
+  /// Quality score normalized to 0-100 scale
+  double? get normalizedQualityScore {
+    if (qualityScore == null) return null;
+    if (qualityScore! > 0 && qualityScore! <= 1.0) {
+      return qualityScore! * 100.0;
+    }
+    return qualityScore;
+  }
+
+  /// Spectral Centroid in Hz
+  double? get spectralCentroidHz {
+    if (spectralSummary != null && spectralSummary!['centroid_hz'] != null) {
+      return (spectralSummary!['centroid_hz'] as num).toDouble();
+    }
+    return null;
+  }
+
+  /// Spectral Bandwidth in Hz
+  double? get spectralBandwidthHz {
+    if (spectralSummary != null && spectralSummary!['bandwidth_hz'] != null) {
+      return (spectralSummary!['bandwidth_hz'] as num).toDouble();
+    }
+    return null;
+  }
+
+  /// Spectral Rolloff in Hz
+  double? get spectralRolloffHz {
+    if (spectralSummary != null && spectralSummary!['rolloff_hz'] != null) {
+      return (spectralSummary!['rolloff_hz'] as num).toDouble();
+    }
+    return null;
+  }
 
   @override
   List<Object?> get props => [
@@ -124,24 +175,33 @@ class AudioAnalysisEntity extends Equatable {
         type,
         status,
         duration,
+        durationSeconds,
         confidence,
         lungsScore,
         insight,
         intensity,
         breathingRate,
+        breathingRateBpm,
+        breathCycleSeconds,
+        coughEventCount,
         rhythm,
         signalQuality,
         backgroundNoise,
         timestamp,
+        completedAt,
         tags,
         localAudioPath,
         jobId,
         qualityScore,
         dominantFrequencyHz,
         rmsEnergy,
+        zeroCrossingRate,
         classification,
         errorMessage,
         spectralSummary,
+        qualityBreakdown,
+        segmentation,
+        mfccMeans,
       ];
 }
 

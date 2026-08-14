@@ -909,10 +909,13 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
 
   void _handleSuccessAnalysis(BuildContext context, AudioRecordingSuccess state) {
     final job = state.job;
-    final qualityScore = ((job.qualityScore ?? 0.95) * 100).toInt();
-    final classification = job.classification ?? 'Optimal Respiratory Sound';
-    final typeName = (state.recordingType ?? _currentRecordingType).toLowerCase() == 'cough' ? 'Cough' : 'Breathing';
+    final typeName = (state.recordingType ?? job.recordingType ?? _currentRecordingType).toLowerCase() == 'cough' ? 'Cough' : 'Breathing';
+    final isCough = typeName == 'Cough';
     final audioPath = state.filePath;
+
+    final double? normQ = job.normalizedQualityScore;
+    final int qScoreInt = (normQ ?? 85.0).round();
+    final String classification = job.classification ?? '$typeName Acoustic Signature Analyzed';
 
     final analysisEntity = AudioAnalysisEntity(
       id: job.jobId,
@@ -920,80 +923,323 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
       type: typeName,
       status: job.status.toLowerCase(),
       duration: (job.durationSeconds ?? 12).toInt(),
-      confidence: qualityScore,
-      lungsScore: qualityScore,
-      insight: 'Acoustic parameters processed: Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
+      durationSeconds: job.durationSeconds,
+      confidence: qScoreInt,
+      lungsScore: qScoreInt,
+      insight: 'Acoustic parameters processed: Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
       intensity: 'Normal',
       breathingRate: (job.breathingRateBpm ?? 0).toInt(),
+      breathingRateBpm: job.breathingRateBpm,
+      breathCycleSeconds: job.breathCycleSeconds,
+      coughEventCount: isCough ? job.coughEventCount : null,
       rhythm: classification,
-      signalQuality: 'Quality: $qualityScore%',
+      signalQuality: normQ != null ? 'Quality: ${normQ.toStringAsFixed(1)}%' : 'Quality: $qScoreInt%',
       backgroundNoise: 'Low',
-      timestamp: DateTime.now(),
+      timestamp: job.createdAt ?? DateTime.now(),
+      completedAt: job.completedAt ?? DateTime.now(),
       tags: ['FastAPI Engine', classification],
       localAudioPath: audioPath,
       jobId: job.jobId,
       qualityScore: job.qualityScore,
       dominantFrequencyHz: job.dominantFrequencyHz,
       rmsEnergy: job.rmsEnergy,
+      zeroCrossingRate: job.zeroCrossingRate,
       classification: classification,
+      errorMessage: job.error,
       spectralSummary: job.spectralSummary,
+      qualityBreakdown: job.qualityBreakdown,
+      segmentation: job.segmentation,
+      mfccMeans: job.mfccMeans,
     );
 
+    // Save to BLoC repository so Dashboard, History, and Analytics update automatically
     context.read<WellnessBloc>().add(WellnessSaveAudioAnalysisEvent(analysisEntity));
+
+    final themeColor = isCough ? AppColors.supportingGreen : AppColors.secondary;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: AppColors.success, size: 28),
-            SizedBox(width: 8),
-            Text('Analysis Complete'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Job ID: ${job.jobId}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            const SizedBox(height: 12),
-            _buildResultRow('Classification', classification),
-            _buildResultRow('Quality Score', '$qualityScore%'),
-            if (job.breathingRateBpm != null)
-              _buildResultRow('Breathing Rate', '${job.breathingRateBpm!.toStringAsFixed(1)} BPM'),
-            if (job.dominantFrequencyHz != null)
-              _buildResultRow('Dominant Freq', '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz'),
-            if (job.rmsEnergy != null)
-              _buildResultRow('RMS Energy', job.rmsEnergy!.toStringAsFixed(3)),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
-              context.go('/dashboard');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: AppColors.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        isCough ? Icons.sick_outlined : Icons.air_rounded,
+                        color: themeColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$typeName Analysis',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Audio processing completed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: AppColors.success, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Completed',
+                            style: TextStyle(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Divider(color: AppColors.border, height: 1),
+                const SizedBox(height: 14),
+
+                // Primary Metrics Box
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildPopupMetricRow(
+                        label: 'Recording Type',
+                        value: typeName,
+                        icon: Icons.category_outlined,
+                      ),
+                      if (job.durationSeconds != null)
+                        _buildPopupMetricRow(
+                          label: 'Duration',
+                          value: '${job.durationSeconds!.toStringAsFixed(2)} s',
+                          icon: Icons.timer_outlined,
+                        ),
+                      if (normQ != null)
+                        _buildPopupMetricRow(
+                          label: 'Quality Score',
+                          value: '${normQ.toStringAsFixed(1)}%',
+                          valueColor: normQ >= 70 ? AppColors.supportingGreen : (normQ >= 40 ? AppColors.secondary : AppColors.error),
+                          icon: Icons.speed_rounded,
+                        ),
+                      if (isCough && job.coughEventCount != null)
+                        _buildPopupMetricRow(
+                          label: 'Cough Events',
+                          value: '${job.coughEventCount}',
+                          valueColor: AppColors.primary,
+                          icon: Icons.graphic_eq_rounded,
+                        ),
+                      if (job.breathingRateBpm != null)
+                        _buildPopupMetricRow(
+                          label: 'Breathing Rate',
+                          value: '${job.breathingRateBpm!.toStringAsFixed(1)} BPM',
+                          icon: Icons.air_rounded,
+                        ),
+                      if (job.breathCycleSeconds != null)
+                        _buildPopupMetricRow(
+                          label: 'Breath Cycle',
+                          value: '${job.breathCycleSeconds!.toStringAsFixed(2)} s',
+                          icon: Icons.loop_rounded,
+                        ),
+                      if (job.dominantFrequencyHz != null)
+                        _buildPopupMetricRow(
+                          label: 'Dominant Frequency',
+                          value: '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz',
+                          icon: Icons.waves_rounded,
+                        ),
+                      if (job.rmsEnergy != null)
+                        _buildPopupMetricRow(
+                          label: 'RMS Energy',
+                          value: job.rmsEnergy!.toStringAsFixed(3),
+                          icon: Icons.multiline_chart_rounded,
+                        ),
+                      if (job.zeroCrossingRate != null)
+                        _buildPopupMetricRow(
+                          label: 'Zero Crossing Rate',
+                          value: job.zeroCrossingRate!.toStringAsFixed(4),
+                          icon: Icons.show_chart_rounded,
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Spectral Summary Section (if available)
+                if (job.spectralSummary != null && (job.spectralCentroidHz != null || job.spectralBandwidthHz != null || job.spectralRolloffHz != null)) ...[
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Spectral Features',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        if (job.spectralCentroidHz != null)
+                          _buildPopupMetricRow(
+                            label: 'Spectral Centroid',
+                            value: '${job.spectralCentroidHz!.toStringAsFixed(1)} Hz',
+                            icon: Icons.grain_rounded,
+                          ),
+                        if (job.spectralBandwidthHz != null)
+                          _buildPopupMetricRow(
+                            label: 'Spectral Bandwidth',
+                            value: '${job.spectralBandwidthHz!.toStringAsFixed(1)} Hz',
+                            icon: Icons.tune_rounded,
+                          ),
+                        if (job.spectralRolloffHz != null)
+                          _buildPopupMetricRow(
+                            label: 'Spectral Rolloff',
+                            value: '${job.spectralRolloffHz!.toStringAsFixed(1)} Hz',
+                            icon: Icons.linear_scale_rounded,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Metadata Footer
+                const SizedBox(height: 14),
+                Text(
+                  'Job ID: ${job.jobId}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'monospace',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 20),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                          context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.border),
+                          foregroundColor: AppColors.textSecondary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Record Another', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                          context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
+                          context.go('/dashboard');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.surface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('View Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            child: const Text('View Dashboard'),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildResultRow(String label, String value) {
+  Widget _buildPopupMetricRow({
+    required String label,
+    required String value,
+    Color? valueColor,
+    required IconData icon,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.5),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500, color: AppColors.textSecondary, fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text, fontSize: 13)),
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                fontSize: 12.5,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? AppColors.text,
+              fontSize: 12.5,
+            ),
+          ),
         ],
       ),
     );
@@ -1002,18 +1248,32 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   void _showErrorDialog(BuildContext context, AudioRecordingFailure state) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 28),
-            SizedBox(width: 8),
-            Text('Processing Failed'),
+            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 26),
+            SizedBox(width: 10),
+            Text('Processing Failed', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
           ],
         ),
-        content: Text(
-          state.message,
-          style: const TextStyle(fontSize: 14, color: AppColors.text),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              state.message,
+              style: const TextStyle(fontSize: 13.5, color: AppColors.text, height: 1.4),
+            ),
+            if (state.jobId != null && state.jobId!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Job ID: ${state.jobId}',
+                style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontFamily: 'monospace'),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -1021,7 +1281,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               Navigator.pop(dialogContext);
               context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
             },
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton.icon(
             onPressed: () {
@@ -1035,6 +1295,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
           ),
         ],
