@@ -282,11 +282,19 @@ class WellnessRepositoryImpl implements WellnessRepository {
         }
 
         if (remote != null) {
+          final String? baselineStatusStr = remote['baseline_status']?.toString();
+          final bool isInitializing = baselineStatusStr?.toLowerCase() == 'initializing' ||
+              (remote['breakdown'] is Map &&
+                  remote['breakdown']['weights'] is Map &&
+                  remote['breakdown']['weights']['T'] == 0);
+
           final double? lungWellnessScore = _parseDouble(remote['lung_wellness_score'] ?? remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score']);
           final double? coughScore = _parseDouble(remote['cough_score'] ?? remote['coughScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['C'] : null));
           final double? breathingScore = _parseDouble(remote['breathing_score'] ?? remote['breathingScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['B'] : null));
           final double? symptomScore = _parseDouble(remote['symptom_score'] ?? remote['symptomScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['S'] : null));
-          final double? trendScore = _parseDouble(remote['trend_score'] ?? remote['trendScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['T'] : null));
+          final double? trendScore = isInitializing
+              ? null
+              : _parseDouble(remote['trend_score'] ?? remote['trendScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['T'] : null));
 
           final String? message = remote['message'] as String? ?? (remote['breakdown'] is Map ? remote['breakdown']['message'] as String? : null);
           final int intScore = (lungWellnessScore ?? 0).round();

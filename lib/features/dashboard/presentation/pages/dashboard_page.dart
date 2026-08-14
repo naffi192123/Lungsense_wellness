@@ -332,7 +332,7 @@ class _DashboardPageState extends State<DashboardPage> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
-          // Trend Score chip — mapped directly from trend_score
+          // Trend Score chip — mapped directly from trend_score when active
           if (trendScore != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -353,6 +353,31 @@ class _DashboardPageState extends State<DashboardPage> {
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (baselineStatus?.toLowerCase() == 'initializing') ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.hourglass_top_rounded, size: 15, color: AppColors.secondary),
+                  SizedBox(width: 6),
+                  Text(
+                    'Trend Score: Initializing',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondary,
                     ),
                   ),
                 ],
@@ -406,6 +431,8 @@ class _DashboardPageState extends State<DashboardPage> {
       symptomTime = state.dailyLogs.first.timestamp;
     }
 
+    final isInitializing = state.latestScore?.baselineStatus?.toLowerCase() == 'initializing' || state.trendScore == null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -453,10 +480,11 @@ class _DashboardPageState extends State<DashboardPage> {
             Expanded(
               child: _buildMetricCard(
                 title: 'Trend Score',
-                score: state.trendScore,
+                score: isInitializing ? null : state.trendScore,
                 timestamp: scoreTime,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
+                customStatusText: isInitializing ? 'Initializing' : null,
               ),
             ),
           ],
@@ -471,14 +499,18 @@ class _DashboardPageState extends State<DashboardPage> {
     required DateTime? timestamp,
     required IconData icon,
     required Color color,
+    String? customStatusText,
   }) {
     final hasScore = score != null && score > 0;
-    final statusText = hasScore
-        ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
-        : 'No logs yet';
-    final statusColor = hasScore
-        ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
-        : AppColors.textSecondary;
+    final statusText = customStatusText ??
+        (hasScore
+            ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
+            : 'No logs yet');
+    final statusColor = customStatusText != null
+        ? AppColors.secondary
+        : (hasScore
+            ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
+            : AppColors.textSecondary);
 
     return Container(
       padding: const EdgeInsets.all(16.0),
