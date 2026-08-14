@@ -8,26 +8,36 @@ import 'package:lungsense_wellness/features/auth/presentation/bloc/auth_bloc.dar
 import 'package:lungsense_wellness/features/auth/presentation/bloc/auth_state.dart';
 import 'package:lungsense_wellness/main.dart';
 
+import 'package:lungsense_wellness/core/network/network_cubit.dart';
+
 class MockSplashBloc extends Mock implements SplashBloc {}
 class MockAuthBloc extends Mock implements AuthBloc {}
+class MockNetworkCubit extends Mock implements NetworkCubit {}
 
 void main() {
   late MockSplashBloc mockSplashBloc;
   late MockAuthBloc mockAuthBloc;
+  late MockNetworkCubit mockNetworkCubit;
   late StreamController<SplashState> splashStateController;
   late StreamController<AuthState> authStateController;
 
   setUp(() {
     mockSplashBloc = MockSplashBloc();
     mockAuthBloc = MockAuthBloc();
+    mockNetworkCubit = MockNetworkCubit();
     splashStateController = StreamController<SplashState>.broadcast();
     authStateController = StreamController<AuthState>.broadcast();
+
+    when(() => mockNetworkCubit.state).thenReturn(const NetworkState(isDisconnected: false));
+    when(() => mockNetworkCubit.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockNetworkCubit.close()).thenAnswer((_) async {});
 
     // Register mocks in GetIt to bypass real Hive and Supabase network initialization
     final sl = GetIt.instance;
     sl.reset();
     sl.registerFactory<SplashBloc>(() => mockSplashBloc);
     sl.registerFactory<AuthBloc>(() => mockAuthBloc);
+    sl.registerFactory<NetworkCubit>(() => mockNetworkCubit);
 
     // Stub BLoC close method to prevent Null is not a subtype of Future<void> exceptions during teardown
     when(() => mockSplashBloc.close()).thenAnswer((_) async {});

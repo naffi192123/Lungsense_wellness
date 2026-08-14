@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import '../errors/exceptions.dart';
+import 'network_info.dart';
 
 /// Centralized API client to manage requests to the FastAPI backend.
-/// Automatically injects Authorization headers and handles token refreshes.
+/// Automatically injects Authorization headers, verifies network connectivity, and handles token refreshes.
 class ApiClient {
   final http.Client _client;
   final Box _box;
+  final NetworkInfo? _networkInfo;
   static const String _baseUrl = 'https://lungsense-wellness.onrender.com';
 
   static const String _accessTokenKey = 'access_token';
@@ -16,7 +20,16 @@ class ApiClient {
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
 
-  ApiClient(this._client, this._box);
+  ApiClient(this._client, this._box, [this._networkInfo]);
+
+  Future<void> _ensureNetworkAvailable() async {
+    if (_networkInfo != null) {
+      final hasConnection = await _networkInfo!.isConnected;
+      if (!hasConnection) {
+        throw const ConnectionException('No internet connection. Please verify your Wi-Fi or mobile data.');
+      }
+    }
+  }
 
   /// Get stored access token.
   String? get accessToken => _box.get(_accessTokenKey) as String?;
@@ -78,74 +91,102 @@ class ApiClient {
 
   /// Perform a HTTP GET request.
   Future<http.Response> get(String path) async {
-    final uri = Uri.parse('$_baseUrl$path');
-    var response = await _client.get(uri, headers: _headers());
-    if (response.statusCode == 401) {
-      final refreshed = await _attemptRefresh();
-      if (refreshed) {
-        response = await _client.get(uri, headers: _headers());
+    await _ensureNetworkAvailable();
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      var response = await _client.get(uri, headers: _headers());
+      if (response.statusCode == 401) {
+        final refreshed = await _attemptRefresh();
+        if (refreshed) {
+          response = await _client.get(uri, headers: _headers());
+        }
       }
+      return response;
+    } on SocketException catch (_) {
+      throw const ConnectionException('Unable to reach backend server. Please check your internet connection.');
+    } on http.ClientException catch (_) {
+      throw const ConnectionException('Network request failed. Please check your internet connection.');
     }
-    return response;
   }
 
   /// Perform a HTTP POST request.
   Future<http.Response> post(String path, {dynamic body}) async {
-    final uri = Uri.parse('$_baseUrl$path');
-    final encodedBody = body != null ? jsonEncode(body) : null;
-    var response = await _client.post(uri, headers: _headers(), body: encodedBody);
-    if (response.statusCode == 401 && path != '/auth/login' && path != '/auth/refresh') {
-      final refreshed = await _attemptRefresh();
-      if (refreshed) {
-        response = await _client.post(uri, headers: _headers(), body: encodedBody);
+    await _ensureNetworkAvailable();
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final encodedBody = body != null ? jsonEncode(body) : null;
+      var response = await _client.post(uri, headers: _headers(), body: encodedBody);
+      if (response.statusCode == 401 && path != '/auth/login' && path != '/auth/refresh') {
+        final refreshed = await _attemptRefresh();
+        if (refreshed) {
+          response = await _client.post(uri, headers: _headers(), body: encodedBody);
+        }
       }
+      return response;
+    } on SocketException catch (_) {
+      throw const ConnectionException('Unable to reach backend server. Please check your internet connection.');
+    } on http.ClientException catch (_) {
+      throw const ConnectionException('Network request failed. Please check your internet connection.');
     }
-    return response;
   }
 
   /// Perform a HTTP PUT request.
   Future<http.Response> put(String path, {dynamic body}) async {
-    final uri = Uri.parse('$_baseUrl$path');
-    final encodedBody = body != null ? jsonEncode(body) : null;
-    var response = await _client.put(uri, headers: _headers(), body: encodedBody);
-    if (response.statusCode == 401) {
-      final refreshed = await _attemptRefresh();
-      if (refreshed) {
-        response = await _client.put(uri, headers: _headers(), body: encodedBody);
+    await _ensureNetworkAvailable();
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final encodedBody = body != null ? jsonEncode(body) : null;
+      var response = await _client.put(uri, headers: _headers(), body: encodedBody);
+      if (response.statusCode == 401) {
+        final refreshed = await _attemptRefresh();
+        if (refreshed) {
+          response = await _client.put(uri, headers: _headers(), body: encodedBody);
+        }
       }
+      return response;
+    } on SocketException catch (_) {
+      throw const ConnectionException('Unable to reach backend server. Please check your internet connection.');
+    } on http.ClientException catch (_) {
+      throw const ConnectionException('Network request failed. Please check your internet connection.');
     }
-    return response;
   }
 
   /// Perform a HTTP Multipart POST request for audio uploads.
   Future<http.Response> multipartPost(String path, {required List<int> fileBytes, required String filename}) async {
-    final uri = Uri.parse('$_baseUrl$path');
-    var request = http.MultipartRequest('POST', uri);
-    request.files.add(http.MultipartFile.fromBytes(
-      'file',
-      fileBytes,
-      filename: filename,
-    ));
-    request.headers.addAll(_headers(isMultipart: true));
+    await _ensureNetworkAvailable();
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      var request = http.MultipartRequest('POST', uri);
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+      ));
+      request.headers.addAll(_headers(isMultipart: true));
 
-    var streamedResponse = await request.send();
-    var response = await http.Response.fromStream(streamedResponse);
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
 
-    if (response.statusCode == 401) {
-      final refreshed = await _attemptRefresh();
-      if (refreshed) {
-        request = http.MultipartRequest('POST', uri);
-        request.files.add(http.MultipartFile.fromBytes(
-          'file',
-          fileBytes,
-          filename: filename,
-        ));
-        request.headers.addAll(_headers(isMultipart: true));
-        streamedResponse = await request.send();
-        response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode == 401) {
+        final refreshed = await _attemptRefresh();
+        if (refreshed) {
+          request = http.MultipartRequest('POST', uri);
+          request.files.add(http.MultipartFile.fromBytes(
+            'file',
+            fileBytes,
+            filename: filename,
+          ));
+          request.headers.addAll(_headers(isMultipart: true));
+          streamedResponse = await request.send();
+          response = await http.Response.fromStream(streamedResponse);
+        }
       }
+      return response;
+    } on SocketException catch (_) {
+      throw const ConnectionException('Unable to reach backend server. Please check your internet connection.');
+    } on http.ClientException catch (_) {
+      throw const ConnectionException('Network request failed. Please check your internet connection.');
     }
-    return response;
   }
 
   Future<bool> _attemptRefresh() async {

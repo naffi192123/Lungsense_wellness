@@ -3,6 +3,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 import '../network/api_client.dart';
+import '../network/network_info.dart';
+import '../network/network_cubit.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -61,12 +63,13 @@ Future<void> initDependencies() async {
   
   final checkInBox = await Hive.openBox(AppConstants.checkInBox);
   final recordingsBox = await Hive.openBox(AppConstants.recordingsBox);
-  
   final scoreBox = await Hive.openBox('score_history_box');
   
-  // Register http.Client and ApiClient
+  // Register http.Client, NetworkInfo, NetworkCubit, and ApiClient
   sl.registerLazySingleton<http.Client>(() => http.Client());
-  sl.registerLazySingleton<ApiClient>(() => ApiClient(sl(), sl()));
+  sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
+  sl.registerFactory<NetworkCubit>(() => NetworkCubit(sl()));
+  sl.registerLazySingleton<ApiClient>(() => ApiClient(sl(), sl(), sl()));
 
   // ==========================================
   // Features Layer - Authentication & Profile
