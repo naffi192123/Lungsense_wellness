@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -637,7 +637,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           const SizedBox(height: 28),
           _buildPipelineStep(
             stepNum: 1,
-            title: 'Upload & Consent Check',
+            title: 'Uploading Audio Signature',
             isComplete: step > 1,
             isActive: step == 1,
           ),

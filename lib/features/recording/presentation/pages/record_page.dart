@@ -288,7 +288,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
           // 3 Step Pipeline Progress Cards
           _buildProcessingStepItem(
             stepNumber: 1,
-            title: 'Upload & Consent Check',
+            title: 'Uploading Audio Signature',
             isComplete: currentStep > 1,
             isActive: currentStep == 1,
           ),

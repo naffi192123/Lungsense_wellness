@@ -18,7 +18,6 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
   StreamSubscription<int>? _durationSubscription;
   String? _currentFilePath;
   String _currentRecordingType = 'cough';
-  bool _isImported = false;
   String _fileName = '';
 
   AudioRecordingBloc({
@@ -84,7 +83,6 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       }
 
       _currentRecordingType = event.recordingType;
-      _isImported = false;
       final path = await recorderService.startRecording();
 
       if (path == null) {
@@ -183,7 +181,6 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
         _currentFilePath = picked.path;
         _fileName = picked.name;
         _currentRecordingType = event.recordingType;
-        _isImported = true;
 
         emit(AudioRecordingReady(
           filePath: picked.path,
@@ -218,19 +215,9 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       return;
     }
 
-    emit(const AudioRecordingUploading(statusMessage: 'Verifying consent and preparing upload...'));
-
-    // Step 1: Check and record user consent
-    final consentResult = await checkAndRecordConsentUseCase();
-    if (_isProcessingCancelled) return;
-    final consentGranted = consentResult.fold((_) => false, (consent) => consent.granted);
-    if (!consentGranted) {
-      emit(const AudioRecordingFailure(message: 'Audio recording consent is required by backend specifications.'));
-      return;
-    }
-
-    // Step 2: Upload file to /recordings/cough or /recordings/breathing
     emit(const AudioRecordingUploading(statusMessage: 'Uploading audio signature to FastAPI...'));
+
+    // Upload file to /recordings/cough or /recordings/breathing
     final uploadResult = await uploadAudioUseCase(
       path: filePath,
       recordingType: event.recordingType,

@@ -63,10 +63,10 @@ class _DashboardPageState extends State<DashboardPage> {
             // Capture bloc references before async gap to avoid BuildContext warning
             final wellnessBloc = context.read<WellnessBloc>();
             final analyticsBloc = context.read<AnalyticsBloc>();
-            context.push('/record').then((_) {
+            context.push('/daily-checkin').then((_) {
               if (mounted) {
-                // After recording, fetch fresh score and refresh analytics
-                wellnessBloc.add(const WellnessFetchScoreEvent());
+                // After check-in, fetch fresh data and refresh analytics
+                wellnessBloc.add(const WellnessFetchDataEvent());
                 analyticsBloc.add(const AnalyticsLoadEvent());
               }
             });
@@ -93,9 +93,9 @@ class _DashboardPageState extends State<DashboardPage> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.mic_none_outlined),
-            activeIcon: Icon(Icons.mic),
-            label: 'Record',
+            icon: Icon(Icons.health_and_safety_outlined),
+            activeIcon: Icon(Icons.health_and_safety),
+            label: 'Daily Check-in',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history_rounded),
@@ -524,298 +524,120 @@ class _DashboardPageState extends State<DashboardPage> {
   // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
   Widget _buildQuickActionsGrid() {
-    return Column(
-      children: [
-        // Main Unified Daily Check-in Hero Card
-        GestureDetector(
-          onTap: () async {
-            await context.push('/daily-checkin');
-            if (mounted) {
-              context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-              context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-            }
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18.0),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFE8F5E9),
-                  Color(0xFFE0F2F1),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.35),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.supportingGreen],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.health_and_safety_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Daily Check-in',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: Color(0xFF1C2B3A),
-                            ),
-                          ),
-                          SizedBox(width: 6),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 16,
-                            color: AppColors.supportingGreen,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Cough • Breathing • Symptoms',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.supportingGreen,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Complete 3 steps to compute your score',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF5C5870),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Start',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Individual quick actions row
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _buildQuickActionCard(
-                  title: 'Cough',
-                  subtitle: 'Record your\ncough',
-                  icon: Icons.mic_rounded,
-                  cardBgColor: const Color(0xFFF0FAF0),
-                  iconGradientColors: [const Color(0xFF7BC67E), const Color(0xFF43A047)],
-                  waveColor: const Color(0xFFB9E4B9),
-                  arrowColor: const Color(0xFF43A047),
-                  onTap: () async {
-                    await context.push('/record?tab=0');
-                    if (mounted) {
-                      context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildQuickActionCard(
-                  title: 'Breathing',
-                  subtitle: 'Record your\nbreathing',
-                  icon: Icons.air_rounded,
-                  cardBgColor: const Color(0xFFE8F7F8),
-                  iconGradientColors: [const Color(0xFF4ECDC4), const Color(0xFF00897B)],
-                  waveColor: const Color(0xFFACE0DC),
-                  arrowColor: const Color(0xFF00897B),
-                  onTap: () async {
-                    await context.push('/record?tab=1');
-                    if (mounted) {
-                      context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildQuickActionCard(
-                  title: 'Symptoms',
-                  subtitle: 'Log your\nsymptoms',
-                  icon: Icons.sentiment_satisfied_alt_rounded,
-                  cardBgColor: const Color(0xFFF3EFFA),
-                  iconGradientColors: [const Color(0xFFB39DDB), const Color(0xFF7E57C2)],
-                  waveColor: const Color(0xFFCFBEEA),
-                  arrowColor: const Color(0xFF7E57C2),
-                  onTap: () async {
-                    await context.push('/daily-log');
-                    if (mounted) {
-                      context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color cardBgColor,
-    required List<Color> iconGradientColors,
-    required Color waveColor,
-    required Color arrowColor,
-    required VoidCallback onTap,
-  }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () async {
+        await context.push('/daily-checkin');
+        if (mounted) {
+          context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+          context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+        }
+      },
       child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18.0),
         decoration: BoxDecoration(
-          color: cardBgColor,
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFFE8F5E9),
+              Color(0xFFE0F2F1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: arrowColor.withValues(alpha: 0.15), width: 1),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        clipBehavior: Clip.hardEdge,
-        child: Stack(
+        child: Row(
           children: [
-            // Wave decoration at bottom
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: CustomPaint(
-                size: const Size(double.infinity, 48),
-                painter: _WavePainter(color: waveColor.withValues(alpha: 0.55)),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.supportingGreen],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.health_and_safety_rounded,
+                color: Colors.white,
+                size: 28,
               ),
             ),
-            // Card content
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 14, 10, 44),
+            const SizedBox(width: 14),
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Gradient circular icon
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: iconGradientColors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: iconGradientColors.last.withValues(alpha: 0.28),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                  Row(
+                    children: [
+                      Text(
+                        'Daily Check-in',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: Color(0xFF1C2B3A),
                         ),
-                      ],
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 20),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: AppColors.supportingGreen,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  // Title
+                  SizedBox(height: 3),
                   Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      color: Color(0xFF1C2B3A),
-                      height: 1.25,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Subtitle
-                  Text(
-                    subtitle,
+                    'Cough • Breathing • Symptoms',
                     style: TextStyle(
-                      fontSize: 10.5,
-                      color: const Color(0xFF1C2B3A).withValues(alpha: 0.55),
-                      height: 1.3,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.supportingGreen,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Complete 3 steps to compute your score',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF5C5870),
                     ),
                   ),
                 ],
               ),
             ),
-            // Bottom-right circular arrow button
-            Positioned(
-              bottom: 10,
-              right: 10,
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: arrowColor.withValues(alpha: 0.12),
-                ),
-                child: Icon(
-                  Icons.arrow_forward_rounded,
-                  color: arrowColor,
-                  size: 15,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Start',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -1099,53 +921,4 @@ class _DailyTipsCarouselState extends State<_DailyTipsCarousel> {
       ],
     );
   }
-}
-
-/// Paints a soft wave shape used as decoration at the bottom of Quick Action cards.
-class _WavePainter extends CustomPainter {
-  final Color color;
-  const _WavePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    path.moveTo(0, size.height * 0.55);
-    path.cubicTo(
-      size.width * 0.25, size.height * 0.15,
-      size.width * 0.55, size.height * 0.85,
-      size.width * 0.80, size.height * 0.40,
-    );
-    path.cubicTo(
-      size.width * 0.90, size.height * 0.20,
-      size.width * 0.96, size.height * 0.50,
-      size.width, size.height * 0.38,
-    );
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    canvas.drawPath(path, paint);
-
-    // Second lighter wave layer
-    final paint2 = Paint()
-      ..color = color.withValues(alpha: color.a * 0.5)
-      ..style = PaintingStyle.fill;
-    final path2 = Path();
-    path2.moveTo(0, size.height * 0.75);
-    path2.cubicTo(
-      size.width * 0.30, size.height * 0.35,
-      size.width * 0.65, size.height * 0.95,
-      size.width, size.height * 0.55,
-    );
-    path2.lineTo(size.width, size.height);
-    path2.lineTo(0, size.height);
-    path2.close();
-    canvas.drawPath(path2, paint2);
-  }
-
-  @override
-  bool shouldRepaint(_WavePainter old) => old.color != color;
 }
