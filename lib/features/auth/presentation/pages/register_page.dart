@@ -269,61 +269,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildGoogleButton(BuildContext context) {
-    return OutlinedButton(
-      onPressed: () {
-        context.read<AuthBloc>().add(const AuthGoogleSignInEvent());
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.text,
-        side: const BorderSide(color: AppColors.border),
-        backgroundColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        minimumSize: const Size(double.infinity, 52),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.g_mobiledata_rounded,
-            size: 32,
-            color: Color(0xFFEA4335),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Continue with Google',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return const Row(
-      children: [
-        Expanded(child: Divider(color: AppColors.border)),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            'OR',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: AppColors.border)),
-      ],
-    );
-  }
-
   Widget _buildLabel(BuildContext context, String label) {
     return Text(
       label,
