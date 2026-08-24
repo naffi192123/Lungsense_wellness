@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../di/injection_container.dart';
 import '../../features/splash/presentation/bloc/splash_bloc.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
+import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
@@ -29,6 +30,8 @@ abstract class AppRouter {
   /// Named route constants.
   static const String splashPath = '/';
   static const String splashName = 'splash';
+  static const String welcomePath = '/welcome';
+  static const String welcomeName = 'welcome';
   static const String loginPath = '/login';
   static const String loginName = 'login';
   static const String registerPath = '/register';
@@ -72,6 +75,11 @@ abstract class AppRouter {
           create: (context) => sl<SplashBloc>(),
           child: const SplashPage(),
         ),
+      ),
+      GoRoute(
+        path: welcomePath,
+        name: welcomeName,
+        builder: (context, state) => const WelcomePage(),
       ),
       GoRoute(
         path: loginPath,

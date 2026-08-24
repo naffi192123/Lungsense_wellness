@@ -26,7 +26,9 @@ class _SplashPageState extends State<SplashPage> {
   Widget build(BuildContext context) {
     return BlocListener<SplashBloc, SplashState>(
       listener: (context, state) {
-        if (state is SplashNavigateToLogin) {
+        if (state is SplashNavigateToWelcome) {
+          context.go('/welcome');
+        } else if (state is SplashNavigateToLogin) {
           context.go('/login');
         } else if (state is SplashNavigateToDashboard) {
           context.go('/dashboard');

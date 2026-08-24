@@ -23,17 +23,22 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     Emitter<SplashState> emit,
   ) async {
     emit(const SplashLoading());
-    
-    // Perform branding logo display delay
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    // Verify session
-    final result = await _getCurrentUserUseCase(const NoParams());
+
+    // Run auth check and minimum splash delay concurrently so the splash
+    // branding is always visible for at least 2 seconds regardless of how
+    // quickly the network/cache responds.
+    final results = await Future.wait([
+      _getCurrentUserUseCase(const NoParams()),
+      Future.delayed(const Duration(milliseconds: 2000)),
+    ]);
+
+    // Verify session (first result from Future.wait)
+    final result = results[0];
     await result.fold(
-      (failure) async => emit(const SplashNavigateToLogin()),
+      (failure) async => emit(const SplashNavigateToWelcome()),
       (user) async {
         if (user == null) {
-          emit(const SplashNavigateToLogin());
+          emit(const SplashNavigateToWelcome());
           return;
         }
 

@@ -18,7 +18,13 @@ class SplashLoading extends SplashState {
   const SplashLoading();
 }
 
+/// Emitted when loading is complete and there is no valid session, navigating to the Welcome Screen.
+class SplashNavigateToWelcome extends SplashState {
+  const SplashNavigateToWelcome();
+}
+
 /// Emitted when loading is complete, notifying the UI to navigate to the Login page.
+/// Still used for direct deep-link or email-verification redirect scenarios.
 class SplashNavigateToLogin extends SplashState {
   const SplashNavigateToLogin();
 }

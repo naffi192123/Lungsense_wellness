@@ -36,14 +36,14 @@ void main() {
     });
 
     test(
-      'emits [SplashLoading, SplashNavigateToLogin] when session is null',
+      'emits [SplashLoading, SplashNavigateToWelcome] when session is null',
       () async {
         when(() => mockGetCurrentUserUseCase(const NoParams()))
             .thenAnswer((_) async => const Right(null));
 
         final expectedStates = [
           const SplashLoading(),
-          const SplashNavigateToLogin(),
+          const SplashNavigateToWelcome(),
         ];
 
         expectLater(
