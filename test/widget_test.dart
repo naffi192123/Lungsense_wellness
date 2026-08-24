@@ -64,9 +64,9 @@ void main() {
 
     // Verify SplashPage features render successfully
     expect(find.text('Daily Tracking'), findsOneWidget);
-    expect(find.text('Lung Score'), findsOneWidget);
+    expect(find.text('Lung Wellness\nScore'), findsOneWidget);
     expect(find.text('Smart Insights'), findsOneWidget);
-    expect(find.text('Powered by'), findsOneWidget);
+    expect(find.text('POWERED BY'), findsOneWidget);
 
     // Simulate SplashBloc emitting navigation state
     when(() => mockSplashBloc.state).thenReturn(const SplashNavigateToLogin());

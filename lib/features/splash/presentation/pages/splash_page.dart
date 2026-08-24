@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +7,8 @@ import '../bloc/splash_event.dart';
 import '../bloc/splash_state.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// The splash page containing app branding and a brief overview of key features.
+/// Splash screen matching the reference design:
+/// Logo_square.png centred + LungSense wordmark + tagline + 3 feature bubbles + DigiBiomics footer.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -18,7 +20,6 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    // Dispatch the timer start event to trigger the 3-second delay
     context.read<SplashBloc>().add(const SplashStartTimerEvent());
   }
 
@@ -42,115 +43,77 @@ class _SplashPageState extends State<SplashPage> {
         backgroundColor: AppColors.background,
         body: Stack(
           children: [
-            // Abstract background layout elements
+            // Decorative background blobs + leaves
             Positioned.fill(
-              child: CustomPaint(
-                painter: _SplashBackgroundPainter(),
-              ),
+              child: CustomPaint(painter: _SplashBackgroundPainter()),
             ),
-            
-            // Foreground UI Layout
+
+            // Foreground content
             SafeArea(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const SizedBox(height: 24),
-                  
-                  // Central Logo section
+
+                  // Central logo + wordmark + tagline
                   Expanded(
                     child: Center(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Image.asset(
-                            'assets/images/logo.png',
-                            width: 280,
+                            'assets/images/logo_square.png',
+                            width: 190,
+                            height: 190,
                             fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox(width: 190, height: 190),
                           ),
+                          const SizedBox(height: 20),
+                          _buildWordmark(),
+                          const SizedBox(height: 6),
+                          _buildWellnessRow(),
+                          const SizedBox(height: 14),
+                          _buildTagline(),
                         ],
                       ),
                     ),
                   ),
 
-                  // Three features list row
+                  // Three feature bubbles
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Expanded(
-                          child: _buildFeatureItem(
-                            context,
-                            iconPath: 'assets/images/ic_daily_tracking.png',
-                            label: 'Daily Tracking',
-                          ),
+                        _buildFeatureBubble(
+                          icon: Icons.calendar_today_outlined,
+                          iconColor: AppColors.supportingGreen,
+                          label: 'Daily Tracking',
+                          isScore: false,
                         ),
-                        _buildDivider(),
-                        Expanded(
-                          child: _buildFeatureItem(
-                            context,
-                            iconPath: 'assets/images/ic_lung_score.png',
-                            label: 'Lung Score',
-                          ),
+                        _buildFeatureBubble(
+                          icon: Icons.circle_outlined,
+                          iconColor: AppColors.secondary,
+                          label: 'Lung Wellness\nScore',
+                          isScore: true,
+                          score: '82',
                         ),
-                        _buildDivider(),
-                        Expanded(
-                          child: _buildFeatureItem(
-                            context,
-                            iconPath: 'assets/images/ic_smart_insights.png',
-                            label: 'Smart Insights',
-                          ),
+                        _buildFeatureBubble(
+                          icon: Icons.lightbulb_outline_rounded,
+                          iconColor: AppColors.accent,
+                          label: 'Smart Insights',
+                          isScore: false,
                         ),
                       ],
                     ),
                   ),
 
-                  // Footer Section
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Powered by',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Image.asset(
-                        'assets/images/digibiomics_logo.png',
-                        height: 28,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'www.digibiomics.com',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary.withOpacity(0.8),
-                              fontSize: 12,
-                              letterSpacing: 0.5,
-                            ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Bottom gradient band
-                      Container(
-                        height: 6,
-                        width: double.infinity,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary,
-                              AppColors.secondary,
-                            ],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 32),
+
+                  // POWERED BY + DigiBiomics logo
+                  _buildFooter(),
+
+                  const SizedBox(height: 28),
                 ],
               ),
             ),
@@ -160,123 +123,313 @@ class _SplashPageState extends State<SplashPage> {
     );
   }
 
-  Widget _buildFeatureItem(
-    BuildContext context, {
-    required String iconPath,
+  Widget _buildWordmark() {
+    return RichText(
+      text: const TextSpan(
+        children: [
+          TextSpan(
+            text: 'Lung',
+            style: TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.w900,
+              color: AppColors.text,
+              letterSpacing: -0.5,
+            ),
+          ),
+          TextSpan(
+            text: 'Sense',
+            style: TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWellnessRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(height: 1.5, width: 30, color: AppColors.secondary),
+        const SizedBox(width: 8),
+        const Text(
+          'W E L L N E S S',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 3.5,
+            color: AppColors.accent,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(height: 1.5, width: 30, color: AppColors.accent),
+      ],
+    );
+  }
+
+  Widget _buildTagline() {
+    return RichText(
+      text: const TextSpan(
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondary,
+          height: 1.4,
+        ),
+        children: [
+          TextSpan(text: 'Breathe '),
+          TextSpan(
+            text: 'Better.',
+            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
+          ),
+          TextSpan(text: ' Live '),
+          TextSpan(
+            text: 'Better.',
+            style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureBubble({
+    required IconData icon,
+    required Color iconColor,
     required String label,
+    required bool isScore,
+    String? score,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          iconPath,
-          height: 48,
-          width: 48,
-          fit: BoxFit.contain,
+        CustomPaint(
+          painter: _DashedCirclePainter(color: iconColor.withValues(alpha: 0.40)),
+          child: SizedBox(
+            width: 76,
+            height: 76,
+            child: Center(
+              child: isScore && score != null
+                  ? _buildScoreBubble(score, iconColor)
+                  : Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: iconColor, size: 26),
+                    ),
+            ),
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
           label,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.text,
-                fontSize: 13,
-              ),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.text,
+            height: 1.35,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildDivider() {
-    return Container(
-      height: 48,
-      width: 1,
-      color: AppColors.border,
-      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+  Widget _buildScoreBubble(String score, Color ringColor) {
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            painter: _ScoreRingPainter(color: ringColor),
+            size: const Size(56, 56),
+          ),
+          Text(
+            score,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: ringColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'POWERED BY',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.5,
+            color: AppColors.textSecondary.withValues(alpha: 0.65),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Image.asset(
+          'assets/images/digibiomics_logo.png',
+          height: 32,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) =>
+              const SizedBox(height: 32),
+        ),
+      ],
     );
   }
 }
 
-/// Custom painter to draw background accent circles and waves to match the reference design.
-class _SplashBackgroundPainter extends CustomPainter {
+// Dashed circle painter
+class _DashedCirclePainter extends CustomPainter {
+  final Color color;
+  const _DashedCirclePainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width / 2) - 2;
+    const dashCount = 24;
+    const dashAngle = 2 * math.pi / dashCount;
+    const gapFraction = 0.4;
+
+    for (int i = 0; i < dashCount; i++) {
+      final startAngle = i * dashAngle;
+      final sweepAngle = dashAngle * (1 - gapFraction);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter old) => old.color != color;
+}
+
+// Score ring painter (270 degree arc)
+class _ScoreRingPainter extends CustomPainter {
+  final Color color;
+  const _ScoreRingPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeCap = StrokeCap.round;
 
-    // Top Concentric Lines (Soft grey/teal rings)
-    paint.color = AppColors.secondary.withOpacity(0.08);
-    canvas.drawCircle(Offset(size.width * 0.1, 0), 140, paint);
-    canvas.drawCircle(Offset(size.width * 0.1, 0), 200, paint);
-    canvas.drawCircle(Offset(size.width * 0.1, 0), 260, paint);
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width / 2) - 2;
 
-    paint.color = AppColors.primary.withOpacity(0.06);
-    canvas.drawCircle(Offset(size.width * 0.9, size.height * 0.05), 110, paint);
-    canvas.drawCircle(Offset(size.width * 0.9, size.height * 0.05), 170, paint);
-    canvas.drawCircle(Offset(size.width * 0.9, size.height * 0.05), 230, paint);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi * 0.75,
+      math.pi * 1.5,
+      false,
+      paint,
+    );
+  }
 
-    // Bottom Waves (filling bottom area with faint green/teal overlays)
-    final wavePaint = Paint()..style = PaintingStyle.fill;
-    
-    // Wave 1 (Secondary Teal)
-    wavePaint.shader = LinearGradient(
-      colors: [
-        AppColors.secondary.withOpacity(0.12),
-        AppColors.secondary.withOpacity(0.01),
-      ],
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    ).createShader(Rect.fromLTRB(0, size.height * 0.7, size.width, size.height));
+  @override
+  bool shouldRepaint(covariant _ScoreRingPainter old) => old.color != color;
+}
 
-    final path1 = Path()
-      ..moveTo(0, size.height * 0.82)
-      ..quadraticBezierTo(
-        size.width * 0.25,
-        size.height * 0.78,
-        size.width * 0.5,
-        size.height * 0.83,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.75,
-        size.height * 0.88,
-        size.width,
-        size.height * 0.83,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
+// Background painter with blobs and floating leaves
+class _SplashBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Top-left teal blob
+    final tealPaint = Paint()
+      ..color = AppColors.secondary.withValues(alpha: 0.20)
+      ..style = PaintingStyle.fill;
+    final tealPath = Path()
+      ..moveTo(0, 0)
+      ..cubicTo(size.width * 0.05, 0, size.width * 0.22, size.height * 0.05,
+          size.width * 0.20, size.height * 0.12)
+      ..cubicTo(size.width * 0.17, size.height * 0.19, 0, size.height * 0.17,
+          0, size.height * 0.13)
       ..close();
-    canvas.drawPath(path1, wavePaint);
+    canvas.drawPath(tealPath, tealPaint);
 
-    // Wave 2 (Primary Green)
-    wavePaint.shader = LinearGradient(
-      colors: [
-        AppColors.primary.withOpacity(0.08),
-        AppColors.primary.withOpacity(0.01),
-      ],
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    ).createShader(Rect.fromLTRB(0, size.height * 0.75, size.width, size.height));
-
-    final path2 = Path()
-      ..moveTo(0, size.height * 0.85)
-      ..quadraticBezierTo(
-        size.width * 0.3,
-        size.height * 0.88,
-        size.width * 0.6,
-        size.height * 0.82,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.85,
-        size.height * 0.79,
-        size.width,
-        size.height * 0.81,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
+    // Top-right lavender blob
+    final lavPaint = Paint()
+      ..color = AppColors.accent.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+    final lavPath = Path()
+      ..moveTo(size.width, 0)
+      ..cubicTo(size.width, size.height * 0.02, size.width * 0.80,
+          size.height * 0.08, size.width * 0.82, size.height * 0.14)
+      ..cubicTo(size.width * 0.84, size.height * 0.21, size.width,
+          size.height * 0.18, size.width, size.height * 0.14)
       ..close();
-    canvas.drawPath(path2, wavePaint);
+    canvas.drawPath(lavPath, lavPaint);
+
+    // Bottom-left green blob
+    final greenPaint = Paint()
+      ..color = AppColors.primary.withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+    final greenPath = Path()
+      ..moveTo(0, size.height)
+      ..cubicTo(size.width * 0.10, size.height * 0.88, size.width * 0.28,
+          size.height * 0.92, size.width * 0.22, size.height)
+      ..close();
+    canvas.drawPath(greenPath, greenPaint);
+
+    // Bottom-right lavender blob
+    final lavBottomPaint = Paint()
+      ..color = AppColors.accent.withValues(alpha: 0.10)
+      ..style = PaintingStyle.fill;
+    final lavBottomPath = Path()
+      ..moveTo(size.width, size.height)
+      ..cubicTo(size.width * 0.85, size.height * 0.90, size.width * 0.70,
+          size.height * 0.94, size.width * 0.72, size.height)
+      ..close();
+    canvas.drawPath(lavBottomPath, lavBottomPaint);
+
+    // Floating leaves
+    _drawLeaf(canvas, Offset(size.width * 0.14, size.height * 0.20),
+        AppColors.primary.withValues(alpha: 0.50), 11, 0.6);
+    _drawLeaf(canvas, Offset(size.width * 0.88, size.height * 0.23),
+        AppColors.supportingGreen.withValues(alpha: 0.45), 9, -0.4);
+    _drawLeaf(canvas, Offset(size.width * 0.05, size.height * 0.32),
+        AppColors.primary.withValues(alpha: 0.30), 7, 1.0);
+  }
+
+  void _drawLeaf(Canvas canvas, Offset center, Color color, double leafSize, double rotation) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    final path = Path()
+      ..moveTo(0, -leafSize)
+      ..cubicTo(leafSize * 0.8, -leafSize * 0.4, leafSize * 0.8, leafSize * 0.4, 0, leafSize)
+      ..cubicTo(-leafSize * 0.8, leafSize * 0.4, -leafSize * 0.8, -leafSize * 0.4, 0, -leafSize)
+      ..close();
+    canvas.drawPath(path, paint);
+    canvas.restore();
   }
 
   @override
