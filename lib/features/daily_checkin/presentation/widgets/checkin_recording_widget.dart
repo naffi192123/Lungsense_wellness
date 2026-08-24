@@ -11,6 +11,7 @@ import '../../../recording/data/services/audio_player_service.dart';
 import '../../../recording/presentation/bloc/audio_recording_bloc.dart';
 import '../../../recording/presentation/bloc/audio_recording_event.dart';
 import '../../../recording/presentation/bloc/audio_recording_state.dart';
+import '../../../recording/presentation/widgets/recording_progress_timeline_widget.dart';
 
 class CheckinRecordingWidget extends StatefulWidget {
   final String recordingType; // 'cough' or 'breathing'
@@ -123,12 +124,32 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           return _buildProcessingView(context, state);
         }
 
+        int elapsed = 0;
+        if (state is AudioRecordingInProgress) {
+          elapsed = state.durationSeconds;
+        } else if (state is AudioRecordingReady) {
+          elapsed = state.durationSeconds > 0
+              ? state.durationSeconds
+              : (state.isImported ? 12 : widget.maxDurationSeconds);
+        }
+
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             children: [
               // Header Card with Instructions
               _buildInstructionCard(),
+              const SizedBox(height: 16),
+
+              // Real-time Recording Progress Indicator Timeline
+              RecordingProgressTimelineWidget(
+                elapsedSeconds: elapsed,
+                maxDurationSeconds: widget.maxDurationSeconds,
+                isRecording: state is AudioRecordingInProgress && !state.isPaused,
+                isPaused: (state is AudioRecordingInProgress && state.isPaused),
+                isCompleted: state is AudioRecordingReady,
+                recordingType: widget.recordingType,
+              ),
               const SizedBox(height: 24),
 
               // Permission Warning (if denied)
@@ -278,7 +299,9 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       elapsed = state.durationSeconds;
       status = state.isPaused ? 'Recording Paused' : 'Recording in Progress...';
     } else if (state is AudioRecordingReady) {
-      elapsed = 12;
+      elapsed = state.durationSeconds > 0
+          ? state.durationSeconds
+          : (state.isImported ? 12 : widget.maxDurationSeconds);
       status = 'Recording Complete';
     }
 

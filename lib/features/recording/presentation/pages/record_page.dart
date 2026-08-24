@@ -12,6 +12,7 @@ import '../../data/services/audio_player_service.dart';
 import '../bloc/audio_recording_bloc.dart';
 import '../bloc/audio_recording_event.dart';
 import '../bloc/audio_recording_state.dart';
+import '../widgets/recording_progress_timeline_widget.dart';
 
 /// Interactive audio recording and acoustic screening page.
 class RecordPage extends StatefulWidget {
@@ -79,6 +80,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   }
 
   String get _currentRecordingType => _selectedTabIndex == 0 ? 'cough' : 'breathing';
+  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 20 : 30;
 
   void _onToggleTab(int index) {
     final bloc = context.read<AudioRecordingBloc>();
@@ -160,7 +162,21 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
         ),
         body: BlocConsumer<AudioRecordingBloc, AudioRecordingState>(
           listener: (context, state) {
-            if (state is AudioRecordingSuccess) {
+            // Auto-stop when reaching max duration
+            if (state is AudioRecordingInProgress) {
+              if (state.durationSeconds >= _maxDurationSeconds) {
+                context.read<AudioRecordingBloc>().add(const AudioStopRecordingEvent());
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Maximum recording duration (${_maxDurationSeconds}s) reached.',
+                    ),
+                    backgroundColor: AppColors.primary,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            } else if (state is AudioRecordingSuccess) {
               _handleSuccessAnalysis(context, state);
             } else if (state is AudioRecordingFailure) {
               _showErrorDialog(context, state);
@@ -172,16 +188,34 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               return _buildProcessingOverlay(context, state);
             }
 
+            int elapsed = 0;
+            if (state is AudioRecordingInProgress) {
+              elapsed = state.durationSeconds;
+            } else if (state is AudioRecordingReady) {
+              elapsed = state.durationSeconds > 0 ? state.durationSeconds : (state.isImported ? 12 : _maxDurationSeconds);
+            }
+
             return Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
                     child: Column(
                       children: [
                         // Tabs Pill Selector
                         _buildToggleTabs(),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
+
+                        // Real-time Recording Progress Indicator Timeline
+                        RecordingProgressTimelineWidget(
+                          elapsedSeconds: elapsed,
+                          maxDurationSeconds: _maxDurationSeconds,
+                          isRecording: state is AudioRecordingInProgress && !state.isPaused,
+                          isPaused: (state is AudioRecordingInProgress && state.isPaused),
+                          isCompleted: state is AudioRecordingReady,
+                          recordingType: _currentRecordingType,
+                        ),
+                        const SizedBox(height: 24),
 
                         // Permission Warning (If Denied)
                         if (state is AudioRecordingPermissionDenied)
@@ -189,11 +223,11 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
 
                         // Central Visual Microphone circle
                         _buildMicrophoneIndicator(state is AudioRecordingInProgress && !state.isPaused),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 24),
 
                         // Time display & status label
                         _buildTimerSection(state),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 32),
 
                         // Controls or Playback widgets depending on state
                         if (state is AudioRecordingReady)

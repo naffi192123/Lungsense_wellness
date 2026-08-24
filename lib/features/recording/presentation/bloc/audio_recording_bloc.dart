@@ -145,6 +145,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     AudioStopRecordingEvent event,
     Emitter<AudioRecordingState> emit,
   ) async {
+    final recordedSeconds = recorderService.elapsedSeconds;
     _durationSubscription?.cancel();
     final path = await recorderService.stopRecording();
     if (path != null && path.isNotEmpty) {
@@ -155,6 +156,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
         fileName: _fileName,
         recordingType: _currentRecordingType,
         isImported: false,
+        durationSeconds: recordedSeconds,
       ));
     } else {
       emit(const AudioRecordingFailure(message: 'Recording returned an invalid path.'));

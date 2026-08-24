@@ -47,16 +47,18 @@ class AudioRecordingReady extends AudioRecordingState {
   final String fileName;
   final String recordingType;
   final bool isImported;
+  final int durationSeconds;
 
   const AudioRecordingReady({
     required this.filePath,
     required this.fileName,
     required this.recordingType,
     required this.isImported,
+    this.durationSeconds = 0,
   });
 
   @override
-  List<Object?> get props => [filePath, fileName, recordingType, isImported];
+  List<Object?> get props => [filePath, fileName, recordingType, isImported, durationSeconds];
 }
 
 class AudioRecordingUploading extends AudioRecordingState {
