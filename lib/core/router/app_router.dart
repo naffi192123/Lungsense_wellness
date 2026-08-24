@@ -24,6 +24,7 @@ import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/change_password_page.dart';
 import '../../features/profile/presentation/pages/contact_us_page.dart';
 import '../../features/profile/presentation/pages/privacy_policy_page.dart';
+import '../../features/profile/presentation/pages/terms_of_use_page.dart';
 import '../../features/daily_checkin/presentation/pages/daily_checkin_page.dart';
 import '../../features/daily_checkin/presentation/bloc/daily_checkin_bloc.dart';
 
@@ -66,6 +67,8 @@ abstract class AppRouter {
   static const String contactUsName = 'contact-us';
   static const String privacyPolicyPath = '/privacy-policy';
   static const String privacyPolicyName = 'privacy-policy';
+  static const String termsOfUsePath = '/terms-of-use';
+  static const String termsOfUseName = 'terms-of-use';
 
   /// GoRouter configuration.
   static final GoRouter router = GoRouter(
@@ -249,6 +252,11 @@ abstract class AppRouter {
         path: privacyPolicyPath,
         name: privacyPolicyName,
         builder: (context, state) => const PrivacyPolicyPage(),
+      ),
+      GoRoute(
+        path: termsOfUsePath,
+        name: termsOfUseName,
+        builder: (context, state) => const TermsOfUsePage(),
       ),
     ],
   );

@@ -47,8 +47,9 @@ class ProfilePage extends StatelessWidget {
                   context,
                   title: 'SETTINGS & SUPPORT',
                   items: [
-                    _SettingsItem(Icons.mail_outline_rounded, 'Contact Us', route: '/contact-us'),
+                    _SettingsItem(Icons.description_outlined, 'Terms of Use', route: '/terms-of-use'),
                     _SettingsItem(Icons.privacy_tip_outlined, 'Privacy Policy', route: '/privacy-policy'),
+                    _SettingsItem(Icons.mail_outline_rounded, 'Contact Us', route: '/contact-us'),
                   ],
                 ),
                 const SizedBox(height: 32),

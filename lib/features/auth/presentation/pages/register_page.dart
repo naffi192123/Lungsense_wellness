@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -65,7 +66,7 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!_agreeToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please accept the Terms of Service & Privacy Policy.'),
+            content: Text('Please accept the Terms of Use & Privacy Policy.'),
             backgroundColor: AppColors.warning,
           ),
         );
@@ -510,23 +511,31 @@ class _RegisterPageState extends State<RegisterPage> {
                     color: AppColors.textSecondary,
                     height: 1.4,
                   ),
-              children: const [
+              children: [
                 TextSpan(
-                  text: 'Terms of Service',
-                  style: TextStyle(
+                  text: 'Terms of Use',
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
                     decoration: TextDecoration.underline,
                   ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      context.push('/terms-of-use');
+                    },
                 ),
-                TextSpan(text: ' and '),
+                const TextSpan(text: ' and '),
                 TextSpan(
                   text: 'Privacy Policy',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
                     decoration: TextDecoration.underline,
                   ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      context.push('/privacy-policy');
+                    },
                 ),
               ],
             ),
