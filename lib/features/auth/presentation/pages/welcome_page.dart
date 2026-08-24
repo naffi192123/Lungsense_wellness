@@ -39,18 +39,13 @@ class WelcomePage extends StatelessWidget {
                     children: [
                       const SizedBox(height: 40),
 
-                      // ----- Logo -----
+                      // ----- Horizontal Logo -----
                       Image.asset(
-                        'assets/images/logo.png',
-                        width: 130,
-                        height: 130,
+                        'assets/images/logo_horizontal.png',
+                        height: 72,
                         fit: BoxFit.contain,
                       ),
-                      const SizedBox(height: 16),
-
-                      // ----- App Name Wordmark -----
-                      _buildAppName(),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 36),
 
                       // ----- Hero Copy -----
                       _buildHeroCopy(),
@@ -108,52 +103,6 @@ class WelcomePage extends StatelessWidget {
     );
   }
 
-  // ── App Name ──────────────────────────────────────────────────────────────
-
-  Widget _buildAppName() {
-    return Column(
-      children: [
-        RichText(
-          text: const TextSpan(
-            style: TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
-              color: AppColors.text,
-            ),
-            children: [
-              TextSpan(text: 'Lung'),
-              TextSpan(
-                text: 'S',
-                style: TextStyle(color: AppColors.primary),
-              ),
-              TextSpan(text: 'ense'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        // "— WELLNESS —" lettermark
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(height: 1.5, width: 32, color: AppColors.secondary),
-            const SizedBox(width: 8),
-            const Text(
-              'W E L L N E S S',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 3,
-                color: AppColors.accent,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(height: 1.5, width: 32, color: AppColors.accent),
-          ],
-        ),
-      ],
-    );
-  }
 
   // ── Hero Copy ─────────────────────────────────────────────────────────────
 
