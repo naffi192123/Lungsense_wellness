@@ -524,68 +524,197 @@ class _DashboardPageState extends State<DashboardPage> {
   // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
   Widget _buildQuickActionsGrid() {
-    return IntrinsicHeight(
-      child: Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
       children: [
-        Expanded(
-          child: _buildQuickActionCard(
-            title: 'Cough',
-            subtitle: 'Record your\ncough',
-            icon: Icons.mic_rounded,
-            cardBgColor: const Color(0xFFF0FAF0),
-            iconGradientColors: [const Color(0xFF7BC67E), const Color(0xFF43A047)],
-            waveColor: const Color(0xFFB9E4B9),
-            arrowColor: const Color(0xFF43A047),
-            onTap: () async {
-              await context.push('/record?tab=0');
-              if (mounted) {
-                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-              }
-            },
+        // Main Unified Daily Check-in Hero Card
+        GestureDetector(
+          onTap: () async {
+            await context.push('/daily-checkin');
+            if (mounted) {
+              context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+              context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18.0),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFE8F5E9),
+                  Color(0xFFE0F2F1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.supportingGreen],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.health_and_safety_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Daily Check-in',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: Color(0xFF1C2B3A),
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 16,
+                            color: AppColors.supportingGreen,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Cough • Breathing • Symptoms',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.supportingGreen,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Complete 3 steps to compute your score',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF5C5870),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Start',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildQuickActionCard(
-            title: 'Breathing',
-            subtitle: 'Record your\nbreathing',
-            icon: Icons.air_rounded,
-            cardBgColor: const Color(0xFFE8F7F8),
-            iconGradientColors: [const Color(0xFF4ECDC4), const Color(0xFF00897B)],
-            waveColor: const Color(0xFFACE0DC),
-            arrowColor: const Color(0xFF00897B),
-            onTap: () async {
-              await context.push('/record?tab=1');
-              if (mounted) {
-                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildQuickActionCard(
-            title: 'How are you\nfeeling today?',
-            subtitle: 'Log your\nsymptoms',
-            icon: Icons.sentiment_satisfied_alt_rounded,
-            cardBgColor: const Color(0xFFF3EFFA),
-            iconGradientColors: [const Color(0xFFB39DDB), const Color(0xFF7E57C2)],
-            waveColor: const Color(0xFFCFBEEA),
-            arrowColor: const Color(0xFF7E57C2),
-            onTap: () async {
-              await context.push('/daily-log');
-              if (mounted) {
-                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-              }
-            },
+        const SizedBox(height: 12),
+
+        // Individual quick actions row
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'Cough',
+                  subtitle: 'Record your\ncough',
+                  icon: Icons.mic_rounded,
+                  cardBgColor: const Color(0xFFF0FAF0),
+                  iconGradientColors: [const Color(0xFF7BC67E), const Color(0xFF43A047)],
+                  waveColor: const Color(0xFFB9E4B9),
+                  arrowColor: const Color(0xFF43A047),
+                  onTap: () async {
+                    await context.push('/record?tab=0');
+                    if (mounted) {
+                      context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'Breathing',
+                  subtitle: 'Record your\nbreathing',
+                  icon: Icons.air_rounded,
+                  cardBgColor: const Color(0xFFE8F7F8),
+                  iconGradientColors: [const Color(0xFF4ECDC4), const Color(0xFF00897B)],
+                  waveColor: const Color(0xFFACE0DC),
+                  arrowColor: const Color(0xFF00897B),
+                  onTap: () async {
+                    await context.push('/record?tab=1');
+                    if (mounted) {
+                      context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'Symptoms',
+                  subtitle: 'Log your\nsymptoms',
+                  icon: Icons.sentiment_satisfied_alt_rounded,
+                  cardBgColor: const Color(0xFFF3EFFA),
+                  iconGradientColors: [const Color(0xFFB39DDB), const Color(0xFF7E57C2)],
+                  waveColor: const Color(0xFFCFBEEA),
+                  arrowColor: const Color(0xFF7E57C2),
+                  onTap: () async {
+                    await context.push('/daily-log');
+                    if (mounted) {
+                      context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ],
-      ),
     );
   }
 

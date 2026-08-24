@@ -24,6 +24,8 @@ import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/change_password_page.dart';
 import '../../features/profile/presentation/pages/contact_us_page.dart';
 import '../../features/profile/presentation/pages/privacy_policy_page.dart';
+import '../../features/daily_checkin/presentation/pages/daily_checkin_page.dart';
+import '../../features/daily_checkin/presentation/bloc/daily_checkin_bloc.dart';
 
 /// Central routing management using GoRouter.
 abstract class AppRouter {
@@ -46,6 +48,8 @@ abstract class AppRouter {
   static const String onboardingName = 'onboarding';
   static const String dashboardPath = '/dashboard';
   static const String dashboardName = 'dashboard';
+  static const String dailyCheckinPath = '/daily-checkin';
+  static const String dailyCheckinName = 'daily-checkin';
   static const String dailyLogPath = '/daily-log';
   static const String dailyLogName = 'daily-log';
   static const String audioAnalysisPath = '/audio-analysis';
@@ -147,6 +151,19 @@ abstract class AppRouter {
             child: DashboardPage(initialTab: initialTab),
           );
         },
+      ),
+      GoRoute(
+        path: dailyCheckinPath,
+        name: dailyCheckinName,
+        builder: (context, state) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<DailyCheckinBloc>()),
+            BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
+            BlocProvider(create: (context) => sl<WellnessBloc>()),
+            BlocProvider(create: (context) => sl<AnalyticsBloc>()),
+          ],
+          child: const DailyCheckinPage(),
+        ),
       ),
       GoRoute(
         path: dailyLogPath,
