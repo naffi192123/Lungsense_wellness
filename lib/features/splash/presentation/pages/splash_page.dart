@@ -54,27 +54,16 @@ class _SplashPageState extends State<SplashPage> {
                 children: [
                   const SizedBox(height: 24),
 
-                  // Central logo + wordmark + tagline
+                  // Central logo (contains LungSense WELLNESS)
                   Expanded(
                     child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/images/logo_square.png',
-                            width: 190,
-                            height: 190,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const SizedBox(width: 190, height: 190),
-                          ),
-                          const SizedBox(height: 20),
-                          _buildWordmark(),
-                          const SizedBox(height: 6),
-                          _buildWellnessRow(),
-                          const SizedBox(height: 14),
-                          _buildTagline(),
-                        ],
+                      child: Image.asset(
+                        'assets/images/logo_square.png',
+                        width: 250,
+                        height: 250,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox(width: 250, height: 250),
                       ),
                     ),
                   ),
@@ -123,78 +112,6 @@ class _SplashPageState extends State<SplashPage> {
     );
   }
 
-  Widget _buildWordmark() {
-    return RichText(
-      text: const TextSpan(
-        children: [
-          TextSpan(
-            text: 'Lung',
-            style: TextStyle(
-              fontSize: 40,
-              fontWeight: FontWeight.w900,
-              color: AppColors.text,
-              letterSpacing: -0.5,
-            ),
-          ),
-          TextSpan(
-            text: 'Sense',
-            style: TextStyle(
-              fontSize: 40,
-              fontWeight: FontWeight.w900,
-              color: AppColors.primary,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWellnessRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(height: 1.5, width: 30, color: AppColors.secondary),
-        const SizedBox(width: 8),
-        const Text(
-          'W E L L N E S S',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 3.5,
-            color: AppColors.accent,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(height: 1.5, width: 30, color: AppColors.accent),
-      ],
-    );
-  }
-
-  Widget _buildTagline() {
-    return RichText(
-      text: const TextSpan(
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textSecondary,
-          height: 1.4,
-        ),
-        children: [
-          TextSpan(text: 'Breathe '),
-          TextSpan(
-            text: 'Better.',
-            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
-          ),
-          TextSpan(text: ' Live '),
-          TextSpan(
-            text: 'Better.',
-            style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildFeatureBubble({
     required IconData icon,
