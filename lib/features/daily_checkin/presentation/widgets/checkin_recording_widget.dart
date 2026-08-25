@@ -849,6 +849,11 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
   }
 
   void _showErrorDialog(BuildContext context, AudioRecordingFailure state) {
+    String displayMessage = state.message.replaceAll('Exception: ', '').trim();
+    if (displayMessage.contains('FormatException') || displayMessage.contains('<!DOCTYPE') || displayMessage.contains('<html>')) {
+      displayMessage = 'The server is currently starting up or temporarily busy. Please wait a few seconds and try again.';
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -862,7 +867,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           ],
         ),
         content: Text(
-          state.message,
+          displayMessage,
           style: const TextStyle(fontSize: 13.5, color: AppColors.text, height: 1.4),
         ),
         actions: [

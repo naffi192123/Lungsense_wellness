@@ -1280,6 +1280,11 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   }
 
   void _showErrorDialog(BuildContext context, AudioRecordingFailure state) {
+    String displayMessage = state.message.replaceAll('Exception: ', '').trim();
+    if (displayMessage.contains('FormatException') || displayMessage.contains('<!DOCTYPE') || displayMessage.contains('<html>')) {
+      displayMessage = 'The server is currently starting up or temporarily busy. Please wait a few seconds and try again.';
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1297,7 +1302,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              state.message,
+              displayMessage,
               style: const TextStyle(fontSize: 13.5, color: AppColors.text, height: 1.4),
             ),
             if (state.jobId != null && state.jobId!.isNotEmpty) ...[

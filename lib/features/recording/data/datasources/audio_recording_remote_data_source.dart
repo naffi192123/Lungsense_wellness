@@ -22,7 +22,13 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
     try {
       final response = await apiClient.get('/consent/$consentType');
       if (response.statusCode == 200) {
+        if (response.body.trim().startsWith('<') || response.body.isEmpty) {
+          throw ServerException('Server returned non-JSON response for consent (${response.statusCode})', code: response.statusCode.toString());
+        }
         final data = jsonDecode(response.body);
+        if (data is! Map) {
+          throw const ServerException('Invalid consent data format from server');
+        }
         return ConsentEntity(
           consentType: data['consent_type'] as String? ?? consentType,
           version: data['version'] as String? ?? '1.0',
@@ -30,7 +36,7 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
           grantedAt: data['granted_at'] != null ? DateTime.tryParse(data['granted_at']) : null,
         );
       } else {
-        throw ServerException('Consent status unavailable', code: response.statusCode.toString());
+        throw ServerException('Consent status unavailable (${response.statusCode})', code: response.statusCode.toString());
       }
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -48,17 +54,33 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
       });
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.body.trim().startsWith('<') || response.body.isEmpty) {
+          return ConsentEntity(
+            consentType: consentType,
+            version: '1.0',
+            granted: granted,
+            grantedAt: DateTime.now(),
+          );
+        }
         final data = jsonDecode(response.body);
         return ConsentEntity(
-          consentType: data['consent_type'] as String? ?? consentType,
-          version: data['version'] as String? ?? '1.0',
-          granted: data['granted'] as bool? ?? true,
-          grantedAt: data['granted_at'] != null ? DateTime.tryParse(data['granted_at']) : DateTime.now(),
+          consentType: (data is Map) ? (data['consent_type'] as String? ?? consentType) : consentType,
+          version: (data is Map) ? (data['version'] as String? ?? '1.0') : '1.0',
+          granted: (data is Map) ? (data['granted'] as bool? ?? true) : true,
+          grantedAt: (data is Map && data['granted_at'] != null) ? DateTime.tryParse(data['granted_at']) : DateTime.now(),
         );
       } else {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        throw ServerException(detail is String ? detail : detail.toString(), code: response.statusCode.toString());
+        String message = 'Failed to record consent (${response.statusCode})';
+        try {
+          if (!response.body.trim().startsWith('<')) {
+            final data = jsonDecode(response.body);
+            if (data is Map && data['detail'] != null) {
+              final detail = data['detail'];
+              message = detail is String ? detail : detail.toString();
+            }
+          }
+        } catch (_) {}
+        throw ServerException(message, code: response.statusCode.toString());
       }
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -87,17 +109,62 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
         filename: filename,
       );
 
-      if (response.statusCode == 202) {
-        final data = jsonDecode(response.body);
+      // Handle successful async submission status codes
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
+        if (response.body.trim().startsWith('<') || response.body.isEmpty) {
+          throw ServerException(
+            'Server returned an invalid non-JSON response (${response.statusCode}). Please check your connection and try again.',
+            code: response.statusCode.toString(),
+          );
+        }
+
+        dynamic data;
+        try {
+          data = jsonDecode(response.body);
+        } catch (_) {
+          throw ServerException(
+            'Failed to parse server upload response (${response.statusCode}).',
+            code: response.statusCode.toString(),
+          );
+        }
+
+        if (data is! Map) {
+          throw const ServerException('Unexpected response structure from upload endpoint.');
+        }
+
+        final jobId = data['job_id'] as String? ?? data['id'] as String?;
+        if (jobId == null || jobId.isEmpty) {
+          throw const ServerException('Audio upload accepted, but no valid Job ID was returned by the server.');
+        }
+
         return AudioJobEntity(
-          jobId: data['job_id'] as String,
+          jobId: jobId,
           status: data['status'] as String? ?? 'processing',
           message: data['message'] as String?,
         );
       } else {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        throw ServerException(detail is String ? detail : 'Upload failed (${response.statusCode})', code: response.statusCode.toString());
+        // Handle non-2xx status codes safely without crashing on HTML responses
+        String errorMessage = 'Upload failed (${response.statusCode})';
+
+        if (response.statusCode == 401 || response.statusCode == 403) {
+          errorMessage = 'Session authentication required. Please log in again.';
+        } else if (response.statusCode == 413) {
+          errorMessage = 'The recorded audio file is too large to process. Please record a shorter sample.';
+        } else if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          errorMessage = 'The server is currently starting up or temporarily unavailable (${response.statusCode}). Please try again in a few moments.';
+        } else {
+          try {
+            if (!response.body.trim().startsWith('<') && response.body.isNotEmpty) {
+              final data = jsonDecode(response.body);
+              if (data is Map && data['detail'] != null) {
+                final detail = data['detail'];
+                errorMessage = detail is String ? detail : detail.toString();
+              }
+            }
+          } catch (_) {}
+        }
+
+        throw ServerException(errorMessage, code: response.statusCode.toString());
       }
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -110,7 +177,20 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
     try {
       final response = await apiClient.get('/recordings/jobs/$jobId');
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        if (response.body.trim().startsWith('<') || response.body.isEmpty) {
+          throw ServerException(
+            'Server returned an invalid non-JSON response while checking job status (${response.statusCode}).',
+            code: response.statusCode.toString(),
+          );
+        }
+
+        dynamic data;
+        try {
+          data = jsonDecode(response.body);
+        } catch (_) {
+          throw ServerException('Failed to parse audio job status JSON.', code: response.statusCode.toString());
+        }
+
         if (data is! Map<String, dynamic> && data is! Map) {
           throw const ServerException('Invalid response format from audio job status');
         }
@@ -187,9 +267,21 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
           completedAt: completed,
         );
       } else {
-        final data = jsonDecode(response.body);
-        final detail = data['detail'];
-        throw ServerException(detail is String ? detail : 'Failed to query job status', code: response.statusCode.toString());
+        String errorMsg = 'Failed to query job status (${response.statusCode})';
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          errorMsg = 'Server is currently processing. Retrying in a few moments...';
+        } else {
+          try {
+            if (!response.body.trim().startsWith('<') && response.body.isNotEmpty) {
+              final data = jsonDecode(response.body);
+              if (data is Map && data['detail'] != null) {
+                final detail = data['detail'];
+                errorMsg = detail is String ? detail : detail.toString();
+              }
+            }
+          } catch (_) {}
+        }
+        throw ServerException(errorMsg, code: response.statusCode.toString());
       }
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -202,9 +294,11 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
     try {
       final response = await apiClient.get('/recordings/features');
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is List) {
-          return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        if (!response.body.trim().startsWith('<') && response.body.isNotEmpty) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is List) {
+            return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          }
         }
       }
       return [];

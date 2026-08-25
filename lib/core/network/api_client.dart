@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../errors/exceptions.dart';
 import 'network_info.dart';
 
@@ -78,7 +79,9 @@ class ApiClient {
   }
 
   Map<String, String> _headers({bool isMultipart = false}) {
-    final headers = <String, String>{};
+    final headers = <String, String>{
+      'Accept': 'application/json',
+    };
     if (!isMultipart) {
       headers['Content-Type'] = 'application/json';
     }
@@ -87,6 +90,28 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $token';
     }
     return headers;
+  }
+
+  MediaType _resolveAudioMediaType(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'm4a':
+        return MediaType('audio', 'm4a');
+      case 'wav':
+        return MediaType('audio', 'wav');
+      case 'mp3':
+        return MediaType('audio', 'mpeg');
+      case 'aac':
+        return MediaType('audio', 'aac');
+      case 'mp4':
+        return MediaType('audio', 'mp4');
+      case 'ogg':
+        return MediaType('audio', 'ogg');
+      case 'webm':
+        return MediaType('audio', 'webm');
+      default:
+        return MediaType('audio', 'm4a');
+    }
   }
 
   /// Perform a HTTP GET request.
@@ -161,6 +186,7 @@ class ApiClient {
         'file',
         fileBytes,
         filename: filename,
+        contentType: _resolveAudioMediaType(filename),
       ));
       request.headers.addAll(_headers(isMultipart: true));
 
@@ -175,6 +201,7 @@ class ApiClient {
             'file',
             fileBytes,
             filename: filename,
+            contentType: _resolveAudioMediaType(filename),
           ));
           request.headers.addAll(_headers(isMultipart: true));
           streamedResponse = await request.send();
