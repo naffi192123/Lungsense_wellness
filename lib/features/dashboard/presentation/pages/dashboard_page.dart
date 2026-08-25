@@ -196,23 +196,23 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Lungs Health Score Circular Dial Card
-                  _buildLungsHealthScoreCard(state),
                   const SizedBox(height: 20),
 
-                  // 4 Specific Health Score Breakdown Cards
-                  _buildFourScoreCards(state),
-                  const SizedBox(height: 24),
-
-                  // Quick Actions
+                  // Quick Actions (placed immediately after Welcome Back)
                   const Text(
                     'Quick Actions',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   _buildQuickActionsGrid(),
+                  const SizedBox(height: 24),
+
+                  // Wellness Scorecard (Lungs Health Score Circular Dial Card)
+                  _buildLungsHealthScoreCard(state),
+                  const SizedBox(height: 20),
+
+                  // Health Score Breakdown (4 Specific Health Score Breakdown Cards)
+                  _buildFourScoreCards(state),
                   const SizedBox(height: 24),
 
                   // Continuous Auto-Scrolling Daily Tips Section

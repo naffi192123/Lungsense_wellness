@@ -231,7 +231,9 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       (failure) async {
         if (!_isProcessingCancelled) {
           emit(AudioRecordingFailure(
-            message: failure.message,
+            message: failure.message.isNotEmpty
+                ? failure.message
+                : 'The recording could not be submitted successfully. Please try again.',
             filePath: filePath,
             recordingType: event.recordingType,
           ));
@@ -239,13 +241,25 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       },
       (job) async {
         if (_isProcessingCancelled) return;
-        // Step 3: Poll status of job until completed or failed
+
+        final trimmedJobId = job.jobId.trim();
+        // The submission is considered successfully accepted only when the server response contains a valid job ID
+        if (trimmedJobId.isEmpty) {
+          emit(AudioRecordingFailure(
+            message: 'The recording could not be submitted successfully. No valid job ID was returned. Please try again.',
+            filePath: filePath,
+            recordingType: event.recordingType,
+          ));
+          return;
+        }
+
+        // Start backend job processing/polling only after receiving a valid job ID
         emit(AudioRecordingJobPolling(
-          jobId: job.jobId,
+          jobId: trimmedJobId,
           statusMessage: 'Acoustic signature feature extraction in progress...',
         ));
 
-        await _pollJobStatus(job.jobId, emit, filePath, event.recordingType);
+        await _pollJobStatus(trimmedJobId, emit, filePath, event.recordingType);
       },
     );
   }
@@ -256,6 +270,16 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     String filePath,
     String recordingType,
   ) async {
+    final trimmedJobId = jobId.trim();
+    if (trimmedJobId.isEmpty) {
+      emit(AudioRecordingFailure(
+        message: 'Cannot poll job status: invalid job ID.',
+        filePath: filePath,
+        recordingType: recordingType,
+      ));
+      return;
+    }
+
     const maxPollAttempts = 30; // 30 attempts * 2s = 60s max
     int attempt = 0;
 

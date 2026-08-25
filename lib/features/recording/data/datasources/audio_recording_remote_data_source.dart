@@ -93,13 +93,18 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
     try {
       final file = File(path);
       if (!await file.exists()) {
-        throw const ServerException('Audio file not found on device path.');
+        throw const ServerException('Audio file not found on device. Please try recording again.');
       }
 
       final fileBytes = await file.readAsBytes();
+      if (fileBytes.isEmpty) {
+        throw const ServerException('The recorded audio file is empty. Please try recording again.');
+      }
+
       final filename = file.path.split(Platform.pathSeparator).last;
       
-      final endpoint = recordingType.toLowerCase() == 'cough' 
+      final normalizedType = recordingType.trim().toLowerCase();
+      final endpoint = normalizedType == 'cough' 
           ? '/recordings/cough' 
           : '/recordings/breathing';
 
@@ -109,11 +114,11 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
         filename: filename,
       );
 
-      // Handle successful async submission status codes
+      // Handle successful async submission status codes (200, 201, 202)
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
-        if (response.body.trim().startsWith('<') || response.body.isEmpty) {
+        if (response.body.trim().isEmpty || response.body.trim().startsWith('<')) {
           throw ServerException(
-            'Server returned an invalid non-JSON response (${response.statusCode}). Please check your connection and try again.',
+            'The recording could not be submitted successfully. The server returned an invalid response. Please try again.',
             code: response.statusCode.toString(),
           );
         }
@@ -123,18 +128,23 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
           data = jsonDecode(response.body);
         } catch (_) {
           throw ServerException(
-            'Failed to parse server upload response (${response.statusCode}).',
+            'The recording could not be submitted successfully. Failed to parse server response. Please try again.',
             code: response.statusCode.toString(),
           );
         }
 
         if (data is! Map) {
-          throw const ServerException('Unexpected response structure from upload endpoint.');
+          throw const ServerException(
+            'The recording could not be submitted successfully. Unexpected response structure from server. Please try again.',
+          );
         }
 
-        final jobId = data['job_id'] as String? ?? data['id'] as String?;
+        final rawJobId = data['job_id'] as String? ?? data['id'] as String?;
+        final jobId = rawJobId?.trim();
         if (jobId == null || jobId.isEmpty) {
-          throw const ServerException('Audio upload accepted, but no valid Job ID was returned by the server.');
+          throw const ServerException(
+            'The recording could not be submitted successfully. No processing job ID was returned by the server. Please try again.',
+          );
         }
 
         return AudioJobEntity(
@@ -144,21 +154,26 @@ class AudioRecordingRemoteDataSourceImpl implements AudioRecordingRemoteDataSour
         );
       } else {
         // Handle non-2xx status codes safely without crashing on HTML responses
-        String errorMessage = 'Upload failed (${response.statusCode})';
+        String errorMessage = 'The recording could not be submitted successfully (${response.statusCode}). Please try again.';
 
         if (response.statusCode == 401 || response.statusCode == 403) {
-          errorMessage = 'Session authentication required. Please log in again.';
+          errorMessage = 'Session authentication expired. Please log in again and retry submission.';
         } else if (response.statusCode == 413) {
-          errorMessage = 'The recorded audio file is too large to process. Please record a shorter sample.';
+          errorMessage = 'The recorded audio file is too large to process. Please record a shorter sample and try again.';
+        } else if (response.statusCode == 415 || response.statusCode == 422) {
+          errorMessage = 'The audio format was not recognized or accepted by the server. Please record again.';
         } else if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
-          errorMessage = 'The server is currently starting up or temporarily unavailable (${response.statusCode}). Please try again in a few moments.';
+          errorMessage = 'The audio processing server is starting up or temporarily busy (${response.statusCode}). Please wait a moment and try again.';
         } else {
           try {
             if (!response.body.trim().startsWith('<') && response.body.isNotEmpty) {
               final data = jsonDecode(response.body);
               if (data is Map && data['detail'] != null) {
                 final detail = data['detail'];
-                errorMessage = detail is String ? detail : detail.toString();
+                final detailStr = detail is String ? detail : detail.toString();
+                if (detailStr.trim().isNotEmpty) {
+                  errorMessage = 'Recording submission error: $detailStr. Please try again.';
+                }
               }
             }
           } catch (_) {}
