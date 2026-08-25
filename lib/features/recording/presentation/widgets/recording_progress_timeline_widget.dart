@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Real-time horizontal recording timeline and progress indicator.
@@ -12,6 +12,7 @@ import '../../../../core/theme/app_colors.dart';
 /// - Active ticks turn bold LungSense green when reached.
 class RecordingProgressTimelineWidget extends StatelessWidget {
   final int elapsedSeconds;
+  final int minDurationSeconds;
   final int maxDurationSeconds;
   final bool isRecording;
   final bool isPaused;
@@ -21,6 +22,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
   const RecordingProgressTimelineWidget({
     super.key,
     required this.elapsedSeconds,
+    this.minDurationSeconds = 16,
     required this.maxDurationSeconds,
     required this.isRecording,
     required this.isPaused,
@@ -51,6 +53,10 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     final progressFraction = maxDurationSeconds > 0
         ? (clampedElapsed / maxDurationSeconds).clamp(0.0, 1.0)
         : 0.0;
+    final minFraction = maxDurationSeconds > 0
+        ? (minDurationSeconds / maxDurationSeconds).clamp(0.0, 1.0)
+        : 0.0;
+    final isMinReached = clampedElapsed >= minDurationSeconds;
     final ticks = _generateTicks();
     final isCough = recordingType.toLowerCase().contains('cough');
     final typeLabel = isCough ? 'Cough Audio' : 'Breathing Audio';
@@ -64,7 +70,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
       statusText = 'COMPLETED';
       statusIcon = Icons.check_circle_rounded;
     } else if (isRecording) {
-      statusColor = AppColors.primary;
+      statusColor = isMinReached ? AppColors.supportingGreen : AppColors.primary;
       statusText = 'RECORDING';
       statusIcon = Icons.radio_button_checked_rounded;
     } else if (isPaused) {
@@ -85,14 +91,14 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(18.0),
         border: Border.all(
           color: isRecording
-              ? AppColors.primary.withValues(alpha: 0.35)
+              ? (isMinReached ? AppColors.supportingGreen.withValues(alpha: 0.45) : AppColors.primary.withValues(alpha: 0.35))
               : AppColors.border,
           width: isRecording ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
             color: isRecording
-                ? AppColors.primary.withValues(alpha: 0.08)
+                ? (isMinReached ? AppColors.supportingGreen.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.08))
                 : AppColors.text.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -102,7 +108,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row: Type + Status Pill on Left, Digital Time on Right
+          // Header Row: Type + Status Pill on Left, Digital Time & Range on Right
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -148,7 +154,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                 ],
               ),
 
-              // Time indicator: 00:08 / 00:30
+              // Time indicator: 00:18 / 00:20
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -161,11 +167,11 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                   children: [
                     Text(
                       _formatTime(clampedElapsed),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                        fontFeatures: [FontFeature.tabularFigures()],
+                        color: isMinReached ? AppColors.supportingGreen : AppColors.primary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                     const Text(
@@ -207,12 +213,13 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                     thumbRadius,
                     totalWidth - thumbRadius,
                   );
+                  final minMarkerX = (minFraction * totalWidth).clamp(0.0, totalWidth);
 
                   return Column(
                     children: [
-                      // Track with Thumb
+                      // Track with Minimum Marker & Thumb
                       SizedBox(
-                        height: 18,
+                        height: 22,
                         child: Stack(
                           alignment: Alignment.centerLeft,
                           children: [
@@ -231,11 +238,10 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                               width: totalWidth * currentFraction,
                               height: trackHeight,
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppColors.primary,
-                                    AppColors.supportingGreen,
-                                  ],
+                                gradient: LinearGradient(
+                                  colors: isMinReached
+                                      ? [AppColors.primary, AppColors.supportingGreen]
+                                      : [AppColors.primary, AppColors.primary],
                                   begin: Alignment.centerLeft,
                                   end: Alignment.centerRight,
                                 ),
@@ -243,7 +249,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                                 boxShadow: currentFraction > 0.02
                                     ? [
                                         BoxShadow(
-                                          color: AppColors.primary.withValues(alpha: 0.35),
+                                          color: (isMinReached ? AppColors.supportingGreen : AppColors.primary).withValues(alpha: 0.35),
                                           blurRadius: 6,
                                           offset: const Offset(0, 1),
                                         ),
@@ -260,7 +266,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
 
                               return Positioned(
                                 left: (tickX - 1.0).clamp(0.0, totalWidth - 2.0),
-                                top: (18 - trackHeight) / 2 - 2,
+                                top: (22 - trackHeight) / 2 - 2,
                                 child: Container(
                                   width: 2.0,
                                   height: trackHeight + 4,
@@ -274,6 +280,26 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                               );
                             }),
 
+                            // Minimum threshold indicator line
+                            Positioned(
+                              left: (minMarkerX - 1.5).clamp(0.0, totalWidth - 3.0),
+                              top: 0,
+                              child: Container(
+                                width: 3.0,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: isMinReached ? AppColors.supportingGreen : AppColors.warning,
+                                  borderRadius: BorderRadius.circular(2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isMinReached ? AppColors.supportingGreen : AppColors.warning).withValues(alpha: 0.5),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
                             // Active Thumb / Indicator Dot
                             if (currentFraction > 0.0)
                               Positioned(
@@ -285,12 +311,12 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                                     color: Colors.white,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: AppColors.primary,
+                                      color: isMinReached ? AppColors.supportingGreen : AppColors.primary,
                                       width: 2.5,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary.withValues(alpha: 0.4),
+                                        color: (isMinReached ? AppColors.supportingGreen : AppColors.primary).withValues(alpha: 0.4),
                                         blurRadius: 6,
                                         spreadRadius: 1,
                                       ),
@@ -307,36 +333,38 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                       SizedBox(
                         height: 18,
                         child: Stack(
-                          children: ticks.map((tickVal) {
-                            final tickFrac = tickVal / maxDurationSeconds;
-                            final isPassed = clampedElapsed >= tickVal;
-                            const labelWidth = 32.0;
-                            double labelLeft = (tickFrac * totalWidth) - (labelWidth / 2);
-                            if (labelLeft < 0) labelLeft = 0;
-                            if (labelLeft + labelWidth > totalWidth) {
-                              labelLeft = totalWidth - labelWidth;
-                            }
+                          children: [
+                            ...ticks.map((tickVal) {
+                              final tickFrac = tickVal / maxDurationSeconds;
+                              final isPassed = clampedElapsed >= tickVal;
+                              const labelWidth = 32.0;
+                              double labelLeft = (tickFrac * totalWidth) - (labelWidth / 2);
+                              if (labelLeft < 0) labelLeft = 0;
+                              if (labelLeft + labelWidth > totalWidth) {
+                                labelLeft = totalWidth - labelWidth;
+                              }
 
-                            return Positioned(
-                              left: labelLeft,
-                              width: labelWidth,
-                              child: Text(
-                                '${tickVal}s',
-                                textAlign: tickVal == 0
-                                    ? TextAlign.left
-                                    : (tickVal == maxDurationSeconds
-                                        ? TextAlign.right
-                                        : TextAlign.center),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isPassed ? FontWeight.w800 : FontWeight.w500,
-                                  color: isPassed
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary.withValues(alpha: 0.65),
+                              return Positioned(
+                                left: labelLeft,
+                                width: labelWidth,
+                                child: Text(
+                                  '${tickVal}s',
+                                  textAlign: tickVal == 0
+                                      ? TextAlign.left
+                                      : (tickVal == maxDurationSeconds
+                                          ? TextAlign.right
+                                          : TextAlign.center),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isPassed ? FontWeight.w800 : FontWeight.w500,
+                                    color: isPassed
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary.withValues(alpha: 0.65),
+                                  ),
                                 ),
-                              ),
-                            );
-                          }).toList(),
+                              );
+                            }),
+                          ],
                         ),
                       ),
                     ],
@@ -346,30 +374,42 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
             },
           ),
 
-          // Subtext hint
-          if (isRecording || isPaused) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+          // Subtext hint with Minimum and Maximum status
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (isRecording || isPaused)
                 Text(
-                  '${maxDurationSeconds - clampedElapsed}s remaining',
+                  !isMinReached
+                      ? '${minDurationSeconds - clampedElapsed}s to min duration (${minDurationSeconds}s)'
+                      : '✓ Min reached (${maxDurationSeconds - clampedElapsed}s to max)',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: isPaused ? AppColors.warning : AppColors.primary,
+                    color: isPaused
+                        ? AppColors.warning
+                        : (!isMinReached ? AppColors.primary : AppColors.supportingGreen),
                   ),
-                ),
+                )
+              else
                 Text(
-                  'Auto-stops at ${maxDurationSeconds}s',
+                  'Min: ${minDurationSeconds}s • Max: ${maxDurationSeconds}s',
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
                   ),
                 ),
-              ],
-            ),
-          ],
+              Text(
+                'Auto-stops at ${maxDurationSeconds}s',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

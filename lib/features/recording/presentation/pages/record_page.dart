@@ -80,7 +80,8 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   }
 
   String get _currentRecordingType => _selectedTabIndex == 0 ? 'cough' : 'breathing';
-  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 20 : 30;
+  int get _minDurationSeconds => _selectedTabIndex == 0 ? 16 : 30;
+  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 20 : 35;
 
   void _onToggleTab(int index) {
     final bloc = context.read<AudioRecordingBloc>();
@@ -169,7 +170,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Maximum recording duration (${_maxDurationSeconds}s) reached.',
+                      'Maximum recording duration reached (${_maxDurationSeconds}s).',
                     ),
                     backgroundColor: AppColors.primary,
                     duration: const Duration(seconds: 2),
@@ -209,6 +210,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                         // Real-time Recording Progress Indicator Timeline
                         RecordingProgressTimelineWidget(
                           elapsedSeconds: elapsed,
+                          minDurationSeconds: _minDurationSeconds,
                           maxDurationSeconds: _maxDurationSeconds,
                           isRecording: state is AudioRecordingInProgress && !state.isPaused,
                           isPaused: (state is AudioRecordingInProgress && state.isPaused),
@@ -606,7 +608,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
       elapsed = state.durationSeconds;
       status = state.isPaused ? 'Recording Paused' : 'Recording in Progress...';
     } else if (state is AudioRecordingReady) {
-      elapsed = 12; // Duration captured
+      elapsed = state.durationSeconds > 0 ? state.durationSeconds : (state.isImported ? 12 : _maxDurationSeconds);
       status = 'Recording Complete';
     }
 
@@ -622,20 +624,41 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.border.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            status,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.border.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                status,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '${_minDurationSeconds}s - ${_maxDurationSeconds}s',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -663,7 +686,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               borderRadius: BorderRadius.circular(35),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: AppColors.primary.withValues(alpha: 0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 6),
                 ),
@@ -728,9 +751,21 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
         ),
         const SizedBox(width: 24),
 
-        // Stop Action
+        // Stop Action with Minimum Duration Validation
         InkWell(
           onTap: () {
+            if (state.durationSeconds < _minDurationSeconds) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${_selectedTabIndex == 0 ? "Cough" : "Breathing"} recording requires at least ${_minDurationSeconds} seconds (currently ${state.durationSeconds}s). Please keep recording.',
+                  ),
+                  backgroundColor: AppColors.warning,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              return;
+            }
             bloc.add(const AudioStopRecordingEvent());
           },
           borderRadius: BorderRadius.circular(30),
@@ -921,6 +956,21 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
       ),
       child: ElevatedButton(
         onPressed: () {
+          final recordedDuration = state is AudioRecordingReady && state.durationSeconds > 0
+              ? state.durationSeconds
+              : ((state is AudioRecordingReady && state.isImported) ? _minDurationSeconds : 0);
+          if (recordedDuration < _minDurationSeconds && !(state is AudioRecordingReady && state.isImported)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${_selectedTabIndex == 0 ? "Cough" : "Breathing"} recording is too short (${recordedDuration}s). A minimum of ${_minDurationSeconds}s is required for accurate acoustic analysis. Please re-record.',
+                ),
+                backgroundColor: AppColors.error,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
           _audioPlayerService.stop();
           bloc.add(AudioUploadEvent(recordingType: _currentRecordingType));
         },

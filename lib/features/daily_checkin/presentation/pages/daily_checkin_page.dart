@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -123,6 +123,7 @@ class DailyCheckinPage extends StatelessWidget {
         return CheckinRecordingWidget(
           key: const ValueKey('checkin_cough_step'),
           recordingType: 'cough',
+          minDurationSeconds: 16,
           maxDurationSeconds: 20,
           onCompleted: (result) {
             context.read<DailyCheckinBloc>().add(CheckinCoughCompletedEvent(result));
@@ -133,7 +134,8 @@ class DailyCheckinPage extends StatelessWidget {
         return CheckinRecordingWidget(
           key: const ValueKey('checkin_breathing_step'),
           recordingType: 'breathing',
-          maxDurationSeconds: 30,
+          minDurationSeconds: 30,
+          maxDurationSeconds: 35,
           onCompleted: (result) {
             context.read<DailyCheckinBloc>().add(CheckinBreathingCompletedEvent(result));
           },

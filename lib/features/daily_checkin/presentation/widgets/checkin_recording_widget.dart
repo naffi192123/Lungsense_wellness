@@ -15,15 +15,18 @@ import '../../../recording/presentation/widgets/recording_progress_timeline_widg
 
 class CheckinRecordingWidget extends StatefulWidget {
   final String recordingType; // 'cough' or 'breathing'
-  final int maxDurationSeconds; // 20 for cough, 30 for breathing
+  final int minDurationSeconds; // 16 for cough, 30 for breathing
+  final int maxDurationSeconds; // 20 for cough, 35 for breathing
   final ValueChanged<AudioAnalysisEntity> onCompleted;
 
   const CheckinRecordingWidget({
     super.key,
     required this.recordingType,
-    required this.maxDurationSeconds,
+    int? minDurationSeconds,
+    int? maxDurationSeconds,
     required this.onCompleted,
-  });
+  })  : minDurationSeconds = minDurationSeconds ?? (recordingType == 'cough' ? 16 : 30),
+        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 20 : 35);
 
   @override
   State<CheckinRecordingWidget> createState() => _CheckinRecordingWidgetState();
@@ -106,7 +109,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Maximum recording duration (${widget.maxDurationSeconds}s) reached.',
+                  'Maximum recording duration reached (${widget.maxDurationSeconds}s).',
                 ),
                 backgroundColor: AppColors.primary,
                 duration: const Duration(seconds: 2),
@@ -144,6 +147,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
               // Real-time Recording Progress Indicator Timeline
               RecordingProgressTimelineWidget(
                 elapsedSeconds: elapsed,
+                minDurationSeconds: widget.minDurationSeconds,
                 maxDurationSeconds: widget.maxDurationSeconds,
                 isRecording: state is AudioRecordingInProgress && !state.isPaused,
                 isPaused: (state is AudioRecordingInProgress && state.isPaused),
@@ -162,7 +166,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
               ),
               const SizedBox(height: 24),
 
-              // Timer Section with Max Duration Limit
+              // Timer Section with Duration Limits
               _buildTimerSection(state),
               const SizedBox(height: 32),
 
@@ -224,8 +228,8 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                 const SizedBox(height: 2),
                 Text(
                   _isCough
-                      ? 'Hold phone 15-20cm away. Cough 3-5 times clearly (max 20s).'
-                      : 'Hold phone close to chest or mouth. Breathe deeply (max 30s).',
+                      ? 'Hold phone 15-20cm away. Cough 3-5 times clearly (16s - 20s).'
+                      : 'Hold phone close to chest or mouth. Breathe deeply (30s - 35s).',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -343,7 +347,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                'Max: ${widget.maxDurationSeconds}s',
+                '${widget.minDurationSeconds}s - ${widget.maxDurationSeconds}s',
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -442,9 +446,23 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
         ),
         const SizedBox(width: 24),
 
-        // Stop
+        // Stop Action with Minimum Duration Validation
         InkWell(
-          onTap: () => bloc.add(const AudioStopRecordingEvent()),
+          onTap: () {
+            if (state.durationSeconds < widget.minDurationSeconds) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${_typeName} recording requires at least ${widget.minDurationSeconds} seconds (currently ${state.durationSeconds}s). Please keep recording.',
+                  ),
+                  backgroundColor: AppColors.warning,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              return;
+            }
+            bloc.add(const AudioStopRecordingEvent());
+          },
           borderRadius: BorderRadius.circular(30),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -583,6 +601,21 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       ),
       child: ElevatedButton(
         onPressed: () {
+          final int recordedDuration = state.durationSeconds > 0
+              ? state.durationSeconds
+              : (state.isImported ? widget.minDurationSeconds : 0);
+          if (recordedDuration < widget.minDurationSeconds && !state.isImported) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${_typeName} recording is too short (${recordedDuration}s). A minimum of ${widget.minDurationSeconds}s is required for accurate acoustic analysis. Please re-record.',
+                ),
+                backgroundColor: AppColors.error,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
           _audioPlayerService.stop();
           bloc.add(AudioUploadEvent(recordingType: widget.recordingType));
         },
