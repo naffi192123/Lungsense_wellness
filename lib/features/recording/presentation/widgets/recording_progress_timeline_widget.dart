@@ -85,7 +85,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(18.0),
@@ -113,50 +113,57 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: statusColor.withValues(alpha: 0.3),
-                        width: 1,
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, color: statusColor, size: 11),
+                          const SizedBox(width: 3),
+                          Text(
+                            statusText,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(statusIcon, color: statusColor, size: 12),
-                        const SizedBox(width: 4),
-                        Text(
-                          statusText,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
-                            letterSpacing: 0.5,
-                          ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        typeLabel,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
                         ),
-                      ],
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    typeLabel,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.text,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 6),
 
               // Time indicator: 00:18 / 00:20
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(10),
@@ -168,7 +175,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                     Text(
                       _formatTime(clampedElapsed),
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w800,
                         color: isMinReached ? AppColors.supportingGreen : AppColors.primary,
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -177,7 +184,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                     const Text(
                       ' / ',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
@@ -185,7 +192,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                     Text(
                       _formatTime(maxDurationSeconds),
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textSecondary,
                         fontFeatures: [FontFeature.tabularFigures()],
@@ -196,7 +203,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Horizontal Progress Bar & Timeline
           TweenAnimationBuilder<double>(
@@ -379,28 +386,32 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (isRecording || isPaused)
-                Text(
-                  !isMinReached
-                      ? '${minDurationSeconds - clampedElapsed}s to min duration (${minDurationSeconds}s)'
-                      : '✓ Min reached (${maxDurationSeconds - clampedElapsed}s to max)',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: isPaused
-                        ? AppColors.warning
-                        : (!isMinReached ? AppColors.primary : AppColors.supportingGreen),
-                  ),
-                )
-              else
-                Text(
-                  'Min: ${minDurationSeconds}s • Max: ${maxDurationSeconds}s',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+              Expanded(
+                child: (isRecording || isPaused)
+                    ? Text(
+                        !isMinReached
+                            ? '${minDurationSeconds - clampedElapsed}s to min (${minDurationSeconds}s)'
+                            : '✓ Min reached (${maxDurationSeconds - clampedElapsed}s to max)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isPaused
+                              ? AppColors.warning
+                              : (!isMinReached ? AppColors.primary : AppColors.supportingGreen),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : Text(
+                        'Min: ${minDurationSeconds}s • Max: ${maxDurationSeconds}s',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+              ),
+              const SizedBox(width: 6),
               Text(
                 'Auto-stops at ${maxDurationSeconds}s',
                 style: const TextStyle(
