@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../bloc/daily_checkin_enums.dart';
 import '../bloc/daily_checkin_state.dart';
@@ -155,7 +155,7 @@ class CheckinReviewWidget extends StatelessWidget {
 
           // 3. Symptoms Log Card
           _buildSummaryCard(
-            title: 'Symptoms & Lifestyle Log',
+            title: 'Daily Symptoms Log',
             icon: Icons.fact_check_outlined,
             accentColor: Colors.amber.shade800,
             onEdit: () => onReRecord(CheckinStep.symptoms),
@@ -163,11 +163,12 @@ class CheckinReviewWidget extends StatelessWidget {
             metrics: [
               _MetricItem('Status', symptoms != null ? 'Logged' : 'Missing', isHighlight: true),
               if (symptoms != null) ...[
-                _MetricItem('Cough Severity', '${symptoms.coughSeverity.toInt()}/3'),
                 _MetricItem('Breathlessness', '${symptoms.breathlessness.toInt()}/3'),
-                _MetricItem('Chest Discomfort', '${symptoms.chestTightness.toInt()}/3'),
-                _MetricItem('Smoked Today', symptoms.smokedToday ? 'Yes' : 'No'),
-                _MetricItem('Exercise', '${symptoms.exerciseMinutes.toInt()} mins'),
+                _MetricItem('Cough Severity', '${symptoms.coughSeverity.toInt()}/3'),
+                _MetricItem('Chest Tightness', '${symptoms.chestTightness.toInt()}/3'),
+                _MetricItem('Wheezing', '${symptoms.wheezing.toInt()}/3'),
+                _MetricItem('Mucus', '${symptoms.mucus.toInt()}/3'),
+                _MetricItem('Fever', '${symptoms.fever.toInt()}/3'),
               ],
             ],
           ),
