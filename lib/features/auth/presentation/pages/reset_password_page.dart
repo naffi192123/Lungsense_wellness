@@ -26,16 +26,33 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: widget.initialEmail ?? '');
+    _passwordController.addListener(_validatePassword);
+  }
+
+  void _validatePassword() {
+    final password = _passwordController.text;
+    setState(() {
+      _hasMinLength = password.length >= 8;
+      _hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      _hasNumber = password.contains(RegExp(r'[0-9]'));
+      _hasSpecialChar = password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+    });
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _otpController.dispose();
+    _passwordController.removeListener(_validatePassword);
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -276,12 +293,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                                     if (value == null || value.isEmpty) {
                                       return 'Please enter a new password.';
                                     }
-                                    if (value.length < 8) {
-                                      return 'Password must be at least 8 characters.';
+                                    if (!_hasMinLength || !_hasUppercase || !_hasNumber || !_hasSpecialChar) {
+                                      return 'Password does not meet validation criteria';
                                     }
                                     return null;
                                   },
                                 ),
+                                const SizedBox(height: 12),
+
+                                // Prominent Password Requirements Box
+                                _buildValidationIndicators(),
                                 const SizedBox(height: 16),
 
                                 // Confirm Password Field
@@ -399,6 +420,76 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildValidationIndicators() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14.0),
+        border: Border.all(color: AppColors.border, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.shield_outlined, size: 18, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text(
+                'Password Requirements',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildValidationCheck('At least 8 characters', _hasMinLength),
+          const SizedBox(height: 8),
+          _buildValidationCheck('At least one uppercase letter (A–Z)', _hasUppercase),
+          const SizedBox(height: 8),
+          _buildValidationCheck('At least one number (0–9)', _hasNumber),
+          const SizedBox(height: 8),
+          _buildValidationCheck('At least one special character (!@#\$%^&*)', _hasSpecialChar),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildValidationCheck(String text, bool isValid) {
+    return Row(
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isValid ? AppColors.success.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.3),
+          ),
+          child: Icon(
+            isValid ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            color: isValid ? AppColors.success : AppColors.textSecondary.withValues(alpha: 0.6),
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: isValid ? AppColors.text : AppColors.textSecondary,
+              fontWeight: isValid ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

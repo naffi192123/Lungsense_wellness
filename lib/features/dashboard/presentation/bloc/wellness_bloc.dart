@@ -73,7 +73,11 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     emit(state.copyWith(status: WellnessStatus.scoreLoading));
     try {
       final latestScore = await _repository.getLatestScore();
-      final componentScores = _parseComponentScores(latestScore);
+      final componentScores = _parseComponentScores(
+        latestScore,
+        dailyLogs: state.dailyLogs,
+        audioAnalyses: state.audioAnalyses,
+      );
       emit(state.copyWith(
         status: WellnessStatus.success,
         latestScore: latestScore,
@@ -97,6 +101,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       final componentScores = _parseComponentScores(
         latestScore,
         dailyLogs: logs,
+        audioAnalyses: state.audioAnalyses,
       );
 
       emit(state.copyWith(
@@ -122,6 +127,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       final scoreHistory = await _repository.getScoreHistory(limit: 30);
       final componentScores = _parseComponentScores(
         latestScore,
+        dailyLogs: state.dailyLogs,
         audioAnalyses: analyses,
       );
 
@@ -139,6 +145,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
 
   /// Parses the C/B/S/T component scores from backend breakdown map.
   /// Handles both integer and nested object formats.
+  /// Ensures Trend Score ('T') is ONLY included when sufficient underlying data is present.
   Map<String, int> _parseComponentScores(
     ScoreHistoryEntity? latestScore, {
     List<DailyLogEntity>? dailyLogs,
@@ -174,7 +181,14 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       if (latestScore.symptomScore != null) {
         result['S'] = latestScore.symptomScore!.round();
       }
-      if (latestScore.trendScore != null) {
+
+      // Check if trend score has sufficient underlying historical data:
+      // Trend requires at least 2 sessions/days of underlying user activity.
+      final bool hasSufficientTrendData = (latestScore.sessionNumber != null && latestScore.sessionNumber! >= 2) ||
+          (dailyLogs != null && dailyLogs.length >= 2) ||
+          (audioAnalyses != null && audioAnalyses.length >= 2);
+
+      if (latestScore.trendScore != null && hasSufficientTrendData) {
         result['T'] = latestScore.trendScore!.round();
       }
 
@@ -188,6 +202,9 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
         };
 
         for (final compKey in ['C', 'B', 'S', 'T']) {
+          if (compKey == 'T' && !hasSufficientTrendData) {
+            continue; // Do not assign default/dummy trend score without sufficient data
+          }
           if (!result.containsKey(compKey)) {
             final aliases = keyAliases[compKey]!;
             for (final alias in aliases) {

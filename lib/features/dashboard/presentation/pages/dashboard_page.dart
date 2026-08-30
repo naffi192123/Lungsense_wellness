@@ -409,10 +409,11 @@ class _DashboardPageState extends State<DashboardPage> {
               child: _buildMetricCard(
                 title: 'Trend Score',
                 score: state.trendScore,
-                timestamp: scoreTime,
+                timestamp: state.trendScore != null ? scoreTime : null,
                 icon: Icons.trending_up_rounded,
                 color: Colors.indigoAccent,
-                customStatusText: 'Personal trend',
+                customStatusText: state.trendScore != null ? 'Personal trend' : 'Baseline forming',
+                customSubtitle: state.trendScore != null ? null : 'Need 2+ sessions',
               ),
             ),
           ],
@@ -428,17 +429,19 @@ class _DashboardPageState extends State<DashboardPage> {
     required IconData icon,
     required Color color,
     String? customStatusText,
+    String? customSubtitle,
   }) {
     final hasScore = score != null && score > 0;
+    final isTrend = title.toLowerCase().contains('trend');
+
     final statusText = customStatusText ??
         (hasScore
             ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
-            : 'No logs yet');
-    final statusColor = customStatusText != null
-        ? AppColors.primary
-        : (hasScore
-            ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
-            : AppColors.textSecondary);
+            : (isTrend ? 'Baseline forming' : 'No logs yet'));
+
+    final statusColor = hasScore
+        ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
+        : AppColors.textSecondary;
 
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -488,7 +491,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            _formatScoreTimestamp(hasScore ? timestamp : null),
+            customSubtitle ?? _formatScoreTimestamp(hasScore ? timestamp : null),
             style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
             overflow: TextOverflow.ellipsis,
           ),

@@ -356,18 +356,8 @@ class WellnessRepositoryImpl implements WellnessRepository {
   Future<ScoreHistoryEntity?> getLatestScore() async {
     if (scoreRemoteDataSource != null) {
       try {
-        var remote = await scoreRemoteDataSource!.getLatestScore();
-        if (remote == null || (remote['lung_wellness_score'] == null && remote['score'] == null && remote['final_score'] == null)) {
-          // If no score computed yet on backend, try computing via POST /score/compute
-          try {
-            final computed = await scoreRemoteDataSource!.computeScore();
-            if (computed.isNotEmpty && (computed['lung_wellness_score'] != null || computed['score'] != null || computed['final_score'] != null)) {
-              remote = computed;
-            }
-          } catch (_) {}
-        }
-
-        if (remote != null) {
+        final remote = await scoreRemoteDataSource!.getLatestScore();
+        if (remote != null && (remote['lung_wellness_score'] != null || remote['score'] != null || remote['final_score'] != null)) {
           final double? lungWellnessScore = _parseDouble(remote['lung_wellness_score'] ?? remote['score'] ?? remote['final_score'] ?? remote['wellness_score'] ?? remote['total_score']);
           final double? coughScore = _parseDouble(remote['cough_score'] ?? remote['coughScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['C'] : null));
           final double? breathingScore = _parseDouble(remote['breathing_score'] ?? remote['breathingScore'] ?? (remote['breakdown'] is Map ? remote['breakdown']['B'] : null));

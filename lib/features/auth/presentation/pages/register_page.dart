@@ -355,37 +355,68 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildValidationIndicators() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      childAspectRatio: 5,
-      children: [
-        _buildValidationCheck('At least 8 characters', _hasMinLength),
-        _buildValidationCheck('One number', _hasNumber),
-        _buildValidationCheck('One uppercase letter', _hasUppercase),
-        _buildValidationCheck('One special character', _hasSpecialChar),
-      ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14.0),
+        border: Border.all(color: AppColors.border, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.shield_outlined, size: 18, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text(
+                'Password Requirements',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildValidationCheck('At least 8 characters', _hasMinLength),
+          const SizedBox(height: 8),
+          _buildValidationCheck('At least one uppercase letter (A–Z)', _hasUppercase),
+          const SizedBox(height: 8),
+          _buildValidationCheck('At least one number (0–9)', _hasNumber),
+          const SizedBox(height: 8),
+          _buildValidationCheck('At least one special character (!@#\$%^&*)', _hasSpecialChar),
+        ],
+      ),
     );
   }
 
   Widget _buildValidationCheck(String text, bool isValid) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          isValid ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: isValid ? AppColors.success : AppColors.border,
-          size: 16,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isValid ? AppColors.success.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.3),
+          ),
+          child: Icon(
+            isValid ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            color: isValid ? AppColors.success : AppColors.textSecondary.withValues(alpha: 0.6),
+            size: 20,
+          ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               color: isValid ? AppColors.text : AppColors.textSecondary,
-              fontWeight: isValid ? FontWeight.w500 : FontWeight.normal,
+              fontWeight: isValid ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
         ),

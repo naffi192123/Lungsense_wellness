@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -164,29 +165,132 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    DateTime tempDate = DateTime.tryParse(_dobController.text) ?? DateTime(2000, 1, 1);
+
+    await showModalBottomSheet<void>(
       context: context,
-      initialDate: DateTime(2000),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: AppColors.surface,
-              onSurface: AppColors.text,
-            ),
-          ),
-          child: child!,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+      ),
+      builder: (BuildContext bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Drag Handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Select Date of Birth',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                          onPressed: () => Navigator.pop(bottomSheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Scrolling instruction banner
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.unfold_more_rounded, size: 18, color: AppColors.primary),
+                          SizedBox(width: 6),
+                          Text(
+                            'Scroll or swipe wheels up & down to choose date',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Interactive Cupertino Scroll Wheel Picker
+                    SizedBox(
+                      height: 200,
+                      child: CupertinoDatePicker(
+                        mode: CupertinoDatePickerMode.date,
+                        initialDateTime: tempDate,
+                        minimumDate: DateTime(1900, 1, 1),
+                        maximumDate: DateTime.now(),
+                        dateOrder: DatePickerDateOrder.ymd,
+                        onDateTimeChanged: (DateTime newDate) {
+                          setModalState(() {
+                            tempDate = newDate;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Confirm Selection Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _dobController.text =
+                                "${tempDate.year}-${tempDate.month.toString().padLeft(2, '0')}-${tempDate.day.toString().padLeft(2, '0')}";
+                          });
+                          Navigator.pop(bottomSheetContext);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.surface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Confirm Birthdate',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
-    if (picked != null) {
-      setState(() {
-        _dobController.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      });
-    }
   }
 
   @override
@@ -392,16 +496,43 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 20),
 
-          // Date of Birth
+          // Date of Birth with clear scroll indicators
           _buildLabel('Date of Birth'),
           const SizedBox(height: 8),
           TextFormField(
             controller: _dobController,
             readOnly: true,
             onTap: () => _selectDate(context),
-            decoration: const InputDecoration(
-              hintText: 'Select your date of birth',
-              suffixIcon: Icon(Icons.calendar_month_outlined, color: AppColors.supportingGreen),
+            decoration: InputDecoration(
+              hintText: 'Tap to scroll & select birthdate',
+              prefixIcon: const Icon(Icons.cake_outlined, color: AppColors.primary),
+              suffixIcon: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.primary),
+                          SizedBox(width: 2),
+                          Text(
+                            'Scroll',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -501,12 +632,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ),
             ],
           ),
-          
-          // BMI display
-          if (data.bmi > 0) ...[
-            const SizedBox(height: 24),
-            _buildBmiIndicator(data.bmi),
-          ],
         ],
       ),
     );
@@ -835,59 +960,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
         fontWeight: FontWeight.bold,
         color: AppColors.text,
         fontSize: 13,
-      ),
-    );
-  }
-
-  Widget _buildBmiIndicator(double bmi) {
-    String category = 'Normal';
-    Color color = AppColors.success;
-    if (bmi < 18.5) {
-      category = 'Underweight';
-      color = AppColors.accent;
-    } else if (bmi >= 25 && bmi < 30) {
-      category = 'Overweight';
-      color = AppColors.warning;
-    } else if (bmi >= 30) {
-      category = 'Obese';
-      color = AppColors.error;
-    }
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline_rounded, color: color, size: 20),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Body Mass Index (BMI)',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Your BMI is $bmi ($category)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
