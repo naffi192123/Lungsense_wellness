@@ -226,7 +226,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
             backgroundNoise: 'Low',
             timestamp: dt,
             completedAt: completedDt,
-            tags: ['FastAPI Engine', classification],
+            tags: ['Acoustic Analysis', classification],
             localAudioPath: localPath,
             jobId: jobId,
             qualityScore: qScore,

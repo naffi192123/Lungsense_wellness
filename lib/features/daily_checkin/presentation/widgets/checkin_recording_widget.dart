@@ -16,7 +16,7 @@ import '../../../recording/presentation/widgets/recording_progress_timeline_widg
 class CheckinRecordingWidget extends StatefulWidget {
   final String recordingType; // 'cough' or 'breathing'
   final int minDurationSeconds; // 16 for cough, 30 for breathing
-  final int maxDurationSeconds; // 20 for cough, 35 for breathing
+  final int maxDurationSeconds; // 20 for cough, 45 for breathing
   final ValueChanged<AudioAnalysisEntity> onCompleted;
 
   const CheckinRecordingWidget({
@@ -26,7 +26,7 @@ class CheckinRecordingWidget extends StatefulWidget {
     int? maxDurationSeconds,
     required this.onCompleted,
   })  : minDurationSeconds = minDurationSeconds ?? (recordingType == 'cough' ? 16 : 30),
-        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 20 : 35);
+        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 20 : 45);
 
   @override
   State<CheckinRecordingWidget> createState() => _CheckinRecordingWidgetState();
@@ -133,14 +133,14 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
         } else if (state is AudioRecordingReady) {
           elapsed = state.durationSeconds > 0
               ? state.durationSeconds
-              : (state.isImported ? 12 : widget.maxDurationSeconds);
+              : (_duration.inSeconds > 0 ? _duration.inSeconds : 0);
         }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             children: [
-              // Header Card with Instructions
+              // Header Card with Highly Prominent Instructions
               _buildInstructionCard(),
               const SizedBox(height: 16),
 
@@ -195,48 +195,183 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: themeColor.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              _isCough ? Icons.sick_outlined : Icons.air_rounded,
-              color: themeColor,
-              size: 24,
-            ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: themeColor.withValues(alpha: 0.35), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
-          const SizedBox(width: 14),
-          Expanded(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _isCough ? Icons.sick_outlined : Icons.air_rounded,
+                  color: themeColor,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isCough
+                          ? 'Voluntary Cough Recording'
+                          : 'Deep Breathing Recording',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _isCough
+                            ? 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s'
+                            : 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s (min 30s)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: themeColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$_typeName Sound Recording',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: AppColors.text,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
+                          children: _isCough
+                              ? const [
+                                  TextSpan(text: 'Please produce '),
+                                  TextSpan(
+                                    text: '3 to 5 deliberate, voluntary coughs ',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                  ),
+                                  TextSpan(text: 'clearly into your phone\'s microphone.'),
+                                ]
+                              : const [
+                                  TextSpan(text: 'Take '),
+                                  TextSpan(
+                                    text: 'slow, steady, deep breaths ',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                                  ),
+                                  TextSpan(text: 'through your mouth or hold phone close to chest.'),
+                                ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _isCough
-                      ? 'Hold phone 15-20cm away. Cough 3-5 times clearly (16s - 20s).'
-                      : 'Hold phone close to chest or mouth. Breathe deeply (30s - 35s).',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                    height: 1.3,
-                  ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Expanded(
+                      child: Text(
+                        _isCough
+                            ? 'Hold your phone ~15–20 cm (6–8 inches) away in a quiet room.'
+                            : 'Ensure a quiet environment without background noise or talking.',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+                      ),
+                    ),
+                  ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionWarning(BuildContext context, AudioRecordingPermissionDenied state) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20.0),
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.mic_off_rounded, color: AppColors.error, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  state.message,
+                  style: const TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                context.read<AudioRecordingBloc>().add(
+                      AudioStartRecordingEvent(recordingType: widget.recordingType),
+                    );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                state.isPermanentlyDenied ? 'Open Settings' : 'Grant Permission',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
             ),
           ),
         ],
@@ -305,7 +440,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
     } else if (state is AudioRecordingReady) {
       elapsed = state.durationSeconds > 0
           ? state.durationSeconds
-          : (state.isImported ? 12 : widget.maxDurationSeconds);
+          : (_duration.inSeconds > 0 ? _duration.inSeconds : 0);
       status = 'Recording Complete';
     }
 
@@ -395,7 +530,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                 const Icon(Icons.mic, color: AppColors.surface, size: 24),
                 const SizedBox(width: 10),
                 Text(
-                  'Start $_typeName Recording',
+                  'Start ${_typeName} Recording',
                   style: const TextStyle(
                     color: AppColors.surface,
                     fontWeight: FontWeight.bold,
@@ -412,15 +547,17 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Cancel / Delete
+        // Cancel/Delete Action
         IconButton(
           iconSize: 32,
           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
-          onPressed: () => bloc.add(const AudioCancelRecordingEvent()),
+          onPressed: () {
+            bloc.add(const AudioCancelRecordingEvent());
+          },
         ),
         const SizedBox(width: 24),
 
-        // Pause / Resume
+        // Pause/Resume Action
         InkWell(
           onTap: () {
             if (isPaused) {
@@ -446,17 +583,18 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
         ),
         const SizedBox(width: 24),
 
-        // Stop Action with Minimum Duration Validation
+        // Stop/Finish Action
         InkWell(
           onTap: () {
-            if (state.durationSeconds < widget.minDurationSeconds) {
+            final int currentSeconds = state.durationSeconds;
+            if (currentSeconds < widget.minDurationSeconds) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    '${_typeName} recording requires at least ${widget.minDurationSeconds} seconds (currently ${state.durationSeconds}s). Please keep recording.',
+                    '${_typeName} recording is too short (${currentSeconds}s). Minimum required is ${widget.minDurationSeconds}s.',
                   ),
                   backgroundColor: AppColors.warning,
-                  duration: const Duration(seconds: 3),
+                  duration: const Duration(seconds: 2),
                 ),
               );
               return;
@@ -467,7 +605,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.supportingGreen,
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -493,7 +631,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           },
           icon: const Icon(Icons.file_upload_outlined, size: 18, color: AppColors.primary),
           label: const Text(
-            'Import Audio File From Device',
+            'Import Recorded Audio File',
             style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
           ),
           style: OutlinedButton.styleFrom(
@@ -502,19 +640,69 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14.0),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14.0),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.tips_and_updates_outlined, size: 16, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text(
+                    'Optimal Recording Guidelines',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.text),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _buildBulletPoint('Hold your phone roughly 15-20 cm away from your mouth.'),
+              _buildBulletPoint('Ensure background noise (fans, TV, traffic) is minimized.'),
+              _buildBulletPoint(_isCough
+                  ? 'Perform 3-5 distinct, deliberate voluntary coughs during the session.'
+                  : 'Take deep, controlled inhalations and exhalations through mouth.'),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, height: 1.3),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPlaybackPanel(BuildContext context, AudioRecordingReady state) {
     final bloc = context.read<AudioRecordingBloc>();
+    final int displayDuration = state.durationSeconds > 0 ? state.durationSeconds : _duration.inSeconds;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20.0),
+        borderRadius: BorderRadius.circular(18.0),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -529,16 +717,14 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                   children: [
                     Text(
                       state.fileName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.text,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      state.isImported ? 'Imported from device' : 'Recorded live via microphone',
+                      state.isImported
+                          ? 'Imported from device (${displayDuration}s)'
+                          : 'Recorded live (${displayDuration}s)',
                       style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ],
@@ -578,7 +764,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                 ),
               ),
               Text(
-                '${_position.inSeconds}s / ${_duration.inSeconds}s',
+                '${_position.inSeconds}s / ${displayDuration > 0 ? displayDuration : _duration.inSeconds}s',
                 style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
@@ -603,7 +789,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
         onPressed: () {
           final int recordedDuration = state.durationSeconds > 0
               ? state.durationSeconds
-              : (state.isImported ? widget.minDurationSeconds : 0);
+              : (_duration.inSeconds > 0 ? _duration.inSeconds : widget.minDurationSeconds);
           if (recordedDuration < widget.minDurationSeconds && !state.isImported) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -637,7 +823,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
   }
 
   Widget _buildProcessingView(BuildContext context, AudioRecordingState state) {
-    String msg = 'Processing audio signature...';
+    String msg = 'Processing your recording...';
     int step = 1;
     if (state is AudioRecordingUploading) {
       msg = state.statusMessage;
@@ -673,7 +859,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Analyzing $_typeName Audio',
+            'Analyzing $_typeName Recording',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -693,21 +879,21 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
           const SizedBox(height: 28),
           _buildPipelineStep(
             stepNum: 1,
-            title: 'Uploading Audio Signature',
+            title: 'Uploading your recording...',
             isComplete: step > 1,
             isActive: step == 1,
           ),
           const SizedBox(height: 10),
           _buildPipelineStep(
             stepNum: 2,
-            title: 'Acoustic Feature Extraction',
+            title: 'Processing your recording...',
             isComplete: step > 2,
             isActive: step == 2,
           ),
           const SizedBox(height: 10),
           _buildPipelineStep(
             stepNum: 3,
-            title: 'Acoustic Scoring & Verification',
+            title: 'Analyzing your recording...',
             isComplete: false,
             isActive: step == 3,
           ),
@@ -730,9 +916,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.error),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
               ),
             ),
           ),
@@ -747,78 +931,47 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
     required bool isComplete,
     required bool isActive,
   }) {
-    final color = isComplete
-        ? AppColors.supportingGreen
-        : (isActive ? AppColors.primary : AppColors.textSecondary.withValues(alpha: 0.4));
+    Color bg = AppColors.surface;
+    Color border = AppColors.border;
+    Color textColor = AppColors.textSecondary;
+    Widget leading = Text('$stepNum', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary));
+
+    if (isComplete) {
+      bg = AppColors.supportingGreen.withValues(alpha: 0.1);
+      border = AppColors.supportingGreen;
+      textColor = AppColors.text;
+      leading = const Icon(Icons.check_circle_rounded, color: AppColors.supportingGreen, size: 20);
+    } else if (isActive) {
+      bg = AppColors.primary.withValues(alpha: 0.1);
+      border = AppColors.primary;
+      textColor = AppColors.primary;
+      leading = const SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
+      );
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(
-          color: isActive ? AppColors.primary.withValues(alpha: 0.5) : AppColors.border,
-          width: isActive ? 1.5 : 1.0,
-        ),
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: isComplete
-                ? const Icon(Icons.check_rounded, color: AppColors.supportingGreen, size: 14)
-                : (isActive
-                    ? const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
-                      )
-                    : Text('$stepNum', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color))),
-          ),
-          const SizedBox(width: 12),
+          leading,
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               title,
               style: TextStyle(
-                fontWeight: isActive || isComplete ? FontWeight.bold : FontWeight.normal,
-                fontSize: 13,
-                color: isComplete || isActive ? AppColors.text : AppColors.textSecondary,
+                fontSize: 13.5,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: textColor,
               ),
-            ),
-          ),
-          if (isComplete)
-            const Text(
-              'Done ✓',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.supportingGreen),
-            )
-          else if (isActive)
-            const Text(
-              'In Progress...',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPermissionWarning(BuildContext context, AudioRecordingPermissionDenied state) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20.0),
-      padding: const EdgeInsets.all(14.0),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14.0),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 24),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              state.message,
-              style: const TextStyle(color: AppColors.text, fontSize: 12),
             ),
           ),
         ],
@@ -841,7 +994,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       title: '$typeName Recording',
       type: typeName,
       status: job.status.toLowerCase(),
-      duration: (job.durationSeconds ?? (isCough ? 12 : 20)).toInt(),
+      duration: (job.durationSeconds ?? (isCough ? 16 : 30)).toInt(),
       durationSeconds: job.durationSeconds,
       confidence: qScoreInt,
       lungsScore: qScoreInt,
@@ -856,7 +1009,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       backgroundNoise: 'Low',
       timestamp: job.createdAt ?? DateTime.now(),
       completedAt: job.completedAt ?? DateTime.now(),
-      tags: ['FastAPI Engine', classification],
+      tags: ['Acoustic Analysis', classification],
       localAudioPath: audioPath,
       jobId: job.jobId,
       qualityScore: job.qualityScore,
@@ -890,42 +1043,66 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 24),
-            SizedBox(width: 10),
-            Text('Processing Failed', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
-        ),
-        content: Text(
-          displayMessage,
-          style: const TextStyle(fontSize: 13.5, color: AppColors.text, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
-            },
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: AppColors.error, size: 28),
+              SizedBox(width: 10),
+              Text('Processing Failed', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<AudioRecordingBloc>().add(const AudioRemoveFileEvent());
-            },
-            icon: const Icon(Icons.mic_rounded, size: 16),
-            label: const Text('Try Again'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayMessage,
+                style: const TextStyle(fontSize: 14, color: AppColors.text, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Please ensure you have a stable network connection and try submitting again.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                context.read<AudioRecordingBloc>().add(const AudioResetEvent());
+              },
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
             ),
-          ),
-        ],
-      ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                final path = state.filePath;
+                if (path != null && path.isNotEmpty) {
+                  context.read<AudioRecordingBloc>().add(
+                        AudioUploadEvent(recordingType: state.recordingType ?? widget.recordingType),
+                      );
+                } else {
+                  context.read<AudioRecordingBloc>().add(
+                        AudioStartRecordingEvent(recordingType: widget.recordingType),
+                      );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                state.filePath != null ? 'Try Again' : 'Record Again',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

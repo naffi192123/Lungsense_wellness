@@ -81,7 +81,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
 
   String get _currentRecordingType => _selectedTabIndex == 0 ? 'cough' : 'breathing';
   int get _minDurationSeconds => _selectedTabIndex == 0 ? 16 : 30;
-  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 20 : 35;
+  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 20 : 45;
 
   void _onToggleTab(int index) {
     final bloc = context.read<AudioRecordingBloc>();
@@ -193,7 +193,9 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
             if (state is AudioRecordingInProgress) {
               elapsed = state.durationSeconds;
             } else if (state is AudioRecordingReady) {
-              elapsed = state.durationSeconds > 0 ? state.durationSeconds : (state.isImported ? 12 : _maxDurationSeconds);
+              elapsed = state.durationSeconds > 0
+                  ? state.durationSeconds
+                  : (_duration.inSeconds > 0 ? _duration.inSeconds : 0);
             }
 
             return Column(
@@ -205,7 +207,11 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                       children: [
                         // Tabs Pill Selector
                         _buildToggleTabs(),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
+
+                        // Prominent Recording Instructions Card
+                        _buildInstructionCard(),
+                        const SizedBox(height: 16),
 
                         // Real-time Recording Progress Indicator Timeline
                         RecordingProgressTimelineWidget(
@@ -264,7 +270,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   }
 
   Widget _buildProcessingOverlay(BuildContext context, AudioRecordingState state) {
-    String msg = 'Processing audio signature...';
+    String msg = 'Processing your recording...';
     int currentStep = 1;
     if (state is AudioRecordingUploading) {
       msg = state.statusMessage;
@@ -286,7 +292,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
             height: 90,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(0.12),
+              color: AppColors.primary.withValues(alpha: 0.12),
             ),
             child: const Center(
               child: SizedBox(
@@ -302,7 +308,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
           const SizedBox(height: 28),
 
           Text(
-            'Analyzing ${_currentRecordingType.toUpperCase()} Audio',
+            'Analyzing ${_selectedTabIndex == 0 ? "Cough" : "Breathing"} Recording',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -321,24 +327,24 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 32),
 
-          // 3 Step Pipeline Progress Cards
+          // 3 Step Pipeline Progress Cards with Reassuring, Simple Language
           _buildProcessingStepItem(
             stepNumber: 1,
-            title: 'Uploading Audio Signature',
+            title: 'Uploading your recording...',
             isComplete: currentStep > 1,
             isActive: currentStep == 1,
           ),
           const SizedBox(height: 12),
           _buildProcessingStepItem(
             stepNumber: 2,
-            title: 'Acoustic Feature Extraction',
+            title: 'Processing your recording...',
             isComplete: currentStep > 2,
             isActive: currentStep == 2,
           ),
           const SizedBox(height: 12),
           _buildProcessingStepItem(
             stepNumber: 3,
-            title: 'Neural Respiratory Classification',
+            title: 'Analyzing your recording...',
             isComplete: false,
             isActive: currentStep == 3,
           ),
@@ -368,11 +374,149 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.error, width: 1.5),
-                shape: RoundedRectangleBorder(
+                side: const BorderSide(color: AppColors.error),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionCard() {
+    final isCough = _selectedTabIndex == 0;
+    final themeColor = isCough ? AppColors.primary : AppColors.secondary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: themeColor.withValues(alpha: 0.35), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
+                child: Icon(
+                  isCough ? Icons.sick_outlined : Icons.air_rounded,
+                  color: themeColor,
+                  size: 26,
+                ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isCough
+                          ? 'Voluntary Cough Recording'
+                          : 'Deep Breathing Recording',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isCough
+                            ? 'REQUIRED: ${_minDurationSeconds}s – ${_maxDurationSeconds}s'
+                            : 'REQUIRED: ${_minDurationSeconds}s – ${_maxDurationSeconds}s (min 30s)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: themeColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
+                          children: isCough
+                              ? const [
+                                  TextSpan(text: 'Please produce '),
+                                  TextSpan(
+                                    text: '3 to 5 deliberate, voluntary coughs ',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                  ),
+                                  TextSpan(text: 'clearly into your phone\'s microphone.'),
+                                ]
+                              : const [
+                                  TextSpan(text: 'Take '),
+                                  TextSpan(
+                                    text: 'slow, steady, deep breaths ',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                                  ),
+                                  TextSpan(text: 'through your mouth or hold phone close to chest.'),
+                                ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Expanded(
+                      child: Text(
+                        isCough
+                            ? 'Hold your phone ~15–20 cm (6–8 inches) away in a quiet room.'
+                            : 'Ensure a quiet environment without background noise or talking.',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -865,6 +1009,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
 
   Widget _buildPlaybackPanel(BuildContext context, AudioRecordingReady state) {
     final bloc = context.read<AudioRecordingBloc>();
+    final int displayDuration = state.durationSeconds > 0 ? state.durationSeconds : _duration.inSeconds;
 
     return Container(
       width: double.infinity,
@@ -891,7 +1036,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      state.isImported ? 'Imported from device' : 'Recorded live via microphone',
+                      state.isImported ? 'Imported from device (${displayDuration}s)' : 'Recorded live via microphone (${displayDuration}s)',
                       style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ],
@@ -933,7 +1078,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                 ),
               ),
               Text(
-                '${_position.inSeconds}s / ${_duration.inSeconds}s',
+                '${_position.inSeconds}s / ${displayDuration > 0 ? displayDuration : _duration.inSeconds}s',
                 style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
@@ -958,7 +1103,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
         onPressed: () {
           final recordedDuration = state is AudioRecordingReady && state.durationSeconds > 0
               ? state.durationSeconds
-              : ((state is AudioRecordingReady && state.isImported) ? _minDurationSeconds : 0);
+              : (_duration.inSeconds > 0 ? _duration.inSeconds : _minDurationSeconds);
           if (recordedDuration < _minDurationSeconds && !(state is AudioRecordingReady && state.isImported)) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -984,7 +1129,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
           ),
         ),
         child: Text(
-          'Submit & Analyze Acoustic Signature (${_currentRecordingType.toUpperCase()})',
+          'Analyze & Submit (${_selectedTabIndex == 0 ? "Cough" : "Breathing"})',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
       ),
@@ -1006,7 +1151,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
       title: '$typeName Recording',
       type: typeName,
       status: job.status.toLowerCase(),
-      duration: (job.durationSeconds ?? 12).toInt(),
+      duration: (job.durationSeconds ?? (isCough ? 16 : 30)).toInt(),
       durationSeconds: job.durationSeconds,
       confidence: qScoreInt,
       lungsScore: qScoreInt,
@@ -1021,7 +1166,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
       backgroundNoise: 'Low',
       timestamp: job.createdAt ?? DateTime.now(),
       completedAt: job.completedAt ?? DateTime.now(),
-      tags: ['FastAPI Engine', classification],
+      tags: ['Acoustic Analysis', classification],
       localAudioPath: audioPath,
       jobId: job.jobId,
       qualityScore: job.qualityScore,

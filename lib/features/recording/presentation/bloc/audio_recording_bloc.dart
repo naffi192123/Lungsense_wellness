@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/services/audio_player_service.dart';
 import '../../data/services/audio_recorder_service.dart';
 import '../../data/services/file_picker_service.dart';
 import '../../domain/usecases/check_and_record_consent_usecase.dart';
@@ -11,6 +12,7 @@ import 'audio_recording_state.dart';
 class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> {
   final AudioRecorderService recorderService;
   final FilePickerService filePickerService;
+  final AudioPlayerService? playerService;
   final UploadAudioUseCase uploadAudioUseCase;
   final GetJobStatusUseCase getJobStatusUseCase;
   final CheckAndRecordConsentUseCase checkAndRecordConsentUseCase;
@@ -23,6 +25,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
   AudioRecordingBloc({
     required this.recorderService,
     required this.filePickerService,
+    this.playerService,
     required this.uploadAudioUseCase,
     required this.getJobStatusUseCase,
     required this.checkAndRecordConsentUseCase,
@@ -184,11 +187,22 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
         _fileName = picked.name;
         _currentRecordingType = event.recordingType;
 
+        int durationSecs = 0;
+        if (playerService != null) {
+          try {
+            final dur = await playerService!.getFileDuration(picked.path);
+            if (dur != null && dur.inSeconds > 0) {
+              durationSecs = dur.inSeconds;
+            }
+          } catch (_) {}
+        }
+
         emit(AudioRecordingReady(
           filePath: picked.path,
           fileName: picked.name,
           recordingType: _currentRecordingType,
           isImported: true,
+          durationSeconds: durationSecs,
         ));
       }
     } catch (e) {
@@ -217,7 +231,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
       return;
     }
 
-    emit(const AudioRecordingUploading(statusMessage: 'Uploading audio signature to FastAPI...'));
+    emit(const AudioRecordingUploading(statusMessage: 'Uploading your recording...'));
 
     // Upload file to /recordings/cough or /recordings/breathing
     final uploadResult = await uploadAudioUseCase(
@@ -256,7 +270,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
         // Start backend job processing/polling only after receiving a valid job ID
         emit(AudioRecordingJobPolling(
           jobId: trimmedJobId,
-          statusMessage: 'Acoustic signature feature extraction in progress...',
+          statusMessage: 'Processing your recording... Please wait.',
         ));
 
         await _pollJobStatus(trimmedJobId, emit, filePath, event.recordingType);
@@ -273,7 +287,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
     final trimmedJobId = jobId.trim();
     if (trimmedJobId.isEmpty) {
       emit(AudioRecordingFailure(
-        message: 'Cannot poll job status: invalid job ID.',
+        message: 'Cannot check status: invalid recording reference.',
         filePath: filePath,
         recordingType: recordingType,
       ));
@@ -318,7 +332,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
             isDone = true;
           } else if (job.isFailed) {
             emit(AudioRecordingFailure(
-              message: job.error ?? 'Acoustic analysis job failed.',
+              message: job.error ?? 'Recording analysis could not be completed.',
               jobId: jobId,
               filePath: filePath,
               recordingType: recordingType,
@@ -327,7 +341,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
           } else {
             emit(AudioRecordingJobPolling(
               jobId: jobId,
-              statusMessage: 'Processing acoustic features (attempt $attempt)...',
+              statusMessage: 'Analyzing your recording... Please wait.',
             ));
           }
         },
@@ -338,7 +352,7 @@ class AudioRecordingBloc extends Bloc<AudioRecordingEvent, AudioRecordingState> 
 
     if (!_isProcessingCancelled && attempt >= maxPollAttempts && state is AudioRecordingJobPolling) {
       emit(AudioRecordingFailure(
-        message: 'Acoustic analysis timeout. The job took longer than 60 seconds.',
+        message: 'Analysis timed out. Please try again.',
         jobId: jobId,
         filePath: filePath,
         recordingType: recordingType,

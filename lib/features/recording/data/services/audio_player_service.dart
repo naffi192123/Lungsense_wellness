@@ -43,6 +43,17 @@ class AudioPlayerService {
     }
   }
 
+  Future<Duration?> getFileDuration(String path) async {
+    final player = _ensurePlayer();
+    try {
+      await player.setSource(DeviceFileSource(path));
+      final dur = await player.getDuration();
+      return dur;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> dispose() async {
     if (_audioPlayer != null) {
       try {

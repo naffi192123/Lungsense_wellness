@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -8,8 +9,9 @@ import '../../../../core/theme/app_colors.dart';
 /// - Live header with status pill and elapsed/max duration display (e.g. 00:08 / 00:30).
 /// - Horizontal progress bar filled with LungSense green gradient.
 /// - Smooth animated thumb indicator at the active position.
-/// - Discrete tick marks and labels at 0s, 5s, 10s, 15s, 20s (cough) or up to 30s (breathing).
+/// - Discrete tick marks and labels at 0s, 5s, 10s, 15s, 20s (cough) or up to 45s (breathing).
 /// - Active ticks turn bold LungSense green when reached.
+/// - Adjusts proportionally to the true duration of uploaded/recorded audio.
 class RecordingProgressTimelineWidget extends StatelessWidget {
   final int elapsedSeconds;
   final int minDurationSeconds;
@@ -36,39 +38,48 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     return '$mins:$secs';
   }
 
-  List<int> _generateTicks() {
+  int get _effectiveMaxDuration {
+    if (isCompleted && elapsedSeconds > maxDurationSeconds) {
+      return elapsedSeconds;
+    }
+    return maxDurationSeconds > 0 ? maxDurationSeconds : 20;
+  }
+
+  List<int> _generateTicks(int effectiveMax) {
     final List<int> ticks = [];
-    for (int t = 0; t <= maxDurationSeconds; t += 5) {
+    final step = effectiveMax > 40 ? 10 : 5;
+    for (int t = 0; t <= effectiveMax; t += step) {
       ticks.add(t);
     }
-    if (!ticks.contains(maxDurationSeconds)) {
-      ticks.add(maxDurationSeconds);
+    if (!ticks.contains(effectiveMax)) {
+      ticks.add(effectiveMax);
     }
     return ticks;
   }
 
   @override
   Widget build(BuildContext context) {
-    final clampedElapsed = elapsedSeconds.clamp(0, maxDurationSeconds);
-    final progressFraction = maxDurationSeconds > 0
-        ? (clampedElapsed / maxDurationSeconds).clamp(0.0, 1.0)
+    final effectiveMax = _effectiveMaxDuration;
+    final displayElapsed = isCompleted ? elapsedSeconds : elapsedSeconds.clamp(0, effectiveMax);
+    final progressFraction = effectiveMax > 0
+        ? (displayElapsed / effectiveMax).clamp(0.0, 1.0)
         : 0.0;
-    final minFraction = maxDurationSeconds > 0
-        ? (minDurationSeconds / maxDurationSeconds).clamp(0.0, 1.0)
+    final minFraction = effectiveMax > 0
+        ? (minDurationSeconds / effectiveMax).clamp(0.0, 1.0)
         : 0.0;
-    final isMinReached = clampedElapsed >= minDurationSeconds;
-    final ticks = _generateTicks();
+    final isMinReached = displayElapsed >= minDurationSeconds;
+    final ticks = _generateTicks(effectiveMax);
     final isCough = recordingType.toLowerCase().contains('cough');
-    final typeLabel = isCough ? 'Cough Audio' : 'Breathing Audio';
+    final typeLabel = isCough ? 'Voluntary Cough Audio' : 'Deep Breathing Audio';
 
     Color statusColor;
     String statusText;
     IconData statusIcon;
 
     if (isCompleted) {
-      statusColor = AppColors.supportingGreen;
+      statusColor = isMinReached ? AppColors.supportingGreen : AppColors.warning;
       statusText = 'COMPLETED';
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = isMinReached ? Icons.check_circle_rounded : Icons.info_outline_rounded;
     } else if (isRecording) {
       statusColor = isMinReached ? AppColors.supportingGreen : AppColors.primary;
       statusText = 'RECORDING';
@@ -149,7 +160,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                       child: Text(
                         typeLabel,
                         style: const TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 12.0,
                           fontWeight: FontWeight.w700,
                           color: AppColors.text,
                         ),
@@ -161,7 +172,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
               ),
               const SizedBox(width: 6),
 
-              // Time indicator: 00:18 / 00:20
+              // Time indicator: 00:18 / 00:20 (or actual duration if completed)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
@@ -173,7 +184,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _formatTime(clampedElapsed),
+                      _formatTime(displayElapsed),
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
@@ -190,7 +201,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _formatTime(maxDurationSeconds),
+                      _formatTime(effectiveMax),
                       style: const TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
@@ -267,9 +278,9 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
 
                             // Tick notches directly on the track
                             ...ticks.map((tickVal) {
-                              final tickFrac = tickVal / maxDurationSeconds;
+                              final tickFrac = tickVal / effectiveMax;
                               final tickX = tickFrac * totalWidth;
-                              final isPassed = clampedElapsed >= tickVal;
+                              final isPassed = displayElapsed >= tickVal;
 
                               return Positioned(
                                 left: (tickX - 1.0).clamp(0.0, totalWidth - 2.0),
@@ -342,8 +353,8 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                         child: Stack(
                           children: [
                             ...ticks.map((tickVal) {
-                              final tickFrac = tickVal / maxDurationSeconds;
-                              final isPassed = clampedElapsed >= tickVal;
+                              final tickFrac = tickVal / effectiveMax;
+                              final isPassed = displayElapsed >= tickVal;
                               const labelWidth = 32.0;
                               double labelLeft = (tickFrac * totalWidth) - (labelWidth / 2);
                               if (labelLeft < 0) labelLeft = 0;
@@ -358,7 +369,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
                                   '${tickVal}s',
                                   textAlign: tickVal == 0
                                       ? TextAlign.left
-                                      : (tickVal == maxDurationSeconds
+                                      : (tickVal == effectiveMax
                                           ? TextAlign.right
                                           : TextAlign.center),
                                   style: TextStyle(
@@ -387,33 +398,45 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: (isRecording || isPaused)
+                child: isCompleted
                     ? Text(
-                        !isMinReached
-                            ? '${minDurationSeconds - clampedElapsed}s to min (${minDurationSeconds}s)'
-                            : '✓ Min reached (${maxDurationSeconds - clampedElapsed}s to max)',
+                        'Duration: ${displayElapsed}s (${isMinReached ? '✓ Meets' : '⚠️ Below'} ${minDurationSeconds}s min)',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isPaused
-                              ? AppColors.warning
-                              : (!isMinReached ? AppColors.primary : AppColors.supportingGreen),
+                          color: isMinReached ? AppColors.supportingGreen : AppColors.warning,
                         ),
                         overflow: TextOverflow.ellipsis,
                       )
-                    : Text(
-                        'Min: ${minDurationSeconds}s • Max: ${maxDurationSeconds}s',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    : (isRecording || isPaused)
+                        ? Text(
+                            !isMinReached
+                                ? '${minDurationSeconds - displayElapsed}s to min (${minDurationSeconds}s)'
+                                : '✓ Min reached (${effectiveMax - displayElapsed}s to max)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isPaused
+                                  ? AppColors.warning
+                                  : (!isMinReached ? AppColors.primary : AppColors.supportingGreen),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : Text(
+                            'Min: ${minDurationSeconds}s • Max: ${maxDurationSeconds}s',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
               ),
               const SizedBox(width: 6),
               Text(
-                'Auto-stops at ${maxDurationSeconds}s',
+                isCompleted
+                    ? 'Actual length'
+                    : 'Auto-stops at ${maxDurationSeconds}s',
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,

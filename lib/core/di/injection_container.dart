@@ -181,6 +181,7 @@ Future<void> initDependencies() async {
     () => AudioRecordingBloc(
       recorderService: sl(),
       filePickerService: sl(),
+      playerService: sl(),
       uploadAudioUseCase: sl(),
       getJobStatusUseCase: sl(),
       checkAndRecordConsentUseCase: sl(),

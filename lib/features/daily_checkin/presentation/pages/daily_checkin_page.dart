@@ -135,7 +135,7 @@ class DailyCheckinPage extends StatelessWidget {
           key: const ValueKey('checkin_breathing_step'),
           recordingType: 'breathing',
           minDurationSeconds: 30,
-          maxDurationSeconds: 35,
+          maxDurationSeconds: 45,
           onCompleted: (result) {
             context.read<DailyCheckinBloc>().add(CheckinBreathingCompletedEvent(result));
           },
