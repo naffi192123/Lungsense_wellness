@@ -26,20 +26,47 @@ class AudioRecorderService {
     return _audioRecorder!;
   }
 
-  /// Check and request runtime microphone and storage permissions.
+  /// Check and request runtime microphone permissions.
+  /// Checks and requests using the record package's native permission handler first
+  /// (which directly uses AVAudioSession on iOS and RECORD_AUDIO on Android),
+  /// with permission_handler as an optional fallback, safely catching MissingPluginException.
   Future<bool> requestMicrophonePermission() async {
-    final status = await ph.Permission.microphone.request();
-    return status.isGranted;
+    try {
+      final recorder = _ensureRecorder();
+      final hasPerm = await recorder.hasPermission();
+      if (hasPerm) return true;
+    } catch (_) {}
+
+    try {
+      final status = await ph.Permission.microphone.request();
+      return status.isGranted;
+    } catch (_) {
+      // If permission_handler method channel is not available or throws MissingPluginException,
+      // fallback to checking the recorder directly.
+      try {
+        return await _ensureRecorder().hasPermission();
+      } catch (_) {
+        return false;
+      }
+    }
   }
 
   /// Check if microphone permission is permanently denied.
   Future<bool> isPermissionPermanentlyDenied() async {
-    return await ph.Permission.microphone.isPermanentlyDenied;
+    try {
+      return await ph.Permission.microphone.isPermanentlyDenied;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Open device app settings.
   Future<bool> openAppSettings() async {
-    return await ph.openAppSettings();
+    try {
+      return await ph.openAppSettings();
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Start recording audio live to a local temporary file.

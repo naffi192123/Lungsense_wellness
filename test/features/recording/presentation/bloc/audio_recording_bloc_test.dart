@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lungsense_wellness/features/recording/presentation/bloc/audio_recording_bloc.dart';
 import 'package:lungsense_wellness/features/recording/presentation/bloc/audio_recording_event.dart';
@@ -9,7 +8,6 @@ import 'package:lungsense_wellness/features/recording/data/services/file_picker_
 import 'package:lungsense_wellness/features/recording/domain/usecases/upload_audio_usecase.dart';
 import 'package:lungsense_wellness/features/recording/domain/usecases/get_job_status_usecase.dart';
 import 'package:lungsense_wellness/features/recording/domain/usecases/check_and_record_consent_usecase.dart';
-import 'package:lungsense_wellness/features/recording/domain/entities/audio_recording_entities.dart';
 
 class MockAudioRecorderService extends Mock implements AudioRecorderService {}
 class MockFilePickerService extends Mock implements FilePickerService {}

@@ -4,6 +4,12 @@
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>LungSense Wellness requires microphone access to record cough and breathing audio for analysis.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>LungSense Wellness requires access to select audio files from your media library.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

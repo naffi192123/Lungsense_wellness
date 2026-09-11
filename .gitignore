@@ -48,6 +48,10 @@ app.*.map.json
 assets/secrets/
 secrets.json
 
+# Android signing credentials
+android/key.properties
+android/app/upload-keystore.jks
+
 # Hive / local databases
 *.hive
 *.lock

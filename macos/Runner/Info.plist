@@ -28,5 +28,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LungSense Wellness requires microphone access to record cough and breathing audio for analysis.</string>
 </dict>
 </plist>
