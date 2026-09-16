@@ -119,7 +119,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildHomeTab() {
     final authState = context.watch<AuthBloc>().state;
-    final cachedName = sl<ApiClient>().userName;
+    final cachedName =
+        sl.isRegistered<ApiClient>() ? sl<ApiClient>().userName : null;
     String name = 'User';
     if (authState is AuthAuthenticated) {
       if (authState.user.name != null && authState.user.name!.isNotEmpty) {
@@ -393,32 +394,177 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                title: 'Symptom Score',
-                score: state.symptomScore,
-                timestamp: scoreTime,
-                icon: Icons.assignment_turned_in_outlined,
-                color: Colors.amber.shade800,
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'Symptom Score',
+                  score: state.symptomScore,
+                  timestamp: scoreTime,
+                  icon: Icons.assignment_turned_in_outlined,
+                  color: Colors.amber.shade800,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                title: 'Trend Score',
-                score: state.trendScore,
-                timestamp: state.trendScore != null ? scoreTime : null,
-                icon: Icons.trending_up_rounded,
-                color: Colors.indigoAccent,
-                customStatusText: state.trendScore != null ? 'Personal trend' : 'Baseline forming',
-                customSubtitle: state.trendScore != null ? null : 'Need 2+ sessions',
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildBaselineCard(state),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBaselineCard(WellnessState state) {
+    final baselineVal = state.baselineValue;
+    final hasBaseline = baselineVal != null && baselineVal > 0;
+
+    final statusText = hasBaseline
+        ? (state.baselineStatusText ?? 'Active')
+        : (state.baselineStatusText ?? 'Forming');
+
+    final statusColor = hasBaseline
+        ? AppColors.supportingGreen
+        : AppColors.secondary;
+
+    final String displayMessage;
+    if (hasBaseline) {
+      displayMessage = state.baselineMessage ?? 'Personal baseline active and updating.';
+    } else {
+      final rawMsg = state.baselineMessage;
+      displayMessage = (rawMsg != null &&
+              rawMsg.isNotEmpty &&
+              !rawMsg.toLowerCase().contains('trend'))
+          ? rawMsg
+          : 'Baseline will be available after a few sessions.';
+    }
+
+    final String displayValue;
+    if (hasBaseline) {
+      if (baselineVal % 1 == 0) {
+        displayValue = baselineVal.toInt().toString();
+      } else {
+        final fixed = baselineVal.toStringAsFixed(2);
+        displayValue = fixed.endsWith('0') ? baselineVal.toStringAsFixed(1) : fixed;
+      }
+    } else {
+      displayValue = '';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Text(
+                  'Baseline',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                Icons.tune_rounded,
+                size: 20,
+                color: hasBaseline ? Colors.teal.shade700 : AppColors.textSecondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (hasBaseline) ...[
+            Text(
+              displayValue,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                color: AppColors.text,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    color: statusColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              displayMessage,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    color: statusColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              displayMessage,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.textSecondary,
+                height: 1.35,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -432,12 +578,11 @@ class _DashboardPageState extends State<DashboardPage> {
     String? customSubtitle,
   }) {
     final hasScore = score != null && score > 0;
-    final isTrend = title.toLowerCase().contains('trend');
 
     final statusText = customStatusText ??
         (hasScore
             ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
-            : (isTrend ? 'Baseline forming' : 'No logs yet'));
+            : 'No logs yet');
 
     final statusColor = hasScore
         ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))

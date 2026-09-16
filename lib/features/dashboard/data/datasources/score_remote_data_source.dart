@@ -120,13 +120,27 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
     try {
       final response = await apiClient.get('/score/baseline');
       if (response.statusCode == 200) {
+        if (response.body.trim().isEmpty ||
+            response.body.trim() == 'null' ||
+            response.body.trim().startsWith('<')) {
+          return {
+            'status': 'initializing',
+            'message': 'Baseline will be available after a few sessions.',
+          };
+        }
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) return decoded;
         if (decoded is Map) return Map<String, dynamic>.from(decoded);
       }
-      return {'status': 'initializing', 'message': 'Complete sessions to activate trend scoring.'};
+      return {
+        'status': 'initializing',
+        'message': 'Baseline will be available after a few sessions.',
+      };
     } catch (_) {
-      return {'status': 'initializing', 'message': 'Complete sessions to activate trend scoring.'};
+      return {
+        'status': 'initializing',
+        'message': 'Baseline will be available after a few sessions.',
+      };
     }
   }
 

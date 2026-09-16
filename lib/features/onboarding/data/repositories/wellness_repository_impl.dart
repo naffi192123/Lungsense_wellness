@@ -435,7 +435,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
         return await scoreRemoteDataSource!.getBaselineStatus();
       } catch (_) {}
     }
-    return {'status': 'initializing', 'message': 'Complete screening sessions to activate trend scoring.'};
+    return {'status': 'initializing', 'message': 'Baseline will be available after a few sessions.'};
   }
 
   @override

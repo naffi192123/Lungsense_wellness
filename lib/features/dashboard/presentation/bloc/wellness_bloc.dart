@@ -67,12 +67,18 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     }
   }
 
-  /// Lightweight score-only refresh: only calls GET /score/latest.
-  /// Used after recording/symptom submission and on tab switch to Home.
+  /// Lightweight score-only refresh: fetches GET /score/latest and GET /score/baseline.
+  /// Used after recording/symptom submission, on pull-to-refresh, and on tab switch to Home.
   Future<void> _onFetchScore(WellnessFetchScoreEvent event, Emitter<WellnessState> emit) async {
     emit(state.copyWith(status: WellnessStatus.scoreLoading));
     try {
-      final latestScore = await _repository.getLatestScore();
+      final results = await Future.wait([
+        _repository.getLatestScore(),
+        _repository.getBaselineStatus(),
+      ]);
+      final latestScore = results[0] as ScoreHistoryEntity?;
+      final baselineStatus = results[1] as Map<String, dynamic>?;
+
       final componentScores = _parseComponentScores(
         latestScore,
         dailyLogs: state.dailyLogs,
@@ -81,6 +87,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
       emit(state.copyWith(
         status: WellnessStatus.success,
         latestScore: latestScore,
+        baselineStatus: baselineStatus,
         componentScores: componentScores,
       ));
     } catch (e) {
@@ -94,10 +101,18 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     try {
       await _repository.saveDailyLog(event.log);
 
-      // Fetch fresh score after computation (POST /score/compute is triggered inside saveDailyLog)
-      final latestScore = await _repository.getLatestScore();
-      final logs = await _repository.getDailyLogs();
-      final scoreHistory = await _repository.getScoreHistory(limit: 30);
+      // Fetch fresh score & baseline after computation (POST /score/compute is triggered inside saveDailyLog)
+      final results = await Future.wait([
+        _repository.getLatestScore(),
+        _repository.getDailyLogs(),
+        _repository.getScoreHistory(limit: 30),
+        _repository.getBaselineStatus(),
+      ]);
+      final latestScore = results[0] as ScoreHistoryEntity?;
+      final logs = (results[1] as List).cast<DailyLogEntity>();
+      final scoreHistory = (results[2] as List).cast<ScoreHistoryEntity>();
+      final baselineStatus = results[3] as Map<String, dynamic>?;
+
       final componentScores = _parseComponentScores(
         latestScore,
         dailyLogs: logs,
@@ -109,6 +124,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
         dailyLogs: logs,
         scoreHistory: scoreHistory,
         latestScore: latestScore,
+        baselineStatus: baselineStatus,
         componentScores: componentScores,
       ));
     } catch (e) {
@@ -121,10 +137,18 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     try {
       await _repository.saveAudioAnalysis(event.analysis);
 
-      // Fetch fresh score after computation (POST /score/compute is triggered inside saveAudioAnalysis)
-      final latestScore = await _repository.getLatestScore();
-      final analyses = await _repository.getAudioAnalyses();
-      final scoreHistory = await _repository.getScoreHistory(limit: 30);
+      // Fetch fresh score & baseline after computation (POST /score/compute is triggered inside saveAudioAnalysis)
+      final results = await Future.wait([
+        _repository.getLatestScore(),
+        _repository.getAudioAnalyses(),
+        _repository.getScoreHistory(limit: 30),
+        _repository.getBaselineStatus(),
+      ]);
+      final latestScore = results[0] as ScoreHistoryEntity?;
+      final analyses = (results[1] as List).cast<AudioAnalysisEntity>();
+      final scoreHistory = (results[2] as List).cast<ScoreHistoryEntity>();
+      final baselineStatus = results[3] as Map<String, dynamic>?;
+
       final componentScores = _parseComponentScores(
         latestScore,
         dailyLogs: state.dailyLogs,
@@ -136,6 +160,7 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
         audioAnalyses: analyses,
         scoreHistory: scoreHistory,
         latestScore: latestScore,
+        baselineStatus: baselineStatus,
         componentScores: componentScores,
       ));
     } catch (e) {
