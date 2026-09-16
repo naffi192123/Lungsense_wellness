@@ -225,5 +225,63 @@ void main() {
       expect(find.text('Personal Best'), findsOneWidget);
       expect(find.text('Your latest score (90) is your highest so far!'), findsOneWidget);
     });
+
+    testWidgets('renders Score Distribution card with What is this button and opens bottom sheet', (tester) async {
+      final now = DateTime.now();
+      final history = [
+        ScoreHistoryEntity(
+          id: 's2',
+          score: 85,
+          lungWellnessScore: 85.0,
+          band: 'good',
+          message: 'Good',
+          timestamp: now,
+        ),
+        ScoreHistoryEntity(
+          id: 's1',
+          score: 65,
+          lungWellnessScore: 65.0,
+          band: 'moderate',
+          message: 'Moderate',
+          timestamp: now.subtract(const Duration(days: 1)),
+        ),
+      ];
+
+      when(() => mockAnalyticsBloc.state).thenReturn(AnalyticsState(
+        status: AnalyticsStatus.success,
+        scoreHistory: history,
+      ));
+      when(() => mockAnalyticsBloc.stream).thenAnswer((_) => const Stream.empty());
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Score Distribution'), findsOneWidget);
+      expect(find.text('Based on 2 sessions'), findsOneWidget);
+      expect(find.text('What is this?'), findsOneWidget);
+      expect(find.text('80 – 100'), findsOneWidget);
+      expect(find.text('60 – 79'), findsOneWidget);
+
+      // Scroll to "What is this?" and tap
+      await tester.ensureVisible(find.text('What is this?'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('What is this?'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('About Score Distribution'), findsOneWidget);
+      expect(
+        find.text(
+          'Score Distribution shows how your completed Wellness Scores are spread across different score ranges. The percentage represents the proportion of your completed sessions within each range.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Got it'), findsOneWidget);
+
+      // Dismiss bottom sheet
+      await tester.tap(find.text('Got it'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('About Score Distribution'), findsNothing);
+    });
   });
 }
