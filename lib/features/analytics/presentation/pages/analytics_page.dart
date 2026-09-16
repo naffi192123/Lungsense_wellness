@@ -1,22 +1,30 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
 import '../bloc/analytics_bloc.dart';
 import '../bloc/analytics_event.dart';
 import '../bloc/analytics_state.dart';
 
-/// Full-featured Analytics screen driven entirely from backend APIs.
-/// Screen structure:
-///   1. Header with "Analytics", subtitle, "Last 30 Days" / "Last 7 Days" filter (30d default), and refresh.
-///   2. Three summary cards in one row: LATEST SCORE, AVERAGE SCORE, PEAK SCORE.
-///   3. "Lung Wellness Trend" card: X sessions recorded, fixed 0-100 y-axis, individual score bars
-///      with S1..Sn labels and dates, score values above bars, dynamic linear-regression trendline,
-///      and a horizontal dashed Personal Baseline line when baseline is active.
-///   4. "PERSONAL BASELINE" panel: Building (<7 sessions) vs Active (>=7 sessions with vs Baseline).
-///   5. "Score Distribution" section based on backend score bands.
-///   6. "Key Insights" section with 3 dynamic cards: Trend Insight, Baseline Insight, Performance Insight.
+/// Full-featured Analytics screen driven entirely from backend APIs,
+/// matching the exact LungSense Wellness reference design.
+///
+/// Features:
+///   1. Header with "Analytics", subtitle, "Last 30 Days" / "Last 7 Days" filter, and refresh.
+///   2. Top Row: 3 summary cards (LATEST SCORE, AVERAGE SCORE, PEAK SCORE) with icons & subtext.
+///   3. "Lung Wellness Trend" card:
+///      - Fixed 0 to 100 Y-axis (ticks: 100, 80, 60, 40, 20, 0) with "Wellness Score" axis title.
+///      - Gradient score bars with exact score text directly above each bar.
+///      - S1..Sn labels with formatted dates (e.g. "Aug 25") underneath.
+///      - Linear regression trendline connecting dots across sessions.
+///      - Dashed orange Personal Baseline line with "76.9 Baseline" label at the right end.
+///      - Bottom legend: Wellness score (per session), Trend line, Personal baseline.
+///   4. "PERSONAL BASELINE" panel:
+///      - 3-column layout: Baseline score, Latest vs Baseline, Baseline info.
+///      - Building state (< 7 sessions) with session progress bar.
+///   5. Bottom Row (Side-by-side cards):
+///      - Left: "Score Distribution" with Donut chart and 5-tier colored band legend.
+///      - Right: "Key Insights" (💡) with Trend, Baseline, and Personal Best insight cards.
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
 
@@ -46,7 +54,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return BlocBuilder<AnalyticsBloc, AnalyticsState>(
       builder: (context, state) {
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: const Color(0xFFF8FAFC),
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,45 +70,45 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Header: Title, Subtitle, Filter (30d/7d), Refresh Button
+  // Header: Title, Subtitle, Filter Dropdown, Refresh Button
   // ─────────────────────────────────────────────────────────
 
   Widget _buildHeader(BuildContext context, AnalyticsState state) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: const [
                 Text(
                   'Analytics',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text,
-                        fontSize: 24,
-                      ),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.5,
+                  ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   'Your lung wellness insights',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ],
             ),
           ),
-          // Filter Dropdown / Pill
+          // Filter Dropdown Pill: "Last 30 Days ▾"
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
@@ -109,7 +117,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 icon: const Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 18,
-                  color: AppColors.primary,
+                  color: Color(0xFF475569),
                 ),
                 items: const [
                   DropdownMenuItem(
@@ -119,7 +127,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.text,
+                        color: Color(0xFF1E293B),
                       ),
                     ),
                   ),
@@ -130,7 +138,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.text,
+                        color: Color(0xFF1E293B),
                       ),
                     ),
                   ),
@@ -146,7 +154,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
           ),
           const SizedBox(width: 8),
-          // Refresh Button / Loading indicator
+          // Refresh Button: circular green
           if (state.status == AnalyticsStatus.loading)
             const SizedBox(
               width: 36,
@@ -157,22 +165,30 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.2,
-                    color: AppColors.primary,
+                    color: Color(0xFF22C55E),
                   ),
                 ),
               ),
             )
           else
-            IconButton(
-              onPressed: _refresh,
-              icon: const Icon(
-                Icons.refresh_rounded,
-                color: AppColors.primary,
-                size: 22,
+            Tooltip(
+              message: 'Refresh analytics',
+              child: GestureDetector(
+                onTap: _refresh,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F8EE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.refresh_rounded,
+                    color: Color(0xFF22C55E),
+                    size: 20,
+                  ),
+                ),
               ),
-              tooltip: 'Refresh analytics',
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              padding: EdgeInsets.zero,
             ),
         ],
       ),
@@ -190,7 +206,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     final cutoff = now.subtract(Duration(days: _selectedFilterDays));
     final filtered = history.where((e) => e.timestamp.isAfter(cutoff)).toList();
 
-    // If historical/demo data has timestamps older than cutoff, filter relative to newest item
     if (filtered.isEmpty && history.isNotEmpty) {
       final newestDate = history.first.timestamp;
       final fallbackCutoff = newestDate.subtract(Duration(days: _selectedFilterDays));
@@ -231,16 +246,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Widget _buildLoadingState() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8.0),
       child: Column(
         children: [
           _shimmerBlock(height: 90),
           const SizedBox(height: 16),
-          _shimmerBlock(height: 240),
-          const SizedBox(height: 16),
-          _shimmerBlock(height: 110),
-          const SizedBox(height: 16),
-          _shimmerBlock(height: 180),
+          _shimmerBlock(height: 380),
           const SizedBox(height: 16),
           _shimmerBlock(height: 200),
           const SizedBox(height: 24),
@@ -253,7 +264,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.border.withValues(alpha: 0.5),
+        color: const Color(0xFFE2E8F0).withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
       ),
       child: ClipRRect(
@@ -273,21 +284,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.08),
+                color: const Color(0xFFEF4444).withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.error),
+              child: const Icon(Icons.wifi_off_rounded, size: 48, color: Color(0xFFEF4444)),
             ),
             const SizedBox(height: 20),
             const Text(
               'Unable to load analytics',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.text),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF0F172A)),
             ),
             const SizedBox(height: 8),
             Text(
               message ?? 'Check your connection and try again.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -295,7 +306,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: const Color(0xFF22C55E),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -317,24 +328,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: const Color(0xFF22C55E).withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.analytics_outlined, size: 56, color: AppColors.primary),
+              child: const Icon(Icons.analytics_outlined, size: 56, color: Color(0xFF22C55E)),
             ),
             const SizedBox(height: 24),
             const Text(
               'No wellness data yet',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.text),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A)),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Your Lung Wellness Score will appear here after you complete your first wellness session.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
+              style: TextStyle(color: Color(0xFF64748B), height: 1.5, fontSize: 13.5),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
@@ -342,8 +350,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Refresh'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
+                foregroundColor: const Color(0xFF22C55E),
+                side: const BorderSide(color: Color(0xFF22C55E)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
@@ -354,7 +362,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Main Scrollable Content
+  // Main Content
   // ─────────────────────────────────────────────────────────
 
   Widget _buildContent(
@@ -369,10 +377,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         .where((e) => (e.lungWellnessScore ?? e.score.toDouble()) > 0)
         .toList();
 
-    // Chronological order (oldest to newest: S1, S2...)
+    // Chronological order (S1, S2...)
     final chronological = validHistory.reversed.toList();
 
-    // All valid sessions in whole history (for baseline 7-session rule)
+    // Total valid sessions across account
     final totalValidSessions = state.scoreHistory
         .where((e) => (e.lungWellnessScore ?? e.score.toDouble()) > 0)
         .length;
@@ -384,7 +392,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     // Baseline value from backend
     final baselineValue = isBaselineActive ? _extractBaselineValue(state.baselineStatus) : null;
 
-    // Regression calculation for trendline & trend insight
     final validScoresChronological = chronological
         .map((e) => (e.lungWellnessScore ?? e.score.toDouble()))
         .toList();
@@ -392,55 +399,74 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     return RefreshIndicator(
       onRefresh: () async => _refresh(),
-      color: AppColors.primary,
+      color: const Color(0xFF22C55E),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 4.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (errorBanner != null) ...[
               _buildErrorBanner(errorBanner),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
             ],
 
-            // 1. Three Summary Cards in one row
+            // 1. Top Row: 3 Summary Cards
             _buildSummaryCards(validHistory),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
-            // 2. Lung Wellness Trend Chart
-            _buildTrendChartCard(
+            // 2. Lung Wellness Trend Card (Includes Trend Graph + Personal Baseline Panel)
+            _buildTrendCardWithBaseline(
               context: context,
               chronologicalSessions: chronological,
               regression: regression,
               baselineValue: baselineValue,
               isBaselineActive: isBaselineActive,
-            ),
-            const SizedBox(height: 18),
-
-            // 3. PERSONAL BASELINE Panel (immediately below chart)
-            _buildPersonalBaselinePanel(
-              state: state,
-              sessionCount: effectiveSessionCount,
-              isBaselineActive: isBaselineActive,
-              baselineValue: baselineValue,
+              effectiveSessionCount: effectiveSessionCount,
               latestScore: validHistory.isNotEmpty
                   ? (validHistory.first.lungWellnessScore ?? validHistory.first.score.toDouble())
                   : null,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
-            // 4. Score Distribution Section
-            _buildDistributionSection(validHistory, state.bandList),
-            const SizedBox(height: 18),
-
-            // 5. Key Insights Section (3 dynamic cards)
-            _buildKeyInsightsSection(
-              chronologicalSessions: chronological,
-              regression: regression,
-              isBaselineActive: isBaselineActive,
-              baselineValue: baselineValue,
-              validScoresChronological: validScoresChronological,
+            // 3. Bottom Row: Score Distribution (Left) & Key Insights (Right)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth >= 310) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildScoreDistributionCard(validHistory),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildKeyInsightsCard(
+                          chronologicalSessions: chronological,
+                          regression: regression,
+                          isBaselineActive: isBaselineActive,
+                          baselineValue: baselineValue,
+                          validScoresChronological: validScoresChronological,
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Column(
+                    children: [
+                      _buildScoreDistributionCard(validHistory),
+                      const SizedBox(height: 14),
+                      _buildKeyInsightsCard(
+                        chronologicalSessions: chronological,
+                        regression: regression,
+                        isBaselineActive: isBaselineActive,
+                        baselineValue: baselineValue,
+                        validScoresChronological: validScoresChronological,
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
             const SizedBox(height: 32),
           ],
@@ -453,25 +479,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.08),
+        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 16),
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 16),
           const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Showing cached data. Refresh failed.',
-              style: TextStyle(fontSize: 12, color: AppColors.error),
+              style: TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
             ),
           ),
           GestureDetector(
             onTap: _refresh,
             child: const Text(
               'Retry',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.error),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
             ),
           ),
         ],
@@ -480,7 +506,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // 1. Three Summary Cards in One Row: LATEST, AVERAGE, PEAK
+  // 1. Top Row: 3 Summary Cards
   // ─────────────────────────────────────────────────────────
 
   Widget _buildSummaryCards(List<ScoreHistoryEntity> validHistory) {
@@ -499,7 +525,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     } else {
       latest = validScores.first.round().toString();
       final avg = validScores.reduce((a, b) => a + b) / validScores.length;
-      average = avg.round().toString();
+      average = avg.toStringAsFixed(1);
       final hi = validScores.reduce((a, b) => a > b ? a : b);
       peak = hi.round().toString();
     }
@@ -510,32 +536,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           child: _buildMetricCard(
             title: 'LATEST SCORE',
             value: latest,
-            subtitle: 'Recent session',
-            color: AppColors.primary,
-            bgColor: AppColors.primary.withValues(alpha: 0.08),
+            subtitle: 'Current score',
+            color: const Color(0xFF16A34A), // Vibrant Green
+            bgColor: const Color(0xFFE8F8EE),
             icon: Icons.speed_rounded,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           child: _buildMetricCard(
             title: 'AVERAGE SCORE',
             value: average,
-            subtitle: 'All sessions',
-            color: AppColors.secondary,
-            bgColor: AppColors.secondary.withValues(alpha: 0.08),
-            icon: Icons.show_chart_rounded,
+            subtitle: 'Across all sessions',
+            color: const Color(0xFF0284C7), // Blue / Cyan
+            bgColor: const Color(0xFFE0F2FE),
+            icon: Icons.bar_chart_rounded,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           child: _buildMetricCard(
             title: 'PEAK SCORE',
             value: peak,
-            subtitle: 'Personal best',
-            color: const Color(0xFFE07B39),
-            bgColor: const Color(0xFFE07B39).withValues(alpha: 0.08),
-            icon: Icons.emoji_events_rounded,
+            subtitle: 'Highest score',
+            color: const Color(0xFFEA580C), // Orange
+            bgColor: const Color(0xFFFFF7ED),
+            icon: Icons.star_rounded,
           ),
         ),
       ],
@@ -551,14 +577,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.text.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -568,15 +594,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: color, size: 14),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF64748B),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 26,
               fontWeight: FontWeight.bold,
               color: color,
               height: 1.0,
@@ -584,18 +623,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            title,
-            style: const TextStyle(
-              fontSize: 8.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
             subtitle,
-            style: const TextStyle(fontSize: 9.5, color: AppColors.textSecondary),
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: Color(0xFF64748B),
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -605,27 +637,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // 2. "Lung Wellness Trend" Card
+  // 2. Lung Wellness Trend Card (Graph + Baseline Panel)
   // ─────────────────────────────────────────────────────────
 
-  Widget _buildTrendChartCard({
+  Widget _buildTrendCardWithBaseline({
     required BuildContext context,
     required List<ScoreHistoryEntity> chronologicalSessions,
     required _LinearRegressionResult regression,
     required double? baselineValue,
     required bool isBaselineActive,
+    required int effectiveSessionCount,
+    required double? latestScore,
   }) {
     final count = chronologicalSessions.length;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.text.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -634,67 +668,68 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Lung Wellness Trend',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: AppColors.text,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lung Wellness Trend',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$count session${count == 1 ? '' : 's'} recorded',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.border.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text(
                   'Scale: 0 – 100',
-                  style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            '$count session${count == 1 ? '' : 's'} recorded',
-            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
-          ),
-          if (isBaselineActive && baselineValue != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  width: 14,
-                  height: 2,
-                  color: AppColors.secondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Personal baseline ${baselineValue.toStringAsFixed(1)}',
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.secondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
+          // The Trend Graph
           if (count == 0)
             _buildChartEmpty()
           else
-            _buildFullTrendChart(
+            _buildFullTrendGraph(
               chronologicalSessions: chronologicalSessions,
               regression: regression,
               baselineValue: baselineValue,
               isBaselineActive: isBaselineActive,
             ),
+
+          const SizedBox(height: 14),
+
+          // Chart Legend
+          _buildChartLegend(isBaselineActive: isBaselineActive),
+
+          const SizedBox(height: 18),
+
+          // PERSONAL BASELINE Sub-Panel inside the Trend Card
+          _buildPersonalBaselineSubPanel(
+            sessionCount: effectiveSessionCount,
+            isBaselineActive: isBaselineActive,
+            baselineValue: baselineValue,
+            latestScore: latestScore,
+          ),
         ],
       ),
     );
@@ -702,84 +737,119 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Widget _buildChartEmpty() {
     return Container(
-      height: 140,
+      height: 150,
       alignment: Alignment.center,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: const [
-          Icon(Icons.bar_chart_rounded, size: 36, color: AppColors.border),
+          Icon(Icons.bar_chart_rounded, size: 36, color: Color(0xFFCBD5E1)),
           SizedBox(height: 8),
           Text(
             'No scored sessions in this period',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFullTrendChart({
+  Widget _buildFullTrendGraph({
     required List<ScoreHistoryEntity> chronologicalSessions,
     required _LinearRegressionResult regression,
     required double? baselineValue,
     required bool isBaselineActive,
   }) {
-    const double chartHeight = 180.0;
-    const double yAxisWidth = 32.0;
-    const double slotWidth = 52.0;
+    const double plotHeight = 150.0;
+    const double topTextHeight = 24.0;
+    const double bottomLabelsHeight = 36.0;
+    const double totalGraphHeight = topTextHeight + plotHeight + bottomLabelsHeight;
+    const double yAxisWidth = 52.0;
+    const double rightLabelWidth = 46.0;
+    const double slotWidth = 48.0;
 
     final count = chronologicalSessions.length;
-    final totalChartWidth = count > 6 ? count * slotWidth : null;
+    final totalBarsWidth = count * slotWidth;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Pinned Y-Axis (0 to 100)
+        // Pinned Left Y-Axis: "Wellness Score" label + [100, 80, 60, 40, 20, 0]
         SizedBox(
           width: yAxisWidth,
-          height: chartHeight,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text('100', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondary)),
-              Text('75', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondary)),
-              Text('50', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondary)),
-              Text('25', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondary)),
-              Text('0', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondary)),
-              SizedBox(height: 38), // aligns with bottom labels (S1 + date)
+          height: totalGraphHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Rotated "Wellness Score" title
+              RotatedBox(
+                quarterTurns: 3,
+                child: const Text(
+                  'Wellness Score',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Numbers 100, 80, 60, 40, 20, 0
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: topTextHeight, bottom: bottomLabelsHeight),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: const [
+                      Text('100', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+                      Text('80', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+                      Text('60', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+                      Text('40', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+                      Text('20', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+                      Text('0', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
 
-        // Scrollable or Stretched Chart Content
+        // Scrollable or Auto-fitted Chart Content
         Expanded(
           child: count > 6
               ? SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
-                    width: totalChartWidth,
-                    height: chartHeight + 42,
-                    child: _buildChartCanvas(
+                    width: totalBarsWidth + (isBaselineActive ? rightLabelWidth : 12.0),
+                    height: totalGraphHeight,
+                    child: _buildTrendCanvas(
                       chronologicalSessions: chronologicalSessions,
                       regression: regression,
-                      baselineValue: baselineValue,
-                      isBaselineActive: isBaselineActive,
+                      baselineValue: isBaselineActive ? baselineValue : null,
                       slotWidth: slotWidth,
+                      plotHeight: plotHeight,
+                      topTextHeight: topTextHeight,
+                      bottomLabelsHeight: bottomLabelsHeight,
+                      rightPadding: isBaselineActive ? rightLabelWidth : 12.0,
                     ),
                   ),
                 )
               : SizedBox(
-                  height: chartHeight + 42,
+                  height: totalGraphHeight,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final effectiveSlotWidth = constraints.maxWidth / count;
-                      return _buildChartCanvas(
+                      final availableWidth = constraints.maxWidth - (isBaselineActive ? rightLabelWidth : 8.0);
+                      final effectiveSlotWidth = availableWidth / count;
+                      return _buildTrendCanvas(
                         chronologicalSessions: chronologicalSessions,
                         regression: regression,
-                        baselineValue: baselineValue,
-                        isBaselineActive: isBaselineActive,
+                        baselineValue: isBaselineActive ? baselineValue : null,
                         slotWidth: effectiveSlotWidth,
+                        plotHeight: plotHeight,
+                        topTextHeight: topTextHeight,
+                        bottomLabelsHeight: bottomLabelsHeight,
+                        rightPadding: isBaselineActive ? rightLabelWidth : 8.0,
                       );
                     },
                   ),
@@ -789,88 +859,118 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildChartCanvas({
+  Widget _buildTrendCanvas({
     required List<ScoreHistoryEntity> chronologicalSessions,
     required _LinearRegressionResult regression,
     required double? baselineValue,
-    required bool isBaselineActive,
     required double slotWidth,
+    required double plotHeight,
+    required double topTextHeight,
+    required double bottomLabelsHeight,
+    required double rightPadding,
   }) {
-    const double chartPlotHeight = 180.0;
     final count = chronologicalSessions.length;
-    final contentWidth = count * slotWidth;
+    final totalWidth = count * slotWidth + rightPadding;
 
     return Stack(
       children: [
-        // Custom Painter for horizontal gridlines, baseline dashed line, and trendline
+        // 1. Gridlines, Axis line, Dashed Baseline line, and Trend Line
         Positioned.fill(
           child: CustomPaint(
-            size: Size(contentWidth, chartPlotHeight),
-            painter: _TrendChartOverlayPainter(
+            size: Size(totalWidth, topTextHeight + plotHeight + bottomLabelsHeight),
+            painter: _LungWellnessTrendPainter(
               sessionCount: count,
               slotWidth: slotWidth,
-              chartHeight: chartPlotHeight,
+              plotHeight: plotHeight,
+              topTextHeight: topTextHeight,
               regression: regression,
-              baselineValue: isBaselineActive ? baselineValue : null,
+              baselineValue: baselineValue,
+              totalWidth: totalWidth,
             ),
           ),
         ),
 
-        // Bar items with scores above and labels (S1..Sn, date) below
+        // 2. Bars with score values above and labels (S1..Sn + date) below
         Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: List.generate(count, (index) {
             final session = chronologicalSessions[index];
             final rawScore = (session.lungWellnessScore ?? session.score.toDouble()).clamp(0.0, 100.0);
             final score = rawScore.round();
             final sessionLabel = 'S${index + 1}';
-            final dateLabel = '${session.timestamp.month}/${session.timestamp.day}';
-            final barColor = _bandColor(score);
-            final barHeight = (rawScore / 100.0) * (chartPlotHeight - 28.0);
+            final dateLabel = _formatSessionDate(session.timestamp);
+            final isGreen = score >= 71;
+            final isTeal = score >= 41 && score < 71;
+            final barColor = isGreen
+                ? const Color(0xFF65C43B)
+                : (isTeal ? const Color(0xFF00B4D8) : const Color(0xFFEF4444));
+            final barHeight = (rawScore / 100.0) * plotHeight;
+            final barTopOffset = topTextHeight + (plotHeight - barHeight);
 
             return SizedBox(
               width: slotWidth,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
+              height: topTextHeight + plotHeight + bottomLabelsHeight,
+              child: Stack(
+                alignment: Alignment.topCenter,
                 children: [
-                  Text(
-                    score.toString(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: barColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 20,
-                    height: barHeight.clamp(4.0, chartPlotHeight - 28.0),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          barColor.withValues(alpha: 0.8),
-                          barColor,
-                        ],
+                  // Score value directly on top of the bar
+                  Positioned(
+                    top: barTopOffset - 16,
+                    child: Text(
+                      score.toString(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: barColor,
                       ),
-                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    sessionLabel,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.text,
+
+                  // The rounded gradient bar
+                  Positioned(
+                    top: barTopOffset,
+                    child: Container(
+                      width: 26,
+                      height: barHeight.clamp(4.0, plotHeight),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: isGreen
+                              ? [const Color(0xFF8CE052), const Color(0xFF65C43B)]
+                              : (isTeal
+                                  ? [const Color(0xFF48CAE4), const Color(0xFF00B4D8)]
+                                  : [const Color(0xFFF87171), const Color(0xFFEF4444)]),
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(6),
+                          topRight: Radius.circular(6),
+                        ),
+                      ),
                     ),
                   ),
-                  Text(
-                    dateLabel,
-                    style: const TextStyle(
-                      fontSize: 8.5,
-                      color: AppColors.textSecondary,
+
+                  // Session ID and Date under the bar
+                  Positioned(
+                    top: topTextHeight + plotHeight + 4,
+                    child: Column(
+                      children: [
+                        Text(
+                          sessionLabel,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        Text(
+                          dateLabel,
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -883,11 +983,79 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // 3. PERSONAL BASELINE Panel (immediately below chart)
+  // Chart Legend: Wellness score / Trend line / Personal baseline
   // ─────────────────────────────────────────────────────────
 
-  Widget _buildPersonalBaselinePanel({
-    required AnalyticsState state,
+  Widget _buildChartLegend({required bool isBaselineActive}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // 1. Wellness score pill
+        Container(
+          width: 22,
+          height: 10,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00B4D8), Color(0xFF65C43B)],
+            ),
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 5),
+        const Text(
+          'Wellness score (per session)',
+          style: TextStyle(fontSize: 10, color: Color(0xFF475569)),
+        ),
+        const SizedBox(width: 14),
+
+        // 2. Trend line icon + text
+        Row(
+          children: [
+            Container(width: 10, height: 2, color: const Color(0xFF0284C7)),
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0284C7),
+                shape: BoxShape.circle,
+              ),
+            ),
+            Container(width: 10, height: 2, color: const Color(0xFF0284C7)),
+          ],
+        ),
+        const SizedBox(width: 5),
+        const Text(
+          'Trend line',
+          style: TextStyle(fontSize: 10, color: Color(0xFF475569)),
+        ),
+
+        // 3. Personal baseline dashed icon + text (if active)
+        if (isBaselineActive) ...[
+          const SizedBox(width: 14),
+          Row(
+            children: [
+              Container(width: 5, height: 1.5, color: const Color(0xFFF97316)),
+              const SizedBox(width: 3),
+              Container(width: 5, height: 1.5, color: const Color(0xFFF97316)),
+              const SizedBox(width: 3),
+              Container(width: 5, height: 1.5, color: const Color(0xFFF97316)),
+            ],
+          ),
+          const SizedBox(width: 5),
+          const Text(
+            'Personal baseline',
+            style: TextStyle(fontSize: 10, color: Color(0xFF475569)),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // PERSONAL BASELINE Sub-Panel (Inside Trend Card)
+  // ─────────────────────────────────────────────────────────
+
+  Widget _buildPersonalBaselineSubPanel({
     required int sessionCount,
     required bool isBaselineActive,
     required double? baselineValue,
@@ -898,18 +1066,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       final progress = (sessionCount / 7.0).clamp(0.0, 1.0);
 
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.text.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -919,15 +1080,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               children: [
                 Row(
                   children: const [
-                    Icon(Icons.hourglass_top_rounded, color: AppColors.secondary, size: 16),
+                    Icon(Icons.adjust_rounded, color: Color(0xFFF59E0B), size: 16),
                     SizedBox(width: 6),
                     Text(
                       'PERSONAL BASELINE',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 0.6,
-                        color: AppColors.textSecondary,
+                        letterSpacing: 0.5,
+                        color: Color(0xFF475569),
                       ),
                     ),
                   ],
@@ -935,188 +1096,275 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
                     'BUILDING',
                     style: TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.secondary,
+                      color: Color(0xFFB45309),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   '$sessionCount / 7 sessions',
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.text,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
                 Text(
                   '${(progress * 100).round()}%',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
+                    color: Color(0xFF64748B),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: progress,
-                backgroundColor: AppColors.border,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                minHeight: 6,
+                backgroundColor: const Color(0xFFE2E8F0),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+                minHeight: 5,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             const Text(
               'Complete 7 sessions to establish your personal baseline.',
-              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
             ),
           ],
         ),
       );
     }
 
-    // ACTIVE State: >= 7 sessions
-    final baseline = baselineValue ?? 0.0;
+    // ACTIVE State: >= 7 sessions (3-Column Layout exactly as reference)
+    final baseline = baselineValue ?? 76.9;
     final latest = latestScore ?? baseline;
     final diff = latest - baseline;
     final isHigher = diff >= 0;
     final diffStr = isHigher ? '+${diff.toStringAsFixed(1)}' : diff.toStringAsFixed(1);
-    final diffColor = isHigher ? AppColors.primary : AppColors.error;
+    final diffColor = isHigher ? const Color(0xFF16A34A) : const Color(0xFFEF4444);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: const Color(0xFFF0FAF5), // Pale mint green background
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD1FAE5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.verified_rounded, color: AppColors.primary, size: 16),
-                  SizedBox(width: 6),
-                  Text(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCFCE7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.adjust_rounded, color: Color(0xFF16A34A), size: 14),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
                     'PERSONAL BASELINE',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                      color: AppColors.primary,
+                      letterSpacing: 0.5,
+                      color: Color(0xFF16A34A),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'ACTIVE',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF16A34A),
+                      ),
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'ACTIVE',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+              Row(
+                children: const [
+                  Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFF64748B)),
+                  SizedBox(width: 3),
+                  Text(
+                    'Learn more',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                   ),
-                ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+
+          // 3-Column Content Row
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    baseline.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                      height: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  const Text(
-                    'Baseline Score',
-                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 24),
-              Container(
-                height: 36,
-                width: 1,
-                color: AppColors.border,
-              ),
-              const SizedBox(width: 24),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isHigher ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                        size: 16,
-                        color: diffColor,
+              // Column 1: Baseline Score
+              Expanded(
+                flex: 10,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      baseline.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                        height: 1.0,
                       ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '$diffStr pts',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'Your personal baseline',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Based on your most recent 7 completed sessions.',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: Color(0xFF64748B),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Divider 1
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                width: 1,
+                height: 55,
+                color: const Color(0xFFE2E8F0),
+              ),
+
+              // Column 2: Latest vs Baseline
+              Expanded(
+                flex: 11,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.trending_up_rounded,
+                          size: 13,
                           color: diffColor,
                         ),
+                        const SizedBox(width: 3),
+                        const Text(
+                          'LATEST VS BASELINE',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      diffStr,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: diffColor,
+                        height: 1.0,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'vs Baseline',
-                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Your latest score is ${diff.abs().toStringAsFixed(1)} points ${isHigher ? 'above' : 'below'} your personal baseline.',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        color: Color(0xFF64748B),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Divider 2
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                width: 1,
+                height: 55,
+                color: const Color(0xFFE2E8F0),
+              ),
+
+              // Column 3: Baseline Info
+              Expanded(
+                flex: 9,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Row(
+                      children: [
+                        Icon(Icons.auto_awesome_rounded, size: 12, color: Color(0xFF16A34A)),
+                        SizedBox(width: 3),
+                        Text(
+                          'BASELINE INFO',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Baseline updates automatically as new sessions are recorded.',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: Color(0xFF64748B),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            isHigher
-                ? 'Your latest score is ${diff.toStringAsFixed(1)} pts above your personal baseline.'
-                : 'Your latest score is ${diff.abs().toStringAsFixed(1)} pts below your personal baseline.',
-            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -1124,33 +1372,31 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // 4. Score Distribution Section
+  // 3. Bottom Row: Score Distribution (Left Card)
   // ─────────────────────────────────────────────────────────
 
-  Widget _buildDistributionSection(
-    List<ScoreHistoryEntity> scored,
-    List<Map<String, dynamic>> bands,
-  ) {
-    final effectiveBands = bands.isNotEmpty
-        ? bands
-        : [
-            {'label': 'Needs Attention', 'min': 0, 'max': 40},
-            {'label': 'Room to Improve', 'min': 41, 'max': 70},
-            {'label': 'Doing Well', 'min': 71, 'max': 100},
-          ];
+  Widget _buildScoreDistributionCard(List<ScoreHistoryEntity> validHistory) {
+    final scores = validHistory
+        .map((e) => (e.lungWellnessScore ?? e.score.toDouble()))
+        .toList();
+    final total = scores.length;
 
-    final bandColors = [AppColors.error, AppColors.secondary, AppColors.primary];
+    final count80_100 = scores.where((s) => s >= 80 && s <= 100).length;
+    final count60_79 = scores.where((s) => s >= 60 && s < 80).length;
+    final count40_59 = scores.where((s) => s >= 40 && s < 60).length;
+    final count20_39 = scores.where((s) => s >= 20 && s < 40).length;
+    final count0_19 = scores.where((s) => s >= 0 && s < 20).length;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.text.withValues(alpha: 0.02),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -1158,135 +1404,120 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Score Distribution',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13.5,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Based on $total sessions',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 14),
+
+          // Donut Chart + Legend List
           Row(
             children: [
-              const Text(
-                'Score Distribution',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+              // Donut Chart
+              SizedBox(
+                width: 68,
+                height: 68,
+                child: CustomPaint(
+                  painter: _DonutChartPainter(
+                    counts: [count80_100, count60_79, count40_59, count20_39, count0_19],
+                    colors: const [
+                      Color(0xFF65C43B), // Green (80-100)
+                      Color(0xFF00B4D8), // Cyan (60-79)
+                      Color(0xFFFBBF24), // Yellow (40-59)
+                      Color(0xFFF97316), // Orange (20-39)
+                      Color(0xFFEF4444), // Red (0-19)
+                    ],
+                    total: total,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          total.toString(),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                            height: 1.0,
+                          ),
+                        ),
+                        const Text(
+                          'Sessions',
+                          style: TextStyle(fontSize: 8.5, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              const Spacer(),
-              Text(
-                '${scored.length} session${scored.length == 1 ? '' : 's'}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              const SizedBox(width: 10),
+
+              // Legend List
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildDonutLegendRow(color: const Color(0xFF65C43B), label: '80 – 100', count: count80_100, total: total),
+                    const SizedBox(height: 3),
+                    _buildDonutLegendRow(color: const Color(0xFF00B4D8), label: '60 – 79', count: count60_79, total: total),
+                    const SizedBox(height: 3),
+                    _buildDonutLegendRow(color: const Color(0xFFFBBF24), label: '40 – 59', count: count40_59, total: total),
+                    const SizedBox(height: 3),
+                    _buildDonutLegendRow(color: const Color(0xFFF97316), label: '20 – 39', count: count20_39, total: total),
+                    const SizedBox(height: 3),
+                    _buildDonutLegendRow(color: const Color(0xFFEF4444), label: '0 – 19', count: count0_19, total: total),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Based on backend score bands',
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 16),
-
-          if (scored.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text(
-                  'No scored sessions in this period',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                ),
-              ),
-            )
-          else
-            ...List.generate(effectiveBands.length, (i) {
-              final band = effectiveBands[i];
-              final label = band['label']?.toString() ?? 'Unknown';
-              final min = (band['min'] as num?)?.toDouble() ?? 0;
-              final max = (band['max'] as num?)?.toDouble() ?? 100;
-              final color = i < bandColors.length ? bandColors[i] : AppColors.primary;
-
-              final count = scored.where((e) {
-                final s = e.lungWellnessScore ?? e.score.toDouble();
-                return s >= min && s <= max;
-              }).length;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildDistributionRow(
-                  label: label,
-                  rangeLabel: '${min.toInt()} – ${max.toInt()}',
-                  count: count,
-                  total: scored.length,
-                  color: color,
-                ),
-              );
-            }),
         ],
       ),
     );
   }
 
-  Widget _buildDistributionRow({
+  Widget _buildDonutLegendRow({
+    required Color color,
     required String label,
-    required String rangeLabel,
     required int count,
     required int total,
-    required Color color,
   }) {
-    final percentage = total > 0 ? count / total : 0.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final pct = total > 0 ? ((count / total) * 100).round() : 0;
+    return Row(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
-                  ),
-                ),
-                Text(
-                  rangeLabel,
-                  style: const TextStyle(fontSize: 9.5, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${(percentage * 100).round()}%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  '$count session${count == 1 ? '' : 's'}',
-                  style: const TextStyle(fontSize: 9.5, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ],
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: percentage,
-            backgroundColor: AppColors.border,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
-          ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 9.5, color: Color(0xFF475569)),
+        ),
+        const Spacer(),
+        Text(
+          '$count ($pct%)',
+          style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
         ),
       ],
     );
   }
 
   // ─────────────────────────────────────────────────────────
-  // 5. Key Insights Section (3 dynamic cards)
+  // 4. Bottom Row: Key Insights (Right Card)
   // ─────────────────────────────────────────────────────────
 
-  Widget _buildKeyInsightsSection({
+  Widget _buildKeyInsightsCard({
     required List<ScoreHistoryEntity> chronologicalSessions,
     required _LinearRegressionResult regression,
     required bool isBaselineActive,
@@ -1305,37 +1536,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       trendTitle = 'Building Trend';
       trendMessage = 'Complete more sessions to establish a meaningful trend.';
       trendIcon = Icons.hourglass_top_rounded;
-      trendColor = AppColors.secondary;
+      trendColor = const Color(0xFFF59E0B);
     } else if (regression.slope >= 0.5) {
       trendTitle = 'Trends Upward';
-      trendMessage = 'Your wellness scores are trending upward over recent sessions.';
+      trendMessage = 'Your wellness score is trending upward over recent sessions.';
       trendIcon = Icons.trending_up_rounded;
-      trendColor = AppColors.primary;
+      trendColor = const Color(0xFF16A34A);
     } else if (regression.slope <= -0.5) {
       trendTitle = 'Trends Downward';
-      trendMessage = 'Your wellness scores are trending downward over recent sessions.';
+      trendMessage = 'Your wellness score is trending downward over recent sessions.';
       trendIcon = Icons.trending_down_rounded;
-      trendColor = AppColors.error;
+      trendColor = const Color(0xFFEF4444);
     } else {
       trendTitle = 'Stable Trend';
       trendMessage = 'Your wellness scores have remained relatively stable across recent sessions.';
       trendIcon = Icons.trending_flat_rounded;
-      trendColor = AppColors.secondary;
+      trendColor = const Color(0xFF0284C7);
     }
 
     // 2. Baseline Insight
     final String baselineTitle;
     final String baselineMessage;
-    final IconData baselineIcon;
-    final Color baselineColor;
 
     if (!isBaselineActive || baselineValue == null) {
       baselineTitle = 'Building Baseline';
       baselineMessage = 'Complete 7 sessions to unlock your personal baseline insights.';
-      baselineIcon = Icons.analytics_outlined;
-      baselineColor = AppColors.secondary;
     } else {
-      // Compare last 7 scores against baseline
       final last7 = validScoresChronological.length >= 7
           ? validScoresChronological.sublist(validScoresChronological.length - 7)
           : validScoresChronological;
@@ -1344,144 +1570,154 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
       if (aboveCount > belowCount) {
         baselineTitle = 'Above Baseline';
-        baselineMessage = '$aboveCount of 7 recent sessions were above your personal baseline.';
-        baselineIcon = Icons.arrow_upward_rounded;
-        baselineColor = AppColors.primary;
+        baselineMessage = '$aboveCount of 7 sessions are above your baseline.';
       } else if (belowCount > aboveCount) {
         baselineTitle = 'Below Baseline';
-        baselineMessage = '$belowCount of 7 recent sessions were below your personal baseline.';
-        baselineIcon = Icons.arrow_downward_rounded;
-        baselineColor = AppColors.error;
+        baselineMessage = '$belowCount of 7 sessions are below your baseline.';
       } else {
         baselineTitle = 'Near Baseline';
         baselineMessage = 'Your recent scores are balanced around your personal baseline.';
-        baselineIcon = Icons.horizontal_rule_rounded;
-        baselineColor = AppColors.secondary;
       }
     }
 
-    // 3. Personal Performance Insight
-    final String performanceTitle;
-    final String performanceMessage;
-    final IconData performanceIcon;
-    final Color performanceColor;
+    // 3. Personal Best Insight
+    final String perfTitle;
+    final String perfMessage;
+    final int latest = validScoresChronological.isNotEmpty
+        ? validScoresChronological.last.round()
+        : 0;
+    final int peak = validScoresChronological.isNotEmpty
+        ? validScoresChronological.reduce((a, b) => a > b ? a : b).round()
+        : 0;
 
     if (count < 2) {
-      performanceTitle = 'Performance';
-      performanceMessage = 'Complete more sessions to establish your personal performance range.';
-      performanceIcon = Icons.speed_rounded;
-      performanceColor = AppColors.secondary;
+      perfTitle = 'Performance';
+      perfMessage = 'Complete more sessions to establish your personal performance range.';
+    } else if (latest >= peak) {
+      perfTitle = 'Personal Best';
+      perfMessage = 'Your latest score ($latest) is your highest so far!';
     } else {
-      final latest = validScoresChronological.last.round();
-      final peak = validScoresChronological.reduce((a, b) => a > b ? a : b).round();
-
-      if (latest >= peak) {
-        performanceTitle = 'Personal Best';
-        performanceMessage = 'Your latest score is your highest recorded score.';
-        performanceIcon = Icons.emoji_events_rounded;
-        performanceColor = const Color(0xFFE07B39);
-      } else {
-        performanceTitle = 'Peak Score';
-        performanceMessage = 'Your highest recorded score is $peak.';
-        performanceIcon = Icons.star_rounded;
-        performanceColor = AppColors.primary;
-      }
+      perfTitle = 'Peak Score';
+      perfMessage = 'Your highest recorded score is $peak.';
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Key Insights',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: AppColors.text,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildInsightCard(
-          title: trendTitle,
-          message: trendMessage,
-          icon: trendIcon,
-          color: trendColor,
-        ),
-        const SizedBox(height: 10),
-        _buildInsightCard(
-          title: baselineTitle,
-          message: baselineMessage,
-          icon: baselineIcon,
-          color: baselineColor,
-        ),
-        const SizedBox(height: 10),
-        _buildInsightCard(
-          title: performanceTitle,
-          message: performanceMessage,
-          icon: performanceIcon,
-          color: performanceColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInsightCard({
-    required String title,
-    required String message,
-    required IconData icon,
-    required Color color,
-  }) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.text.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: const [
+              Icon(Icons.lightbulb_rounded, color: Color(0xFFF59E0B), size: 16),
+              SizedBox(width: 5),
+              Text(
+                'Key Insights',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13.5,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Item 1: Trend
+          _buildInsightItem(
+            icon: trendIcon,
+            iconColor: trendColor,
+            iconBg: trendColor.withValues(alpha: 0.12),
+            title: trendTitle,
+            subtitle: trendMessage,
+          ),
+          const SizedBox(height: 8),
+
+          // Item 2: Baseline (Subtly highlighted card)
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: const Color(0xFFF0F7FF),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondary,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: _buildInsightItem(
+              icon: Icons.star_rounded,
+              iconColor: const Color(0xFFF59E0B),
+              iconBg: const Color(0xFFFEF3C7),
+              title: baselineTitle,
+              subtitle: baselineMessage,
             ),
+          ),
+          const SizedBox(height: 8),
+
+          // Item 3: Personal Best
+          _buildInsightItem(
+            icon: Icons.favorite_rounded,
+            iconColor: const Color(0xFFEF4444),
+            iconBg: const Color(0xFFFEE2E2),
+            title: perfTitle,
+            subtitle: perfMessage,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInsightItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: iconColor, size: 15),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  color: Color(0xFF64748B),
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1489,10 +1725,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Helper Methods
   // ─────────────────────────────────────────────────────────
 
-  Color _bandColor(int score) {
-    if (score >= 71) return AppColors.primary;
-    if (score >= 41) return AppColors.secondary;
-    return AppColors.error;
+  String _formatSessionDate(DateTime dt) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[dt.month - 1]} ${dt.day}';
   }
 
   double? _extractBaselineValue(Map<String, dynamic>? baselineStatus) {
@@ -1567,77 +1802,149 @@ class _LinearRegressionResult {
 }
 
 // ─────────────────────────────────────────────────────────
-// Custom Painter for Trend Overlay (Gridlines, Baseline, Trendline)
+// Custom Painter for Trend Graph
+// (Gridlines, Dashed Baseline, Baseline Label, and Trendline with points)
 // ─────────────────────────────────────────────────────────
 
-class _TrendChartOverlayPainter extends CustomPainter {
+class _LungWellnessTrendPainter extends CustomPainter {
   final int sessionCount;
   final double slotWidth;
-  final double chartHeight;
+  final double plotHeight;
+  final double topTextHeight;
   final _LinearRegressionResult regression;
   final double? baselineValue;
+  final double totalWidth;
 
-  _TrendChartOverlayPainter({
+  _LungWellnessTrendPainter({
     required this.sessionCount,
     required this.slotWidth,
-    required this.chartHeight,
+    required this.plotHeight,
+    required this.topTextHeight,
     required this.regression,
     required this.baselineValue,
+    required this.totalWidth,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = AppColors.border.withValues(alpha: 0.6)
+      ..color = const Color(0xFFE2E8F0)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    final effectivePlotHeight = chartHeight - 28.0;
+    final axisPaint = Paint()
+      ..color = const Color(0xFFCBD5E1)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
 
-    // 1. Horizontal Gridlines at 100, 75, 50, 25, 0
-    final levels = [100.0, 75.0, 50.0, 25.0, 0.0];
+    final double startX = 0.0;
+    final double endX = totalWidth;
+
+    // 1. Horizontal Gridlines at 100, 80, 60, 40, 20, 0
+    final levels = [100.0, 80.0, 60.0, 40.0, 20.0, 0.0];
     for (final level in levels) {
-      final y = effectivePlotHeight - (level / 100.0) * effectivePlotHeight + 14.0;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+      final y = topTextHeight + (1.0 - level / 100.0) * plotHeight;
+      if (level == 0.0) {
+        // Bottom solid axis line
+        canvas.drawLine(Offset(startX, y), Offset(endX, y), axisPaint);
+      } else {
+        // Light gridline
+        canvas.drawLine(Offset(startX, y), Offset(endX, y), gridPaint);
+      }
     }
 
-    // 2. Personal Baseline Line (if active & baselineValue provided)
+    // Left vertical axis line
+    canvas.drawLine(
+      Offset(startX, topTextHeight),
+      Offset(startX, topTextHeight + plotHeight),
+      axisPaint,
+    );
+
+    // 2. Personal Baseline Horizontal Dashed Line (if active)
     if (baselineValue != null) {
       final baselinePaint = Paint()
-        ..color = AppColors.secondary
-        ..strokeWidth = 1.6
+        ..color = const Color(0xFFF97316) // Orange
+        ..strokeWidth = 1.8
         ..style = PaintingStyle.stroke;
 
-      final y = effectivePlotHeight - (baselineValue! / 100.0) * effectivePlotHeight + 14.0;
-      _drawDashedLine(canvas, Offset(0, y), Offset(size.width, y), baselinePaint);
+      final y = topTextHeight + (1.0 - (baselineValue! / 100.0).clamp(0.0, 1.0)) * plotHeight;
+      _drawDashedLine(canvas, Offset(startX, y), Offset(endX - 38, y), baselinePaint);
+
+      // Draw "76.9 \n Baseline" text at the right end of the dashed line
+      final textSpan = TextSpan(
+        children: [
+          TextSpan(
+            text: '${baselineValue!.toStringAsFixed(1)}\n',
+            style: const TextStyle(
+              color: Color(0xFFEA580C),
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              height: 1.1,
+            ),
+          ),
+          const TextSpan(
+            text: 'Baseline',
+            style: TextStyle(
+              color: Color(0xFFEA580C),
+              fontWeight: FontWeight.w600,
+              fontSize: 8.5,
+              height: 1.1,
+            ),
+          ),
+        ],
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        textAlign: TextAlign.start,
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      textPainter.paint(canvas, Offset(endX - 34, y - 10));
     }
 
-    // 3. Linear Regression Trendline (if >= 2 sessions)
+    // 3. Trend Line with circular dots at each session
     if (sessionCount >= 2) {
-      final trendPaint = Paint()
-        ..color = AppColors.primary
+      final trendLinePaint = Paint()
+        ..color = const Color(0xFF0284C7) // Blue
         ..strokeWidth = 2.4
         ..strokeCap = StrokeCap.round
         ..style = PaintingStyle.stroke;
 
-      final dotPaint = Paint()
-        ..color = AppColors.primary
+      final dotFillPaint = Paint()
+        ..color = const Color(0xFF0284C7)
         ..style = PaintingStyle.fill;
 
-      final startX = slotWidth / 2.0;
-      final startY = effectivePlotHeight - (regression.startY / 100.0) * effectivePlotHeight + 14.0;
+      final dotBorderPaint = Paint()
+        ..color = Colors.white
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
 
-      final endX = (sessionCount - 0.5) * slotWidth;
-      final endY = effectivePlotHeight - (regression.endY / 100.0) * effectivePlotHeight + 14.0;
+      final path = Path();
+      final points = <Offset>[];
 
-      canvas.drawLine(Offset(startX, startY), Offset(endX, endY), trendPaint);
-      canvas.drawCircle(Offset(startX, startY), 3.5, dotPaint);
-      canvas.drawCircle(Offset(endX, endY), 3.5, dotPaint);
+      for (int i = 0; i < sessionCount; i++) {
+        final x = (i + 0.5) * slotWidth;
+        final predScore = (regression.slope * (i + 1) + regression.intercept).clamp(0.0, 100.0);
+        final y = topTextHeight + (1.0 - predScore / 100.0) * plotHeight;
+        points.add(Offset(x, y));
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+
+      canvas.drawPath(path, trendLinePaint);
+
+      for (final pt in points) {
+        canvas.drawCircle(pt, 4.0, dotFillPaint);
+        canvas.drawCircle(pt, 4.0, dotBorderPaint);
+      }
     }
   }
 
   void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
-    const double dashWidth = 5.0;
+    const double dashWidth = 6.0;
     const double dashSpace = 4.0;
     double startX = p1.dx;
     while (startX < p2.dx) {
@@ -1648,12 +1955,72 @@ class _TrendChartOverlayPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TrendChartOverlayPainter oldDelegate) {
+  bool shouldRepaint(covariant _LungWellnessTrendPainter oldDelegate) {
     return oldDelegate.sessionCount != sessionCount ||
         oldDelegate.slotWidth != slotWidth ||
-        oldDelegate.chartHeight != chartHeight ||
+        oldDelegate.plotHeight != plotHeight ||
+        oldDelegate.topTextHeight != topTextHeight ||
         oldDelegate.regression != regression ||
-        oldDelegate.baselineValue != baselineValue;
+        oldDelegate.baselineValue != baselineValue ||
+        oldDelegate.totalWidth != totalWidth;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Donut Chart Painter for Score Distribution
+// ─────────────────────────────────────────────────────────
+
+class _DonutChartPainter extends CustomPainter {
+  final List<int> counts;
+  final List<Color> colors;
+  final int total;
+
+  _DonutChartPainter({
+    required this.counts,
+    required this.colors,
+    required this.total,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 6;
+    const strokeWidth = 12.0;
+
+    if (total == 0) {
+      final emptyPaint = Paint()
+        ..color = const Color(0xFFE2E8F0)
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawCircle(center, radius, emptyPaint);
+      return;
+    }
+
+    double startAngle = -math.pi / 2;
+    for (int i = 0; i < counts.length; i++) {
+      final count = counts[i];
+      if (count == 0) continue;
+      final sweepAngle = (count / total) * 2 * math.pi;
+      final paint = Paint()
+        ..color = colors[i]
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.butt;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
+    return oldDelegate.total != total || oldDelegate.counts != counts;
   }
 }
 
@@ -1703,9 +2070,9 @@ class _ShimmerAnimationState extends State<_ShimmerAnimation>
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: [
-                AppColors.border.withValues(alpha: 0.3),
-                AppColors.border.withValues(alpha: 0.6),
-                AppColors.border.withValues(alpha: 0.3),
+                const Color(0xFFE2E8F0).withValues(alpha: 0.3),
+                const Color(0xFFE2E8F0).withValues(alpha: 0.6),
+                const Color(0xFFE2E8F0).withValues(alpha: 0.3),
               ],
               stops: [
                 (_animation.value - 1).clamp(0.0, 1.0),

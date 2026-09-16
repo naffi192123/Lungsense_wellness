@@ -168,9 +168,8 @@ void main() {
 
       expect(find.text('PERSONAL BASELINE'), findsOneWidget);
       expect(find.text('ACTIVE'), findsOneWidget);
-      expect(find.text('73.0'), findsOneWidget);
-      expect(find.text('vs Baseline'), findsOneWidget);
-      expect(find.textContaining('Personal baseline 73.0'), findsOneWidget);
+      expect(find.text('73.0'), findsNWidgets(2));
+      expect(find.text('LATEST VS BASELINE'), findsOneWidget);
     });
 
     testWidgets('renders Key Insights with Trend, Baseline, and Performance cards', (tester) async {
@@ -216,7 +215,7 @@ void main() {
       expect(find.text('Key Insights'), findsOneWidget);
       // Upward trend: slope > 0.5
       expect(find.text('Trends Upward'), findsOneWidget);
-      expect(find.text('Your wellness scores are trending upward over recent sessions.'), findsOneWidget);
+      expect(find.text('Your wellness score is trending upward over recent sessions.'), findsOneWidget);
 
       // Building baseline: < 7 sessions
       expect(find.text('Building Baseline'), findsOneWidget);
@@ -224,7 +223,7 @@ void main() {
 
       // Latest = 90, Peak = 90 -> Personal Best
       expect(find.text('Personal Best'), findsOneWidget);
-      expect(find.text('Your latest score is your highest recorded score.'), findsOneWidget);
+      expect(find.text('Your latest score (90) is your highest so far!'), findsOneWidget);
     });
   });
 }
