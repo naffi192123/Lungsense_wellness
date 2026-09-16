@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../bloc/daily_checkin_state.dart';
 
@@ -17,7 +17,7 @@ class CheckinStartWidget extends StatelessWidget {
     final completedCount = state.completedStepsCount;
     final isPartiallyDone = completedCount > 0;
     final buttonText = isPartiallyDone
-        ? (completedCount == 3 ? 'Review & Complete Check-in' : 'Continue Check-in ($completedCount/3)')
+        ? (completedCount >= 3 ? 'Review & Complete Check-in' : 'Continue Check-in ($completedCount/4)')
         : 'Start Daily Check-in';
 
     return SingleChildScrollView(
@@ -73,7 +73,7 @@ class CheckinStartWidget extends StatelessWidget {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            '3 Guided Steps • ~3 Minutes',
+                            '4 Guided Steps • ~3 Minutes',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
@@ -107,21 +107,21 @@ class CheckinStartWidget extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        completedCount == 3
+                        completedCount >= 3
                             ? Icons.check_circle_rounded
                             : Icons.timelapse_rounded,
                         size: 16,
-                        color: completedCount == 3
+                        color: completedCount >= 3
                             ? AppColors.supportingGreen
                             : AppColors.primary,
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '$completedCount of 3 stages completed',
+                        '$completedCount of 4 stages completed',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: completedCount == 3
+                          color: completedCount >= 3
                               ? AppColors.supportingGreen
                               : AppColors.text,
                         ),
@@ -177,6 +177,18 @@ class CheckinStartWidget extends StatelessWidget {
             icon: Icons.fact_check_outlined,
             isCompleted: state.symptomsCompleted,
             accentColor: Colors.amber.shade800,
+          ),
+          const SizedBox(height: 12),
+
+          // Stage 4: Diagnosis (Optional)
+          _buildStageCard(
+            stepNumber: '4',
+            title: 'Diagnosis (Optional)',
+            duration: '< 1 minute',
+            description: 'Report a known respiratory diagnosis or skip this step.',
+            icon: Icons.medical_information_outlined,
+            isCompleted: state.diagnosisCompleted,
+            accentColor: Colors.teal.shade700,
           ),
           const SizedBox(height: 32),
 

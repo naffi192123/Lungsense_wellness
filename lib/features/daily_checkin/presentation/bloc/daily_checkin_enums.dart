@@ -1,9 +1,10 @@
-﻿/// Step positions in the guided daily check-in flow.
+/// Step positions in the guided daily check-in flow.
 enum CheckinStep {
   start,
   cough,
   breathing,
   symptoms,
+  diagnosis,
   review,
   completing,
   completed,

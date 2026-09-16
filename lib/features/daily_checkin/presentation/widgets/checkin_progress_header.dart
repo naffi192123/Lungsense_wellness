@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../bloc/daily_checkin_enums.dart';
 import '../bloc/daily_checkin_state.dart';
@@ -24,10 +24,13 @@ class CheckinProgressHeader extends StatelessWidget {
     final symptomsActive = state.currentStep == CheckinStep.symptoms;
     final symptomsDone = state.symptomsCompleted;
 
+    final diagnosisActive = state.currentStep == CheckinStep.diagnosis;
+    final diagnosisDone = state.diagnosisCompleted;
+
     return Container(
       width: double.infinity,
       color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
       child: Column(
         children: [
           Row(
@@ -54,6 +57,14 @@ class CheckinProgressHeader extends StatelessWidget {
                 isActive: symptomsActive,
                 isDone: symptomsDone,
                 icon: Icons.fact_check_outlined,
+              ),
+              _buildConnector(isActive: diagnosisActive || diagnosisDone || symptomsDone),
+              _buildStepItem(
+                stepNum: '4',
+                title: 'Diagnosis',
+                isActive: diagnosisActive,
+                isDone: diagnosisDone,
+                icon: Icons.medical_information_outlined,
               ),
             ],
           ),

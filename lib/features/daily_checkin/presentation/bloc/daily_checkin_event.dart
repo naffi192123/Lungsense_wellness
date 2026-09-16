@@ -1,5 +1,6 @@
-﻿import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
+import '../../../diagnosis/domain/entities/diagnosis_entity.dart';
 import 'daily_checkin_enums.dart';
 
 abstract class DailyCheckinEvent extends Equatable {
@@ -35,6 +36,20 @@ class CheckinSymptomsCompletedEvent extends DailyCheckinEvent {
   const CheckinSymptomsCompletedEvent(this.log);
   @override
   List<Object?> get props => [log];
+}
+
+/// Diagnosis step completed (either submitted with a diagnosis or skipped).
+class CheckinDiagnosisCompletedEvent extends DailyCheckinEvent {
+  final DiagnosisEntity? diagnosis;
+  final bool isSkipped;
+
+  const CheckinDiagnosisCompletedEvent({
+    this.diagnosis,
+    this.isSkipped = false,
+  });
+
+  @override
+  List<Object?> get props => [diagnosis, isSkipped];
 }
 
 /// User taps "Complete Check-in" on the review screen.

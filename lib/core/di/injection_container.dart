@@ -47,6 +47,7 @@ import '../../features/recording/domain/usecases/check_and_record_consent_usecas
 import '../../features/recording/presentation/bloc/audio_recording_bloc.dart';
 import '../../features/dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../features/analytics/presentation/bloc/analytics_bloc.dart';
+import '../../features/diagnosis/data/datasources/diagnosis_remote_data_source.dart';
 import '../../features/daily_checkin/presentation/bloc/daily_checkin_bloc.dart';
 
 /// Service Locator instance.
@@ -79,6 +80,7 @@ Future<void> initDependencies() async {
   // DataSources
   sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(sl()));
   sl.registerLazySingleton<ProfileRemoteDataSource>(() => ProfileRemoteDataSourceImpl(sl()));
+  sl.registerLazySingleton<DiagnosisRemoteDataSource>(() => DiagnosisRemoteDataSourceImpl(sl()));
 
   // Repositories
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl()));

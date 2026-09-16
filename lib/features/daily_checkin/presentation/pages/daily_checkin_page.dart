@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_event.dart';
 import '../../../analytics/presentation/bloc/analytics_bloc.dart';
 import '../../../analytics/presentation/bloc/analytics_event.dart';
+import '../../../diagnosis/data/datasources/diagnosis_remote_data_source.dart';
 import '../bloc/daily_checkin_bloc.dart';
 import '../bloc/daily_checkin_enums.dart';
 import '../bloc/daily_checkin_event.dart';
@@ -14,6 +16,7 @@ import '../widgets/checkin_progress_header.dart';
 import '../widgets/checkin_start_widget.dart';
 import '../widgets/checkin_recording_widget.dart';
 import '../widgets/checkin_symptoms_widget.dart';
+import '../widgets/checkin_diagnosis_widget.dart';
 import '../widgets/checkin_review_widget.dart';
 import '../widgets/checkin_completing_widget.dart';
 import '../widgets/checkin_completion_widget.dart';
@@ -49,6 +52,8 @@ class DailyCheckinPage extends StatelessWidget {
         return 'Breathing Recording';
       case CheckinStep.symptoms:
         return 'Daily Symptoms';
+      case CheckinStep.diagnosis:
+        return 'Diagnosis (Optional)';
       case CheckinStep.review:
         return 'Review Check-in';
       case CheckinStep.completing:
@@ -147,6 +152,29 @@ class DailyCheckinPage extends StatelessWidget {
           initialLog: state.symptomsResult,
           onCompleted: (log) {
             context.read<DailyCheckinBloc>().add(CheckinSymptomsCompletedEvent(log));
+          },
+        );
+
+      case CheckinStep.diagnosis:
+        return CheckinDiagnosisWidget(
+          key: const ValueKey('checkin_diagnosis_step'),
+          initialDiagnosis: state.diagnosisResult,
+          diagnosisRemoteDataSource: sl<DiagnosisRemoteDataSource>(),
+          onCompleted: (entity) {
+            context.read<DailyCheckinBloc>().add(
+              CheckinDiagnosisCompletedEvent(
+                diagnosis: entity,
+                isSkipped: false,
+              ),
+            );
+          },
+          onSkipped: () {
+            context.read<DailyCheckinBloc>().add(
+              const CheckinDiagnosisCompletedEvent(
+                diagnosis: null,
+                isSkipped: true,
+              ),
+            );
           },
         );
 

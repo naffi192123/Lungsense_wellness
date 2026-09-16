@@ -22,6 +22,7 @@ class CheckinReviewWidget extends StatelessWidget {
     final cough = state.coughResult;
     final breathing = state.breathingResult;
     final symptoms = state.symptomsResult;
+    final diagnosis = state.diagnosisResult;
 
     final isSubmitting = state.isSubmitting;
     final hasError = state.sessionStatus == CheckinSessionStatus.error &&
@@ -170,6 +171,27 @@ class CheckinReviewWidget extends StatelessWidget {
                 _MetricItem('Mucus', '${symptoms.mucus.toInt()}/3'),
                 _MetricItem('Fever', '${symptoms.fever.toInt()}/3'),
               ],
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 4. Diagnosis Card (Optional)
+          _buildSummaryCard(
+            title: 'Reported Diagnosis (Optional)',
+            icon: Icons.medical_information_outlined,
+            accentColor: Colors.teal.shade700,
+            onEdit: () => onReRecord(CheckinStep.diagnosis),
+            editLabel: diagnosis != null ? 'Edit' : (state.diagnosisSkipped ? 'Add' : 'Edit'),
+            metrics: [
+              _MetricItem(
+                'Diagnosis',
+                diagnosis != null
+                    ? diagnosis.diagnosis
+                    : (state.diagnosisSkipped ? 'Skipped (Not provided)' : 'Not entered'),
+                isHighlight: diagnosis != null,
+              ),
+              if (diagnosis != null && diagnosis.notes != null && diagnosis.notes!.trim().isNotEmpty)
+                _MetricItem('Notes', diagnosis.notes!.trim()),
             ],
           ),
           const SizedBox(height: 32),

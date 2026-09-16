@@ -1,5 +1,6 @@
-﻿import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
+import '../../../diagnosis/domain/entities/diagnosis_entity.dart';
 import 'daily_checkin_enums.dart';
 
 class DailyCheckinState extends Equatable {
@@ -8,6 +9,8 @@ class DailyCheckinState extends Equatable {
   final AudioAnalysisEntity? coughResult;
   final AudioAnalysisEntity? breathingResult;
   final DailyLogEntity? symptomsResult;
+  final DiagnosisEntity? diagnosisResult;
+  final bool diagnosisSkipped;
   final ScoreHistoryEntity? computedScore;
   final String? errorMessage;
   final String? statusMessage;
@@ -18,6 +21,8 @@ class DailyCheckinState extends Equatable {
     this.coughResult,
     this.breathingResult,
     this.symptomsResult,
+    this.diagnosisResult,
+    this.diagnosisSkipped = false,
     this.computedScore,
     this.errorMessage,
     this.statusMessage,
@@ -26,12 +31,14 @@ class DailyCheckinState extends Equatable {
   bool get coughCompleted => coughResult != null;
   bool get breathingCompleted => breathingResult != null;
   bool get symptomsCompleted => symptomsResult != null;
+  bool get diagnosisCompleted => diagnosisResult != null || diagnosisSkipped;
 
   int get completedStepsCount {
     int count = 0;
     if (coughCompleted) count++;
     if (breathingCompleted) count++;
     if (symptomsCompleted) count++;
+    if (diagnosisCompleted) count++;
     return count;
   }
 
@@ -53,6 +60,9 @@ class DailyCheckinState extends Equatable {
     bool clearBreathing = false,
     DailyLogEntity? symptomsResult,
     bool clearSymptoms = false,
+    DiagnosisEntity? diagnosisResult,
+    bool clearDiagnosis = false,
+    bool? diagnosisSkipped,
     ScoreHistoryEntity? computedScore,
     String? errorMessage,
     bool clearError = false,
@@ -66,6 +76,9 @@ class DailyCheckinState extends Equatable {
           clearBreathing ? null : (breathingResult ?? this.breathingResult),
       symptomsResult:
           clearSymptoms ? null : (symptomsResult ?? this.symptomsResult),
+      diagnosisResult:
+          clearDiagnosis ? null : (diagnosisResult ?? this.diagnosisResult),
+      diagnosisSkipped: diagnosisSkipped ?? this.diagnosisSkipped,
       computedScore: computedScore ?? this.computedScore,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       statusMessage: statusMessage ?? this.statusMessage,
@@ -79,6 +92,8 @@ class DailyCheckinState extends Equatable {
         coughResult,
         breathingResult,
         symptomsResult,
+        diagnosisResult,
+        diagnosisSkipped,
         computedScore,
         errorMessage,
         statusMessage,

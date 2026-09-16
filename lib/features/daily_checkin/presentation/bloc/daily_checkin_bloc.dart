@@ -1,4 +1,4 @@
-﻿import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../features/dashboard/data/datasources/score_remote_data_source.dart';
 import '../../../../features/onboarding/domain/entities/wellness_entities.dart';
 import '../../../../features/onboarding/domain/repositories/wellness_repository.dart';
@@ -18,6 +18,7 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
     on<CheckinCoughCompletedEvent>(_onCoughCompleted);
     on<CheckinBreathingCompletedEvent>(_onBreathingCompleted);
     on<CheckinSymptomsCompletedEvent>(_onSymptomsCompleted);
+    on<CheckinDiagnosisCompletedEvent>(_onDiagnosisCompleted);
     on<CheckinReRecordEvent>(_onReRecord);
     on<CheckinGoBackEvent>(_onGoBack);
     on<CheckinSubmitEvent>(_onSubmit);
@@ -29,6 +30,8 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
       emit(state.copyWith(currentStep: CheckinStep.breathing));
     } else if (state.coughCompleted && state.breathingCompleted && !state.symptomsCompleted) {
       emit(state.copyWith(currentStep: CheckinStep.symptoms));
+    } else if (state.coughCompleted && state.breathingCompleted && state.symptomsCompleted && !state.diagnosisCompleted) {
+      emit(state.copyWith(currentStep: CheckinStep.diagnosis));
     } else if (state.allStepsCompleted) {
       emit(state.copyWith(currentStep: CheckinStep.review));
     } else {
@@ -42,7 +45,9 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
   ) {
     final nextStep = !state.breathingCompleted
         ? CheckinStep.breathing
-        : (!state.symptomsCompleted ? CheckinStep.symptoms : CheckinStep.review);
+        : (!state.symptomsCompleted
+            ? CheckinStep.symptoms
+            : (!state.diagnosisCompleted ? CheckinStep.diagnosis : CheckinStep.review));
 
     emit(state.copyWith(
       coughResult: event.result,
@@ -56,7 +61,9 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
   ) {
     final nextStep = !state.symptomsCompleted
         ? CheckinStep.symptoms
-        : (!state.coughCompleted ? CheckinStep.cough : CheckinStep.review);
+        : (!state.coughCompleted
+            ? CheckinStep.cough
+            : (!state.diagnosisCompleted ? CheckinStep.diagnosis : CheckinStep.review));
 
     emit(state.copyWith(
       breathingResult: event.result,
@@ -70,11 +77,25 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
   ) {
     final nextStep = !state.coughCompleted
         ? CheckinStep.cough
-        : (!state.breathingCompleted ? CheckinStep.breathing : CheckinStep.review);
+        : (!state.breathingCompleted
+            ? CheckinStep.breathing
+            : CheckinStep.diagnosis);
 
     emit(state.copyWith(
       symptomsResult: event.log,
       currentStep: nextStep,
+    ));
+  }
+
+  void _onDiagnosisCompleted(
+    CheckinDiagnosisCompletedEvent event,
+    Emitter<DailyCheckinState> emit,
+  ) {
+    emit(state.copyWith(
+      diagnosisResult: event.diagnosis,
+      clearDiagnosis: event.diagnosis == null && event.isSkipped,
+      diagnosisSkipped: event.isSkipped,
+      currentStep: CheckinStep.review,
     ));
   }
 
@@ -101,8 +122,11 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
       case CheckinStep.symptoms:
         emit(state.copyWith(currentStep: CheckinStep.breathing));
         break;
-      case CheckinStep.review:
+      case CheckinStep.diagnosis:
         emit(state.copyWith(currentStep: CheckinStep.symptoms));
+        break;
+      case CheckinStep.review:
+        emit(state.copyWith(currentStep: CheckinStep.diagnosis));
         break;
       case CheckinStep.completing:
       case CheckinStep.completed:

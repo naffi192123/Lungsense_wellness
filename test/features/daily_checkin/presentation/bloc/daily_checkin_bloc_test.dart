@@ -1,10 +1,11 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lungsense_wellness/features/daily_checkin/presentation/bloc/daily_checkin_bloc.dart';
 import 'package:lungsense_wellness/features/daily_checkin/presentation/bloc/daily_checkin_enums.dart';
 import 'package:lungsense_wellness/features/daily_checkin/presentation/bloc/daily_checkin_event.dart';
 import 'package:lungsense_wellness/features/daily_checkin/presentation/bloc/daily_checkin_state.dart';
 import 'package:lungsense_wellness/features/dashboard/data/datasources/score_remote_data_source.dart';
+import 'package:lungsense_wellness/features/diagnosis/domain/entities/diagnosis_entity.dart';
 import 'package:lungsense_wellness/features/onboarding/domain/entities/wellness_entities.dart';
 import 'package:lungsense_wellness/features/onboarding/domain/repositories/wellness_repository.dart';
 
@@ -76,6 +77,13 @@ void main() {
       timestamp: DateTime.now(),
     );
 
+    final mockDiagnosis = DiagnosisEntity(
+      id: 'diag_123',
+      diagnosis: 'Asthma',
+      notes: 'Seasonal flare-up',
+      createdAt: DateTime.now(),
+    );
+
     final mockScore = ScoreHistoryEntity(
       id: 'score_123',
       score: 85,
@@ -120,6 +128,9 @@ void main() {
       expect(bloc.state.coughCompleted, isFalse);
       expect(bloc.state.breathingCompleted, isFalse);
       expect(bloc.state.symptomsCompleted, isFalse);
+      expect(bloc.state.diagnosisResult, isNull);
+      expect(bloc.state.diagnosisSkipped, isFalse);
+      expect(bloc.state.diagnosisCompleted, isFalse);
     });
 
     test('CheckinStartEvent transitions to cough step', () async {
@@ -130,7 +141,7 @@ void main() {
       );
     });
 
-    test('Sequential check-in flow advances from Cough -> Breathing -> Symptoms -> Review', () async {
+    test('Sequential check-in flow advances from Cough -> Breathing -> Symptoms -> Diagnosis -> Review', () async {
       // Step 1: Cough completed
       bloc.add(CheckinCoughCompletedEvent(mockCough));
       await expectLater(
@@ -149,17 +160,44 @@ void main() {
         )),
       );
 
-      // Step 3: Symptoms completed
+      // Step 3: Symptoms completed -> advances to Diagnosis (Step 4)
       bloc.add(CheckinSymptomsCompletedEvent(mockSymptoms));
       await expectLater(
         bloc.stream,
         emits(predicate<DailyCheckinState>(
-          (s) => s.currentStep == CheckinStep.review && s.allStepsCompleted,
+          (s) => s.currentStep == CheckinStep.diagnosis && s.symptomsCompleted,
+        )),
+      );
+
+      // Step 4: Diagnosis completed -> advances to Review
+      bloc.add(CheckinDiagnosisCompletedEvent(diagnosis: mockDiagnosis));
+      await expectLater(
+        bloc.stream,
+        emits(predicate<DailyCheckinState>(
+          (s) =>
+              s.currentStep == CheckinStep.review &&
+              s.diagnosisCompleted &&
+              s.diagnosisResult == mockDiagnosis &&
+              !s.diagnosisSkipped,
         )),
       );
     });
 
-    test('CheckinGoBackEvent transitions back sequentially', () async {
+    test('CheckinDiagnosisCompletedEvent with skip advances to Review with diagnosisSkipped true', () async {
+      bloc.add(const CheckinDiagnosisCompletedEvent(isSkipped: true));
+      await expectLater(
+        bloc.stream,
+        emits(predicate<DailyCheckinState>(
+          (s) =>
+              s.currentStep == CheckinStep.review &&
+              s.diagnosisCompleted &&
+              s.diagnosisResult == null &&
+              s.diagnosisSkipped,
+        )),
+      );
+    });
+
+    test('CheckinGoBackEvent transitions back sequentially across all steps', () async {
       // Move to cough
       bloc.add(const CheckinStartEvent());
       await expectLater(
@@ -173,13 +211,34 @@ void main() {
         bloc.stream,
         emits(predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.start)),
       );
-    });
 
-    test('CheckinSubmitEvent executes full API pipeline and completes', () async {
-      // Populate all 3 steps
+      // Navigate to review step
       bloc.add(CheckinCoughCompletedEvent(mockCough));
       bloc.add(CheckinBreathingCompletedEvent(mockBreathing));
       bloc.add(CheckinSymptomsCompletedEvent(mockSymptoms));
+      bloc.add(CheckinDiagnosisCompletedEvent(diagnosis: mockDiagnosis));
+
+      // Review -> Diagnosis
+      bloc.add(const CheckinGoBackEvent());
+      await expectLater(
+        bloc.stream,
+        emitsThrough(predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.diagnosis)),
+      );
+
+      // Diagnosis -> Symptoms
+      bloc.add(const CheckinGoBackEvent());
+      await expectLater(
+        bloc.stream,
+        emits(predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.symptoms)),
+      );
+    });
+
+    test('CheckinSubmitEvent executes full API pipeline and completes', () async {
+      // Populate all steps including diagnosis
+      bloc.add(CheckinCoughCompletedEvent(mockCough));
+      bloc.add(CheckinBreathingCompletedEvent(mockBreathing));
+      bloc.add(CheckinSymptomsCompletedEvent(mockSymptoms));
+      bloc.add(CheckinDiagnosisCompletedEvent(diagnosis: mockDiagnosis));
 
       // Submit checkin
       bloc.add(const CheckinSubmitEvent());
@@ -189,6 +248,7 @@ void main() {
         emitsInOrder([
           predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.breathing),
           predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.symptoms),
+          predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.diagnosis),
           predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.review),
           predicate<DailyCheckinState>((s) => s.currentStep == CheckinStep.completing && s.sessionStatus == CheckinSessionStatus.computingScore),
           predicate<DailyCheckinState>((s) => s.sessionStatus == CheckinSessionStatus.completingSession),
