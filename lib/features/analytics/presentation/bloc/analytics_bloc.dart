@@ -25,7 +25,7 @@ class AnalyticsBloc extends Bloc<AnalyticsEvent, AnalyticsState> {
     emit(state.copyWith(status: AnalyticsStatus.loading));
     try {
       // Fetch all three endpoints concurrently for minimal latency
-      final historyFuture = _repository.getScoreHistory(limit: 50);
+      final historyFuture = _repository.getScoreHistory(limit: 100);
       final baselineFuture = _repository.getBaselineStatus();
       final bandsFuture = _repository.getScoreBands();
 
