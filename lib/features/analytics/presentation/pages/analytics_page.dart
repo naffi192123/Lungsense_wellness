@@ -38,18 +38,30 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // ScrollController for the trend chart – auto-scrolls to newest (rightmost) session
   final ScrollController _chartScrollController = ScrollController();
 
+  // Track session count & filter to ensure chart auto-jumps to the rightmost/latest sessions
+  int? _lastJumpSessionCount;
+  int? _lastJumpFilterDays;
+
   /// Schedules a jump to the far right of the chart after the current frame.
   void _jumpChartToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_chartScrollController.hasClients &&
           _chartScrollController.position.maxScrollExtent > 0) {
         _chartScrollController.jumpTo(
           _chartScrollController.position.maxScrollExtent,
         );
-        // Fraction will be updated by the scroll listener after the jump
-      } else if (mounted) {
-        // No scrollable content — reset fraction to rightmost
-        setState(() => _chartScrollFraction = 1.0);
+      } else {
+        // Fallback: If layout hasn't settled maxScrollExtent on this frame, retry on next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (_chartScrollController.hasClients &&
+              _chartScrollController.position.maxScrollExtent > 0) {
+            _chartScrollController.jumpTo(
+              _chartScrollController.position.maxScrollExtent,
+            );
+          }
+        });
       }
     });
   }
@@ -85,13 +97,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   void _refresh() {
+    _lastJumpSessionCount = null;
     context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
     _jumpChartToEnd();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AnalyticsBloc, AnalyticsState>(
+    return BlocConsumer<AnalyticsBloc, AnalyticsState>(
+      listener: (context, state) {
+        if (state.status == AnalyticsStatus.success) {
+          _lastJumpSessionCount = null;
+          _jumpChartToEnd();
+        }
+      },
       builder: (context, state) {
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
@@ -187,6 +206,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   if (val != null) {
                     setState(() {
                       _selectedFilterDays = val;
+                      _lastJumpFilterDays = null;
                     });
                     _jumpChartToEnd();
                   }
@@ -987,6 +1007,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
 
     final double totalContentWidth = count * slotWidth + rightLabelWidth;
+
+    // Automatically position at the rightmost/latest sessions when dataset or filter changes
+    if (_lastJumpSessionCount != count || _lastJumpFilterDays != _selectedFilterDays) {
+      _lastJumpSessionCount = count;
+      _lastJumpFilterDays = _selectedFilterDays;
+      _jumpChartToEnd();
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1905,24 +1932,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return Row(
       children: [
         Container(
-          width: 14,
-          height: 14,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF475569),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF475569),
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 4),
         Text(
           '$count ($pct%)',
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 11.5,
             fontWeight: FontWeight.w600,
             color: Color(0xFF1E293B),
           ),

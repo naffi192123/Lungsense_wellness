@@ -283,5 +283,44 @@ void main() {
 
       expect(find.text('About Score Distribution'), findsNothing);
     });
+
+    testWidgets('chart is automatically positioned at rightmost sessions by default', (tester) async {
+      final now = DateTime.now();
+      // Generate 30 sessions so content width (886px) exceeds test viewport (682px)
+      final history = List.generate(
+        30,
+        (i) => ScoreHistoryEntity(
+          id: 's$i',
+          score: 70 + (i % 25),
+          lungWellnessScore: (70 + (i % 25)).toDouble(),
+          band: 'good',
+          message: 'Good',
+          timestamp: now.subtract(Duration(days: 30 - i)),
+        ),
+      );
+
+      when(() => mockAnalyticsBloc.state).thenReturn(AnalyticsState(
+        status: AnalyticsStatus.success,
+        scoreHistory: history,
+      ));
+      when(() => mockAnalyticsBloc.stream).thenAnswer((_) => const Stream.empty());
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      // Locate the horizontal chart SingleChildScrollView
+      final scrollViews = find.byType(SingleChildScrollView);
+      final chartScrollView = tester.widgetList<SingleChildScrollView>(scrollViews).firstWhere(
+        (w) => w.scrollDirection == Axis.horizontal,
+      );
+
+      expect(chartScrollView.controller, isNotNull);
+      expect(chartScrollView.controller!.hasClients, isTrue);
+      expect(chartScrollView.controller!.position.maxScrollExtent, greaterThan(0));
+      expect(
+        chartScrollView.controller!.position.pixels,
+        equals(chartScrollView.controller!.position.maxScrollExtent),
+      );
+    });
   });
 }
