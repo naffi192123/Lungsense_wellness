@@ -166,7 +166,7 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
-      expect(find.text('PERSONAL BASELINE'), findsOneWidget);
+      expect(find.text('Personal Baseline'), findsOneWidget);
       expect(find.text('ACTIVE'), findsOneWidget);
       expect(find.text('73.0'), findsNWidgets(2));
       expect(find.text('LATEST VS BASELINE'), findsOneWidget);

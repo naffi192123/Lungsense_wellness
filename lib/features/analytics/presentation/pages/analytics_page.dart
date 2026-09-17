@@ -1134,25 +1134,44 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
 
-    // ACTIVE State: >= 7 sessions (2-Column Side-by-Side Layout as reference)
+    // ACTIVE State: >= 7 sessions (Compact 2-Column Reference Design)
     final baseline = baselineValue ?? 76.9;
     final latest = latestScore ?? baseline;
     final diff = latest - baseline;
-    final isHigher = diff >= 0;
+    final bool isHigher = diff > 0.049;
+    final bool isLower = diff < -0.049;
     final diffStr = isHigher ? '+${diff.toStringAsFixed(1)}' : diff.toStringAsFixed(1);
-    final diffColor = isHigher ? const Color(0xFF16A34A) : const Color(0xFFEF4444);
-    final diffCardBg = isHigher ? const Color(0xFFF0FAF5) : const Color(0xFFFEF2F2);
-    final diffIconBg = isHigher ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
+    final diffColor = isHigher
+        ? const Color(0xFF16A34A)
+        : isLower
+            ? const Color(0xFFEF4444)
+            : const Color(0xFF64748B);
+    final diffIconBg = isHigher
+        ? const Color(0xFFDCFCE7)
+        : isLower
+            ? const Color(0xFFFEE2E2)
+            : const Color(0xFFF1F5F9);
+    final String badgeLabel = isHigher ? '↑ Higher' : isLower ? '↓ Lower' : 'At Baseline';
+    final Color badgeBg = isHigher
+        ? const Color(0xFFDCFCE7)
+        : isLower
+            ? const Color(0xFFFEE2E2)
+            : const Color(0xFFF1F5F9);
+    final Color badgeFg = isHigher
+        ? const Color(0xFF16A34A)
+        : isLower
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF475569);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1160,197 +1179,186 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header Row
+          // ── Compact Header Row ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.adjust_rounded, color: Color(0xFF16A34A), size: 20),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'PERSONAL BASELINE',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                  color: Color(0xFF0F172A),
-                ),
+                child: const Icon(Icons.adjust_rounded, color: Color(0xFF16A34A), size: 17),
               ),
               const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Personal Baseline',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
                   'ACTIVE',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF16A34A),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              InkWell(
-                onTap: () => _showPersonalBaselineInfo(context),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFF64748B)),
-                      SizedBox(width: 4),
-                      Text(
-                        'Learn more',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
+                    letterSpacing: 0.3,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // 2-Column Side-by-Side Content Row
+          // ── 2-Column Content Row ──
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // LEFT COLUMN: PERSONAL BASELINE
+                // LEFT: Baseline value
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FAF5),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: const Icon(
+                              Icons.bar_chart_rounded,
+                              color: Color(0xFF16A34A),
+                              size: 16,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.bar_chart_rounded,
-                            color: Color(0xFF16A34A),
-                            size: 18,
+                          const SizedBox(width: 6),
+                          const Text(
+                            'BASELINE',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        baseline.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF16A34A),
+                          height: 1.0,
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          baseline.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF16A34A),
-                            height: 1.0,
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Avg. of last 7 sessions',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF94A3B8),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Your personal baseline',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Based on your most recent 7 completed sessions.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF64748B),
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
 
-                // Subtle Vertical Divider
+                // Vertical divider
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                   width: 1,
                   color: const Color(0xFFE2E8F0),
                 ),
 
-                // RIGHT COLUMN: LATEST VS BASELINE
+                // RIGHT: Latest vs Baseline
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: diffCardBg,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: diffIconBg,
-                            borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: diffIconBg,
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Icon(
+                              isHigher
+                                  ? Icons.trending_up_rounded
+                                  : isLower
+                                      ? Icons.trending_down_rounded
+                                      : Icons.trending_flat_rounded,
+                              color: diffColor,
+                              size: 16,
+                            ),
                           ),
-                          child: Icon(
-                            isHigher ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                            color: diffColor,
-                            size: 18,
+                          const SizedBox(width: 6),
+                          const Expanded(
+                            child: Text(
+                              'LATEST VS BASELINE',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF64748B),
+                                letterSpacing: 0.3,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        diffStr,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: diffColor,
+                          height: 1.0,
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'LATEST VS BASELINE',
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          badgeLabel,
                           style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.3,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: badgeFg,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          diffStr,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: diffColor,
-                            height: 1.0,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Your latest score is ${diff.abs().toStringAsFixed(1)} points ${isHigher ? 'above' : 'below'} your personal baseline.',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF64748B),
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
