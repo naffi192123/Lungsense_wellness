@@ -771,7 +771,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Compact Horizontal Scroll Indicator for the Trend Chart
+  // Compact Right-Aligned Scroll Indicator for the Trend Chart
   // ─────────────────────────────────────────────────────────
 
   Widget _buildChartScrollIndicator({
@@ -795,38 +795,53 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     final double totalContentWidth = sessionCount * slotWidth + rightLabelWidth;
 
     return LayoutBuilder(builder: (context, constraints) {
-      // The available viewport width for the scrollable part of the chart
-      final double viewportWidth = (constraints.maxWidth - yAxisOffset).clamp(0.0, double.infinity);
+      // Viewport width = scrollable portion (excluding y-axis columns)
+      final double viewportWidth =
+          (constraints.maxWidth - yAxisOffset).clamp(0.0, double.infinity);
 
-      // If everything fits, no scrollbar needed
+      // Hide if all sessions fit without scrolling
       if (totalContentWidth <= viewportWidth || viewportWidth <= 0) {
         return const SizedBox.shrink();
       }
 
       const double trackHeight = 4.0;
-      const double chevronSize = 18.0;
-      const double minThumbWidth = 24.0;
+      const double chevronSize = 20.0;
       const double indicatorHeight = 28.0;
-      const double trackHPadding = 4.0; // horizontal padding inside track area
+      // Fixed compact track width (~30% of viewport, capped 100–160px)
+      final double compactTrackWidth =
+          (viewportWidth * 0.32).clamp(90.0, 150.0);
 
-      final double thumbRatio = (viewportWidth / totalContentWidth).clamp(0.0, 1.0);
+      final double thumbRatio =
+          (viewportWidth / totalContentWidth).clamp(0.0, 1.0);
+
+      final bool atStart = _chartScrollFraction <= 0.01;
+      final bool atEnd = _chartScrollFraction >= 0.99;
+
+      // Thumb position and width within the compact track
+      final double thumbWidth =
+          (compactTrackWidth * thumbRatio).clamp(20.0, compactTrackWidth);
+      final double maxThumbOffset = compactTrackWidth - thumbWidth;
+      final double thumbOffset =
+          (_chartScrollFraction * maxThumbOffset).clamp(0.0, maxThumbOffset);
 
       return SizedBox(
         height: indicatorHeight,
         child: Row(
           children: [
-            // Spacer matching the fixed Y-axis columns
+            // Left spacer: align indicator to the right of the chart viewport
             SizedBox(width: yAxisOffset),
+            const Spacer(),
 
-            // Left chevron
+            // Left chevron (← older sessions)
             GestureDetector(
               onTap: () {
                 if (!_chartScrollController.hasClients) return;
-                final target = (_chartScrollController.position.pixels - viewportWidth * 0.7)
-                    .clamp(0.0, _chartScrollController.position.maxScrollExtent);
+                final target =
+                    (_chartScrollController.position.pixels - viewportWidth * 0.7)
+                        .clamp(0.0, _chartScrollController.position.maxScrollExtent);
                 _chartScrollController.animateTo(
                   target,
-                  duration: const Duration(milliseconds: 280),
+                  duration: const Duration(milliseconds: 260),
                   curve: Curves.easeOut,
                 );
               },
@@ -837,7 +852,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   child: Icon(
                     Icons.chevron_left_rounded,
                     size: chevronSize,
-                    color: _chartScrollFraction <= 0.01
+                    color: atStart
                         ? const Color(0xFFCBD5E1)
                         : const Color(0xFF64748B),
                   ),
@@ -845,74 +860,75 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ),
             ),
 
-            const SizedBox(width: 2),
-
-            // Track + draggable thumb
-            Expanded(
-              child: LayoutBuilder(builder: (ctx, trackConstraints) {
-                final double trackWidth = trackConstraints.maxWidth - trackHPadding * 2;
-                final double thumbWidth = (trackWidth * thumbRatio).clamp(minThumbWidth, trackWidth);
-                final double maxThumbOffset = trackWidth - thumbWidth;
-                final double thumbOffset = (_chartScrollFraction * maxThumbOffset).clamp(0.0, maxThumbOffset);
-
-                return Center(
-                  child: Container(
-                    height: trackHeight,
-                    margin: const EdgeInsets.symmetric(horizontal: trackHPadding),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(trackHeight / 2),
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // Draggable thumb
-                        Positioned(
-                          left: thumbOffset,
-                          top: -(8 - trackHeight / 2), // center vertically for hit area
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onHorizontalDragUpdate: (details) {
-                              if (!_chartScrollController.hasClients) return;
-                              final double dragFraction = details.delta.dx / maxThumbOffset.clamp(1.0, double.infinity);
-                              final double newFraction = (_chartScrollFraction + dragFraction).clamp(0.0, 1.0);
-                              _chartScrollController.jumpTo(
-                                newFraction * _chartScrollController.position.maxScrollExtent,
-                              );
-                            },
+            // Compact scrollbar track
+            SizedBox(
+              width: compactTrackWidth,
+              height: indicatorHeight,
+              child: Center(
+                child: SizedBox(
+                  width: compactTrackWidth,
+                  height: trackHeight,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Track background
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(trackHeight / 2),
+                          ),
+                        ),
+                      ),
+                      // Draggable thumb
+                      Positioned(
+                        left: thumbOffset,
+                        top: -(6 - trackHeight / 2),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onHorizontalDragUpdate: (details) {
+                            if (!_chartScrollController.hasClients) return;
+                            final double dragFraction = details.delta.dx /
+                                maxThumbOffset.clamp(1.0, double.infinity);
+                            final double newFraction =
+                                (_chartScrollFraction + dragFraction)
+                                    .clamp(0.0, 1.0);
+                            _chartScrollController.jumpTo(
+                              newFraction *
+                                  _chartScrollController.position.maxScrollExtent,
+                            );
+                          },
+                          child: Container(
+                            width: thumbWidth,
+                            height: 14,
+                            alignment: Alignment.center,
                             child: Container(
                               width: thumbWidth,
-                              height: 16, // tall hit area
-                              alignment: Alignment.center,
-                              child: Container(
-                                width: thumbWidth,
-                                height: trackHeight + 2,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF94A3B8),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
+                              height: trackHeight + 2,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF94A3B8),
+                                borderRadius: BorderRadius.circular(3),
                               ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              }),
+                ),
+              ),
             ),
 
-            const SizedBox(width: 2),
-
-            // Right chevron
+            // Right chevron (→ newer sessions)
             GestureDetector(
               onTap: () {
                 if (!_chartScrollController.hasClients) return;
-                final target = (_chartScrollController.position.pixels + viewportWidth * 0.7)
-                    .clamp(0.0, _chartScrollController.position.maxScrollExtent);
+                final target =
+                    (_chartScrollController.position.pixels + viewportWidth * 0.7)
+                        .clamp(0.0, _chartScrollController.position.maxScrollExtent);
                 _chartScrollController.animateTo(
                   target,
-                  duration: const Duration(milliseconds: 280),
+                  duration: const Duration(milliseconds: 260),
                   curve: Curves.easeOut,
                 );
               },
@@ -923,7 +939,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   child: Icon(
                     Icons.chevron_right_rounded,
                     size: chevronSize,
-                    color: _chartScrollFraction >= 0.99
+                    color: atEnd
                         ? const Color(0xFFCBD5E1)
                         : const Color(0xFF64748B),
                   ),
