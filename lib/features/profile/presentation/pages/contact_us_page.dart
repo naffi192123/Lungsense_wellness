@@ -1,47 +1,15 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class ContactUsPage extends StatefulWidget {
+class ContactUsPage extends StatelessWidget {
   const ContactUsPage({super.key});
 
-  @override
-  State<ContactUsPage> createState() => _ContactUsPageState();
-}
-
-class _ContactUsPageState extends State<ContactUsPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _subjectController = TextEditingController();
-  final _messageController = TextEditingController();
-  bool _isSubmitting = false;
-
-  @override
-  void dispose() {
-    _subjectController.dispose();
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  void _submitContactForm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isSubmitting = true;
-      });
-
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          setState(() {
-            _isSubmitting = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Thank you! Your message has been sent to support.'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          context.pop();
-        }
-      });
+  Future<void> _launch(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     }
   }
 
@@ -61,121 +29,230 @@ class _ContactUsPageState extends State<ContactUsPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Card
-                Container(
-                  padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(16.0),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.headset_mic_rounded, color: AppColors.primary, size: 32),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'We are here to help',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Have questions or feedback? Send us a message and our wellness team will respond within 24 hours.',
-                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
-                            ),
-                          ],
-                        ),
-                      ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.12),
+                      AppColors.supportingGreen.withOpacity(0.06),
                     ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                 ),
-                const SizedBox(height: 24),
-
-                // Subject Label
-                const Text(
-                  'Subject',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _subjectController,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g., Question about acoustic analysis',
-                  ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter a subject';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Message Label
-                const Text(
-                  'Message',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _messageController,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    hintText: 'Describe your issue or suggestions in detail...',
-                  ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter your message';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-
-                // Submit Button
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16.0),
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.supportingGreen],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.headset_mic_rounded,
+                          color: AppColors.primary, size: 28),
                     ),
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitContactForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: AppColors.surface,
-                      shadowColor: Colors.transparent,
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.0),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Get in Touch',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "Reach out to the DigiBiomics team — we're happy to help.",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(color: AppColors.surface, strokeWidth: 2),
-                          )
-                        : const Text(
-                            'Send Message',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Phone card
+              _ContactCard(
+                icon: Icons.phone_rounded,
+                title: 'Phone',
+                children: [
+                  _ContactItem(
+                    label: '+1-647-882-9464',
+                    onTap: () => _launch('tel:+16478829464'),
+                  ),
+                  _ContactItem(
+                    label: '+97-152-513-8419',
+                    onTap: () => _launch('tel:+971525138419'),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // Email card
+              _ContactCard(
+                icon: Icons.email_rounded,
+                title: 'Email',
+                children: [
+                  _ContactItem(
+                    label: 'info@digibiomics.com',
+                    onTap: () => _launch('mailto:info@digibiomics.com'),
+                  ),
+                  _ContactItem(
+                    label: 'meraj.khan@digibiomics.com',
+                    onTap: () => _launch('mailto:meraj.khan@digibiomics.com'),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // Address card
+              _ContactCard(
+                icon: Icons.location_on_rounded,
+                title: 'Address',
+                children: [
+                  _ContactItem(
+                    label: '3052 Owls Foot Drive\nMississauga, ON  L5M 6W5\nCanada',
+                    onTap: () => _launch(
+                      'https://maps.google.com/?q=3052+Owls+Foot+Drive,+Mississauga,+ON+L5M+6W5,+Canada',
+                    ),
+                    isMultiline: true,
+                  ),
+                ],
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────
+// Reusable card for a contact category
+// ────────────────────────────────────────────────
+class _ContactCard extends StatelessWidget {
+  const _ContactCard({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, thickness: 0.5),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────
+// Individual tappable contact row
+// ────────────────────────────────────────────────
+class _ContactItem extends StatelessWidget {
+  const _ContactItem({
+    required this.label,
+    required this.onTap,
+    this.isMultiline = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool isMultiline;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          crossAxisAlignment:
+              isMultiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.primary,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.open_in_new_rounded,
+                size: 14, color: AppColors.textSecondary),
+          ],
         ),
       ),
     );
