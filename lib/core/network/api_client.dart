@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../constants/app_constants.dart';
 import '../errors/exceptions.dart';
 import 'network_info.dart';
 
@@ -13,7 +14,10 @@ class ApiClient {
   final http.Client _client;
   final Box _box;
   final NetworkInfo? _networkInfo;
-  static const String _baseUrl = 'https://lungsense-wellness.onrender.com';
+
+  /// Centralized API base URL.
+  static const String baseUrl = AppConstants.apiBaseUrl;
+  static const String _baseUrl = baseUrl;
 
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
@@ -25,7 +29,7 @@ class ApiClient {
 
   Future<void> _ensureNetworkAvailable() async {
     if (_networkInfo != null) {
-      final hasConnection = await _networkInfo!.isConnected;
+      final hasConnection = await _networkInfo.isConnected;
       if (!hasConnection) {
         throw const ConnectionException('No internet connection. Please verify your Wi-Fi or mobile data.');
       }

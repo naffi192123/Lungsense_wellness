@@ -2,6 +2,10 @@
 abstract class AppConstants {
   static const String appName = 'LungSense';
   
+  // Backend API Configuration
+  static const String apiBaseUrl = 'http://3.108.54.191';
+  static const String apiHost = '3.108.54.191';
+  
   // Hive Box Names
   static const String userPreferencesBox = 'user_preferences_box';
   static const String wellnessScoreBox = 'wellness_score_box';

@@ -270,7 +270,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<String?> _fetchProfileName(String token) async {
     try {
       final res = await http.get(
-        Uri.parse('https://lungsense-wellness.onrender.com/profile'),
+        Uri.parse('${ApiClient.baseUrl}/profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

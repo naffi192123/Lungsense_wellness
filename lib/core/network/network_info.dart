@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import '../constants/app_constants.dart';
 
 /// Abstract contract for checking true internet connectivity.
 abstract class NetworkInfo {
@@ -18,7 +19,7 @@ class NetworkInfoImpl implements NetworkInfo {
   bool? _lastState;
 
   NetworkInfoImpl({
-    this.primaryHost = 'lungsense-wellness.onrender.com',
+    this.primaryHost = AppConstants.apiHost,
     this.fallbackHost = '8.8.8.8',
   }) {
     _startMonitoring();
