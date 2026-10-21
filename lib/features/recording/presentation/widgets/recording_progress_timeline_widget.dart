@@ -24,7 +24,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
   const RecordingProgressTimelineWidget({
     super.key,
     required this.elapsedSeconds,
-    this.minDurationSeconds = 16,
+    this.minDurationSeconds = 8,
     required this.maxDurationSeconds,
     required this.isRecording,
     required this.isPaused,

@@ -80,8 +80,8 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   }
 
   String get _currentRecordingType => _selectedTabIndex == 0 ? 'cough' : 'breathing';
-  int get _minDurationSeconds => _selectedTabIndex == 0 ? 16 : 30;
-  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 20 : 45;
+  int get _minDurationSeconds => _selectedTabIndex == 0 ? 8 : 12;
+  int get _maxDurationSeconds => _selectedTabIndex == 0 ? 10 : 15;
 
   void _onToggleTab(int index) {
     final bloc = context.read<AudioRecordingBloc>();
@@ -446,7 +446,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                       child: Text(
                         isCough
                             ? 'REQUIRED: ${_minDurationSeconds}s – ${_maxDurationSeconds}s'
-                            : 'REQUIRED: ${_minDurationSeconds}s – ${_maxDurationSeconds}s (min 30s)',
+                            : 'REQUIRED: ${_minDurationSeconds}s – ${_maxDurationSeconds}s',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
