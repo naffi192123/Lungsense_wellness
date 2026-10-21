@@ -15,8 +15,8 @@ import '../../../recording/presentation/widgets/recording_progress_timeline_widg
 
 class CheckinRecordingWidget extends StatefulWidget {
   final String recordingType; // 'cough' or 'breathing'
-  final int minDurationSeconds; // 16 for cough, 30 for breathing
-  final int maxDurationSeconds; // 20 for cough, 45 for breathing
+  final int minDurationSeconds; // 8 for cough, 12 for breathing
+  final int maxDurationSeconds; // 10 for cough, 15 for breathing
   final ValueChanged<AudioAnalysisEntity> onCompleted;
 
   const CheckinRecordingWidget({
@@ -25,8 +25,8 @@ class CheckinRecordingWidget extends StatefulWidget {
     int? minDurationSeconds,
     int? maxDurationSeconds,
     required this.onCompleted,
-  })  : minDurationSeconds = minDurationSeconds ?? (recordingType == 'cough' ? 16 : 30),
-        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 20 : 45);
+  })  : minDurationSeconds = minDurationSeconds ?? (recordingType == 'cough' ? 8 : 12),
+        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 10 : 15);
 
   @override
   State<CheckinRecordingWidget> createState() => _CheckinRecordingWidgetState();
@@ -248,7 +248,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                       child: Text(
                         _isCough
                             ? 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s'
-                            : 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s (min 30s)',
+                            : 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
