@@ -42,7 +42,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     if (isCompleted && elapsedSeconds > maxDurationSeconds) {
       return elapsedSeconds;
     }
-    return maxDurationSeconds > 0 ? maxDurationSeconds : 20;
+    return maxDurationSeconds > 0 ? maxDurationSeconds : 10;
   }
 
   List<int> _generateTicks(int effectiveMax) {
