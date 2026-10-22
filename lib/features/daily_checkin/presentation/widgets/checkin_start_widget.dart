@@ -148,7 +148,7 @@ class CheckinStartWidget extends StatelessWidget {
           _buildStageCard(
             stepNumber: '1',
             title: 'Cough Sound Recording',
-            duration: 'Max 10 seconds',
+            duration: 'Max 15 seconds',
             description: 'Perform 3-5 distinct coughs into your phone microphone.',
             icon: Icons.sick_outlined,
             isCompleted: state.coughCompleted,
@@ -160,7 +160,7 @@ class CheckinStartWidget extends StatelessWidget {
           _buildStageCard(
             stepNumber: '2',
             title: 'Breathing / Chest Sound',
-            duration: 'Max 15 seconds',
+            duration: 'Max 30 seconds',
             description: 'Take deep, steady inhalations and exhalations.',
             icon: Icons.air_rounded,
             isCompleted: state.breathingCompleted,

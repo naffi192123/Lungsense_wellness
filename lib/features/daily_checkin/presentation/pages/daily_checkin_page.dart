@@ -128,8 +128,8 @@ class DailyCheckinPage extends StatelessWidget {
         return CheckinRecordingWidget(
           key: const ValueKey('checkin_cough_step'),
           recordingType: 'cough',
-          minDurationSeconds: 8,
-          maxDurationSeconds: 10,
+          minDurationSeconds: 12,
+          maxDurationSeconds: 15,
           onCompleted: (result) {
             context.read<DailyCheckinBloc>().add(CheckinCoughCompletedEvent(result));
           },
@@ -139,8 +139,8 @@ class DailyCheckinPage extends StatelessWidget {
         return CheckinRecordingWidget(
           key: const ValueKey('checkin_breathing_step'),
           recordingType: 'breathing',
-          minDurationSeconds: 12,
-          maxDurationSeconds: 15,
+          minDurationSeconds: 25,
+          maxDurationSeconds: 30,
           onCompleted: (result) {
             context.read<DailyCheckinBloc>().add(CheckinBreathingCompletedEvent(result));
           },

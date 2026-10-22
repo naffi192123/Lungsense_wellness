@@ -15,8 +15,8 @@ import '../../../recording/presentation/widgets/recording_progress_timeline_widg
 
 class CheckinRecordingWidget extends StatefulWidget {
   final String recordingType; // 'cough' or 'breathing'
-  final int minDurationSeconds; // 8 for cough, 12 for breathing
-  final int maxDurationSeconds; // 10 for cough, 15 for breathing
+  final int minDurationSeconds; // 12 for cough, 25 for breathing
+  final int maxDurationSeconds; // 15 for cough, 30 for breathing
   final ValueChanged<AudioAnalysisEntity> onCompleted;
 
   const CheckinRecordingWidget({
@@ -25,8 +25,8 @@ class CheckinRecordingWidget extends StatefulWidget {
     int? minDurationSeconds,
     int? maxDurationSeconds,
     required this.onCompleted,
-  })  : minDurationSeconds = minDurationSeconds ?? (recordingType == 'cough' ? 8 : 12),
-        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 10 : 15);
+  })  : minDurationSeconds = minDurationSeconds ?? (recordingType == 'cough' ? 12 : 25),
+        maxDurationSeconds = maxDurationSeconds ?? (recordingType == 'cough' ? 15 : 30);
 
   @override
   State<CheckinRecordingWidget> createState() => _CheckinRecordingWidgetState();
@@ -994,7 +994,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       title: '$typeName Recording',
       type: typeName,
       status: job.status.toLowerCase(),
-      duration: (job.durationSeconds ?? (isCough ? 16 : 30)).toInt(),
+      duration: (job.durationSeconds ?? (isCough ? 12 : 25)).toInt(),
       durationSeconds: job.durationSeconds,
       confidence: qScoreInt,
       lungsScore: qScoreInt,

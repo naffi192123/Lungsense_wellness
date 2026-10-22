@@ -24,7 +24,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
   const RecordingProgressTimelineWidget({
     super.key,
     required this.elapsedSeconds,
-    this.minDurationSeconds = 8,
+    this.minDurationSeconds = 12,
     required this.maxDurationSeconds,
     required this.isRecording,
     required this.isPaused,
@@ -42,7 +42,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     if (isCompleted && elapsedSeconds > maxDurationSeconds) {
       return elapsedSeconds;
     }
-    return maxDurationSeconds > 0 ? maxDurationSeconds : 10;
+    return maxDurationSeconds > 0 ? maxDurationSeconds : 15;
   }
 
   List<int> _generateTicks(int effectiveMax) {
