@@ -60,7 +60,7 @@ class ProfilePage extends StatelessWidget {
 
                 // App Version info
                 Text(
-                  'Version 1.0.1 (Build 2)',
+                  'Version 1.0.1 (Build 3)',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary.withOpacity(0.6),
                         fontSize: 12,
