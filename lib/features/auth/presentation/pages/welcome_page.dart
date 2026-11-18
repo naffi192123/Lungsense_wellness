@@ -56,26 +56,23 @@ class WelcomePage extends StatelessWidget {
                         iconData: Icons.assignment_turned_in_outlined,
                         iconColor: AppColors.supportingGreen,
                         iconBgColor: AppColors.supportingGreen.withValues(alpha: 0.12),
-                        title: 'Simple guided recordings',
-                        subtitle: 'Quick, easy step-by-step check-ins.',
+                        title: 'Guided Recordings',
                         dotColor: AppColors.supportingGreen,
                       ),
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 20),
                       _buildFeatureRow(
                         iconData: Icons.trending_up_rounded,
                         iconColor: AppColors.secondary,
                         iconBgColor: AppColors.secondary.withValues(alpha: 0.12),
-                        title: 'Personal trends',
-                        subtitle: 'See how your breathing changes over time.',
+                        title: 'Respiratory Trends',
                         dotColor: AppColors.secondary,
                       ),
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 20),
                       _buildFeatureRow(
                         iconData: Icons.lightbulb_outlined,
                         iconColor: AppColors.accent,
                         iconBgColor: AppColors.accent.withValues(alpha: 0.12),
-                        title: 'Helpful next Steps',
-                        subtitle: 'Get clear guidance based on your results.',
+                        title: 'Helpful Next Steps',
                         dotColor: AppColors.accent,
                       ),
 
@@ -119,18 +116,17 @@ class WelcomePage extends StatelessWidget {
               height: 1.35,
             ),
             children: [
-              TextSpan(text: 'Understand your breathing, '),
+              TextSpan(text: 'Understand your respiratory wellness, '),
               TextSpan(
-                text: 'one check-in',
+                text: 'one check-in at a time',
                 style: TextStyle(color: AppColors.primary),
               ),
-              TextSpan(text: ' at a time'),
             ],
           ),
         ),
         const SizedBox(height: 14),
         const Text(
-          'Record cough and breathing, track symptoms, and follow changes in your respiratory wellness.',
+          'Record cough and breathing sounds, track symptoms, and follow your respiratory wellness over time.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
@@ -149,44 +145,29 @@ class WelcomePage extends StatelessWidget {
     required Color iconColor,
     required Color iconBgColor,
     required String title,
-    required String subtitle,
     required Color dotColor,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 56,
-          height: 56,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
             color: iconBgColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(iconData, color: iconColor, size: 26),
+          child: Icon(iconData, color: iconColor, size: 24),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-            ],
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.text,
+            ),
           ),
         ),
         // Trailing accent dot
