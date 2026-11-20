@@ -176,6 +176,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       // 2. Persist lifestyle attributes locally
       final updatedModel = OnboardingModel(
         fullName: fullName,
+        age: age,
         dateOfBirth: DateTime(DateTime.now().year - age, 1, 1).toIso8601String().split('T').first,
         gender: _selectedGender.toLowerCase(),
         height: height,

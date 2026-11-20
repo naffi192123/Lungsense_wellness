@@ -38,7 +38,9 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
   @override
   Future<void> saveOnboarding({required OnboardingModel model, required String userId}) async {
     try {
-      final age = _calculateAge(model.dateOfBirth);
+      final age = (model.age != null && model.age! > 0)
+          ? model.age!
+          : _calculateAge(model.dateOfBirth);
       String gender = model.gender.trim().toLowerCase();
       if (gender != 'male' && gender != 'female') {
         gender = 'other';

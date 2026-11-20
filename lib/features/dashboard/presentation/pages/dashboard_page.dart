@@ -191,8 +191,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         onPressed: isLoading
                             ? null
                             : () {
-                                // Refresh icon — always fetch latest score from GET /score/latest
-                                context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+                                // Manual refresh — fetch fresh data, score, and analytics
+                                context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                                context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
                               },
                       ),
                     ],
@@ -205,7 +206,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
                   ),
                   const SizedBox(height: 14),
-                  _buildQuickActionsGrid(),
+                  _buildQuickActionsGrid(state),
                   const SizedBox(height: 24),
 
                   // Wellness Scorecard (Lungs Health Score Circular Dial Card)
@@ -247,7 +248,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildRecentActivityList(recentAudio, state.dailyLogs),
+                  _buildRecentActivityList(recentAudio, state.dailyLogs, state),
                 ],
               ),
             ),
@@ -281,6 +282,21 @@ class _DashboardPageState extends State<DashboardPage> {
     final scoreStr = hasScore
         ? (lungWellnessScore % 1 == 0 ? lungWellnessScore.toInt().toString() : lungWellnessScore.toStringAsFixed(1))
         : '--';
+
+    final String messageText;
+    if (!hasScore) {
+      messageText = 'Complete today’s symptom check-in and cough and breathing recordings to generate your score';
+    } else {
+      final rawMsg = scoreEntity?.message;
+      if (rawMsg != null &&
+          rawMsg.isNotEmpty &&
+          !rawMsg.toLowerCase().contains('no score') &&
+          !rawMsg.toLowerCase().contains('score computed fresh')) {
+        messageText = rawMsg;
+      } else {
+        messageText = 'Today\'s check-in is complete! Your respiratory wellness score has been calculated and updated.';
+      }
+    }
 
     return Container(
       width: double.infinity,
@@ -330,11 +346,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            (scoreEntity?.message != null && scoreEntity!.message!.isNotEmpty)
-                ? scoreEntity.message!
-                : (hasScore
-                    ? 'Score computed fresh from backend.'
-                    : 'No score computed yet. Complete your symptom check-in and audio recordings to compute today\'s score.'),
+            messageText,
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
           ),
@@ -671,13 +683,198 @@ class _DashboardPageState extends State<DashboardPage> {
   // _extractBreakdownScore removed — scores are now parsed centrally in
   // WellnessBloc._parseComponentScores and exposed via WellnessState.componentScores.
 
-  Widget _buildQuickActionsGrid() {
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool _isCheckinCompletedToday(WellnessState state) {
+    final now = DateTime.now();
+
+    // Check if score was computed today
+    final scoreEntity = state.latestScore ??
+        (state.scoreHistory.isNotEmpty ? state.scoreHistory.first : null);
+    if (scoreEntity != null) {
+      final double? scoreVal = scoreEntity.lungWellnessScore ??
+          (scoreEntity.score > 0 ? scoreEntity.score.toDouble() : null);
+      if (scoreVal != null && scoreVal > 0 && _isSameDay(scoreEntity.timestamp.toLocal(), now)) {
+        return true;
+      }
+    }
+
+    // Check if check-in steps are logged for today
+    final hasTodayLog = state.dailyLogs.any((l) => _isSameDay(l.date.toLocal(), now));
+    final hasTodayCough = state.audioAnalyses.any((a) =>
+        a.type.toLowerCase().contains('cough') && _isSameDay(a.timestamp.toLocal(), now));
+    final hasTodayBreathing = state.audioAnalyses.any((a) =>
+        a.type.toLowerCase().contains('breath') && _isSameDay(a.timestamp.toLocal(), now));
+
+    if (hasTodayLog && (hasTodayCough || hasTodayBreathing)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<void> _openDailyCheckin() async {
+    await context.push('/daily-checkin');
+    if (mounted) {
+      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+    }
+  }
+
+  void _showAdditionalRecordingsSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: AppColors.supportingGreen, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Check-in Complete for Today',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Your daily score is up to date. You can add extra audio recordings or retake check-in if needed:',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.35),
+                ),
+                const SizedBox(height: 16),
+                _buildRecordingOptionTile(
+                  icon: Icons.sick_outlined,
+                  color: AppColors.primary,
+                  title: 'Record Cough Sounds',
+                  subtitle: '12-15 seconds voluntary cough analysis',
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    await context.push('/record?type=cough');
+                    if (mounted) {
+                      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildRecordingOptionTile(
+                  icon: Icons.air_rounded,
+                  color: AppColors.supportingGreen,
+                  title: 'Record Breathing Sounds',
+                  subtitle: '25-30 seconds deep respiratory analysis',
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    await context.push('/record?type=breathing');
+                    if (mounted) {
+                      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildRecordingOptionTile(
+                  icon: Icons.replay_rounded,
+                  color: AppColors.textSecondary,
+                  title: 'Retake Full Daily Check-in',
+                  subtitle: 'Repeat all 3 steps to update today\'s score',
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    await _openDailyCheckin();
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecordingOptionTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: color.withValues(alpha: 0.12),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppColors.text),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsGrid(WellnessState state) {
+    final isCompleted = _isCheckinCompletedToday(state);
+
     return GestureDetector(
-      onTap: () async {
-        await context.push('/daily-checkin');
-        if (mounted) {
-          context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-          context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (isCompleted) {
+          _showAdditionalRecordingsSheet(context);
+        } else {
+          _openDailyCheckin();
         }
       },
       child: Container(
@@ -694,12 +891,14 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.35),
+            color: isCompleted
+                ? AppColors.supportingGreen.withValues(alpha: 0.45)
+                : AppColors.primary.withValues(alpha: 0.35),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: (isCompleted ? AppColors.supportingGreen : AppColors.primary).withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -712,61 +911,69 @@ class _DashboardPageState extends State<DashboardPage> {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.supportingGreen],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: isCompleted
+                    ? const LinearGradient(
+                        colors: [AppColors.supportingGreen, Color(0xFF2E7D32)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : const LinearGradient(
+                        colors: [AppColors.primary, AppColors.supportingGreen],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
+                    color: (isCompleted ? AppColors.supportingGreen : AppColors.primary).withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.health_and_safety_rounded,
+              child: Icon(
+                isCompleted ? Icons.check_circle_rounded : Icons.health_and_safety_rounded,
                 color: Colors.white,
-                size: 28,
+                size: isCompleted ? 30 : 28,
               ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Text(
-                        'Daily Check-in',
-                        style: TextStyle(
+                        isCompleted ? 'Daily Check-in Completed' : 'Daily Check-in',
+                        style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
                           color: Color(0xFF1C2B3A),
                         ),
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Icon(
-                        Icons.arrow_forward_rounded,
+                        isCompleted ? Icons.check_circle_outline_rounded : Icons.arrow_forward_rounded,
                         size: 16,
                         color: AppColors.supportingGreen,
                       ),
                     ],
                   ),
-                  SizedBox(height: 3),
+                  const SizedBox(height: 3),
                   Text(
-                    'Cough • Breathing • Symptoms',
-                    style: TextStyle(
+                    isCompleted ? 'All 3 steps completed today' : 'Cough • Breathing • Symptoms',
+                    style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: AppColors.supportingGreen,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    'Complete 3 steps to compute your score',
-                    style: TextStyle(
+                    isCompleted
+                        ? 'Tap to add more recordings anytime'
+                        : 'Complete 3 steps to get today’s score.',
+                    style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF5C5870),
                     ),
@@ -775,19 +982,35 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: isCompleted ? 12 : 14, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: isCompleted ? AppColors.supportingGreen : AppColors.primary,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                'Start',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
+              child: isCompleted
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, color: Colors.white, size: 16),
+                        SizedBox(width: 3),
+                        Text(
+                          'Record More',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Text(
+                      'Start',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -795,7 +1018,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildRecentActivityList(List<AudioAnalysisEntity> audioList, List<DailyLogEntity> logList) {
+  Widget _buildRecentActivityList(
+    List<AudioAnalysisEntity> audioList,
+    List<DailyLogEntity> logList,
+    WellnessState state,
+  ) {
     if (audioList.isEmpty && logList.isEmpty) {
       return Container(
         width: double.infinity,
@@ -819,8 +1046,27 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Column(
       children: items.map((item) {
-        final iconColor = item.lungsScore >= 90 ? AppColors.supportingGreen : AppColors.secondary;
-        final iconData = item.type == 'Cough' ? Icons.sick_outlined : Icons.air_rounded;
+        final isCough = item.type.toLowerCase().contains('cough');
+        final isBreathing = item.type.toLowerCase().contains('breath');
+
+        // Resolve score consistently from single reliable data source (state component scores)
+        int? resolvedScore;
+        if (isCough) {
+          resolvedScore = state.coughScore ?? (item.lungsScore > 0 ? item.lungsScore : null);
+        } else if (isBreathing) {
+          resolvedScore = state.breathingScore ?? (item.lungsScore > 0 ? item.lungsScore : null);
+        } else {
+          resolvedScore = item.lungsScore > 0 ? item.lungsScore : null;
+        }
+
+        final hasItemScore = resolvedScore != null && resolvedScore > 0;
+        final iconColor = hasItemScore
+            ? (resolvedScore >= 80
+                ? AppColors.supportingGreen
+                : (resolvedScore >= 60 ? AppColors.secondary : AppColors.error))
+            : AppColors.textSecondary;
+        final iconData = isCough ? Icons.sick_outlined : Icons.air_rounded;
+        final titleText = isCough ? 'Cough Recording' : 'Breathing Session';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12.0),
@@ -847,7 +1093,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.type == 'Cough' ? 'Cough Recording' : 'Breathing Session',
+                            titleText,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -869,7 +1115,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Score ${item.lungsScore}',
+                    hasItemScore ? 'Score $resolvedScore' : 'Processed',
                     style: TextStyle(fontWeight: FontWeight.bold, color: iconColor, fontSize: 13),
                   ),
                   const SizedBox(height: 2),

@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 class OnboardingData extends Equatable {
   // Step 1: Basic Info
   final String fullName;
+  final int? age;
   final String dateOfBirth; // YYYY-MM-DD
   final String gender;
   final double height; // in cm
@@ -23,8 +24,9 @@ class OnboardingData extends Equatable {
   final String otherNotes;
 
   const OnboardingData({
-    required this.fullName,
-    required this.dateOfBirth,
+    this.fullName = '',
+    this.age,
+    this.dateOfBirth = '',
     required this.gender,
     required this.height,
     required this.weight,
@@ -43,6 +45,7 @@ class OnboardingData extends Equatable {
   factory OnboardingData.empty() {
     return const OnboardingData(
       fullName: '',
+      age: null,
       dateOfBirth: '',
       gender: '',
       height: 0.0,
@@ -62,6 +65,7 @@ class OnboardingData extends Equatable {
   /// CopyWith utility for BLoC state modifiers.
   OnboardingData copyWith({
     String? fullName,
+    int? age,
     String? dateOfBirth,
     String? gender,
     double? height,
@@ -78,6 +82,7 @@ class OnboardingData extends Equatable {
   }) {
     return OnboardingData(
       fullName: fullName ?? this.fullName,
+      age: age ?? this.age,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,
       height: height ?? this.height,
@@ -97,6 +102,7 @@ class OnboardingData extends Equatable {
   @override
   List<Object?> get props => [
         fullName,
+        age,
         dateOfBirth,
         gender,
         height,

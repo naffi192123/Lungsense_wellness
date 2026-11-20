@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -24,16 +23,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final _formKeyStep3 = GlobalKey<FormState>();
 
   // Step 1 Controllers
-  final _nameController = TextEditingController();
-  final _dobController = TextEditingController();
+  final _ageController = TextEditingController();
   final _heightController = TextEditingController();
   final _weightController = TextEditingController();
   String _selectedGender = '';
 
   // Step 2 Controllers
   final _occupationController = TextEditingController();
-  final _sleepController = TextEditingController();
-  final _waterController = TextEditingController();
   final _exerciseController = TextEditingController();
   String _selectedActivityLevel = '';
 
@@ -54,25 +50,34 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _dobController.dispose();
+    _ageController.dispose();
     _heightController.dispose();
     _weightController.dispose();
     _occupationController.dispose();
-    _sleepController.dispose();
-    _waterController.dispose();
     _exerciseController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
   void _syncUIFromData(OnboardingData data) {
-    if (_nameController.text != data.fullName) {
-      _nameController.text = data.fullName;
+    if (data.age != null && data.age! > 0) {
+      if (_ageController.text != data.age.toString()) {
+        _ageController.text = data.age.toString();
+      }
+    } else if (data.dateOfBirth.isNotEmpty) {
+      try {
+        final birthDate = DateTime.parse(data.dateOfBirth);
+        final today = DateTime.now();
+        var age = today.year - birthDate.year;
+        if (today.month < birthDate.month || (today.month == birthDate.month && today.day < birthDate.day)) {
+          age--;
+        }
+        if (age > 0 && _ageController.text != age.toString()) {
+          _ageController.text = age.toString();
+        }
+      } catch (_) {}
     }
-    if (_dobController.text != data.dateOfBirth) {
-      _dobController.text = data.dateOfBirth;
-    }
+
     final curHeight = double.tryParse(_heightController.text);
     if (data.height > 0 && curHeight != data.height) {
       _heightController.text = data.height % 1 == 0 ? data.height.toInt().toString() : data.height.toString();
@@ -87,14 +92,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       _occupationController.text = data.occupation;
     }
     _selectedActivityLevel = data.activityLevel;
-    final curSleep = double.tryParse(_sleepController.text);
-    if (data.sleepHours != null && data.sleepHours! > 0 && curSleep != data.sleepHours) {
-      _sleepController.text = data.sleepHours! % 1 == 0 ? data.sleepHours!.toInt().toString() : data.sleepHours!.toString();
-    }
-    final curWater = double.tryParse(_waterController.text);
-    if (data.waterIntake != null && data.waterIntake! > 0 && curWater != data.waterIntake) {
-      _waterController.text = data.waterIntake! % 1 == 0 ? data.waterIntake!.toInt().toString() : data.waterIntake!.toString();
-    }
+
     if (data.exerciseDays != null && _exerciseController.text != data.exerciseDays.toString()) {
       _exerciseController.text = data.exerciseDays.toString();
     }
@@ -108,20 +106,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   OnboardingData _gatherCurrentData(OnboardingData baseData) {
+    final age = int.tryParse(_ageController.text.trim());
+    final dob = (age != null && age > 0)
+        ? DateTime(DateTime.now().year - age, 1, 1).toIso8601String().split('T').first
+        : baseData.dateOfBirth;
+
     return baseData.copyWith(
-      fullName: _nameController.text,
-      dateOfBirth: _dobController.text,
+      age: age,
+      dateOfBirth: dob,
       gender: _selectedGender,
       height: double.tryParse(_heightController.text) ?? 0.0,
       weight: double.tryParse(_weightController.text) ?? 0.0,
-      occupation: _occupationController.text,
+      occupation: _occupationController.text.trim(),
       activityLevel: _selectedActivityLevel,
-      sleepHours: double.tryParse(_sleepController.text),
-      waterIntake: double.tryParse(_waterController.text),
-      exerciseDays: int.tryParse(_exerciseController.text),
+      exerciseDays: int.tryParse(_exerciseController.text.trim()),
       smokingStatus: _selectedSmokingStatus,
       selectedConditionIds: _selectedConditionIds.toList(),
-      otherNotes: _notesController.text,
+      otherNotes: _notesController.text.trim(),
     );
   }
 
@@ -162,135 +163,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       _bloc.add(OnboardingUpdateDataEvent(_gatherCurrentData(state.data)));
       _bloc.add(const OnboardingSubmitEvent());
     }
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    DateTime tempDate = DateTime.tryParse(_dobController.text) ?? DateTime(2000, 1, 1);
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
-      ),
-      builder: (BuildContext bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Drag Handle
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Select Date of Birth',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.text,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
-                          onPressed: () => Navigator.pop(bottomSheetContext),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Scrolling instruction banner
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.unfold_more_rounded, size: 18, color: AppColors.primary),
-                          SizedBox(width: 6),
-                          Text(
-                            'Scroll or swipe wheels up & down to choose date',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Interactive Cupertino Scroll Wheel Picker
-                    SizedBox(
-                      height: 200,
-                      child: CupertinoDatePicker(
-                        mode: CupertinoDatePickerMode.date,
-                        initialDateTime: tempDate,
-                        minimumDate: DateTime(1900, 1, 1),
-                        maximumDate: DateTime.now(),
-                        dateOrder: DatePickerDateOrder.ymd,
-                        onDateTimeChanged: (DateTime newDate) {
-                          setModalState(() {
-                            tempDate = newDate;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Confirm Selection Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _dobController.text =
-                                "${tempDate.year}-${tempDate.month.toString().padLeft(2, '0')}-${tempDate.day.toString().padLeft(2, '0')}";
-                          });
-                          Navigator.pop(bottomSheetContext);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.surface,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Confirm Birthdate',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -477,66 +349,28 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 24),
 
-          // Full Name
-          _buildLabel('Full Name'),
+          // Age
+          _buildLabel('Age'),
           const SizedBox(height: 8),
           TextFormField(
-            controller: _nameController,
-            textCapitalization: TextCapitalization.words,
+            controller: _ageController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(3),
+            ],
             textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
-              hintText: 'Enter your name',
+              hintText: 'Enter your age (e.g. 28)',
+              prefixIcon: Icon(Icons.cake_outlined, color: AppColors.primary),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Please enter your full name';
+                return 'Please enter your age';
               }
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-
-          // Date of Birth with clear scroll indicators
-          _buildLabel('Date of Birth'),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _dobController,
-            readOnly: true,
-            onTap: () => _selectDate(context),
-            decoration: InputDecoration(
-              hintText: 'Tap to scroll & select birthdate',
-              prefixIcon: const Icon(Icons.cake_outlined, color: AppColors.primary),
-              suffixIcon: Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.primary),
-                          SizedBox(width: 2),
-                          Text(
-                            'Scroll',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select your date of birth';
+              final age = int.tryParse(value.trim());
+              if (age == null || age < 1 || age > 120) {
+                return 'Please enter a valid age (1-120)';
               }
               return null;
             },
@@ -699,47 +533,29 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 24),
 
-          // Placeholder Architecture Fields (Sleep, Water, Exercise)
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel('Sleep Hours'),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _sleepController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(hintText: '8 (Optional)'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel('Water (Liters)'),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _waterController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(hintText: '2.5 (Optional)'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          // Exercise Days / Week
           _buildLabel('Exercise Days / Week'),
           const SizedBox(height: 8),
           TextFormField(
             controller: _exerciseController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: '3 (Optional)'),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(1),
+            ],
+            decoration: const InputDecoration(
+              hintText: 'e.g. 3 (Optional)',
+              prefixIcon: Icon(Icons.calendar_today_outlined, color: AppColors.primary),
+            ),
+            validator: (value) {
+              if (value != null && value.trim().isNotEmpty) {
+                final days = int.tryParse(value.trim());
+                if (days == null || days < 0 || days > 7) {
+                  return 'Please enter a number between 0 and 7';
+                }
+              }
+              return null;
+            },
           ),
         ],
       ),

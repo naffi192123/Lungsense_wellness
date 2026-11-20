@@ -190,11 +190,11 @@ Future<void> initDependencies() async {
     ),
   );
 
-  sl.registerFactory(
+  sl.registerLazySingleton(
     () => WellnessBloc(repository: sl()),
   );
 
-  sl.registerFactory(
+  sl.registerLazySingleton(
     () => AnalyticsBloc(repository: sl()),
   );
 

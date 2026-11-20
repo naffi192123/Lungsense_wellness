@@ -37,9 +37,15 @@ class DailyCheckinPage extends StatelessWidget {
 
   void _navigateToDashboard(BuildContext context) {
     // Refresh dashboard and analytics data before navigating
-    context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-    context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-    context.go('/dashboard');
+    try {
+      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+    } catch (_) {}
+    if (context.canPop()) {
+      context.pop(true);
+    } else {
+      context.go('/dashboard');
+    }
   }
 
   String _getTitle(CheckinStep step) {

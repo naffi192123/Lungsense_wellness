@@ -14,21 +14,23 @@ class CheckinStartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completedCount = state.completedStepsCount;
+    final completedCount = (state.coughCompleted ? 1 : 0) +
+        (state.breathingCompleted ? 1 : 0) +
+        (state.symptomsCompleted ? 1 : 0);
     final isPartiallyDone = completedCount > 0;
     final buttonText = isPartiallyDone
-        ? (completedCount >= 3 ? 'Review & Complete Check-in' : 'Continue Check-in ($completedCount/4)')
+        ? (completedCount >= 3 ? 'Review & Complete Check-in' : 'Continue Check-in ($completedCount/3)')
         : 'Start Daily Check-in';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Card
+          // Header Card with Embedded Start Button
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(18.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -73,7 +75,7 @@ class CheckinStartWidget extends StatelessWidget {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            '4 Guided Steps • ~3 Minutes',
+                            '3 Guided Steps',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
@@ -85,9 +87,9 @@ class CheckinStartWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 const Text(
-                  'Record your respiratory sounds and log your daily symptoms. The AI engine analyzes acoustic features and computes your comprehensive Lung Wellness Score.',
+                  'Record your cough and breathing sounds, then report your symptoms to generate your Lung Wellness Score.',
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
@@ -95,44 +97,80 @@ class CheckinStartWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                // Progress counter pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        completedCount >= 3
-                            ? Icons.check_circle_rounded
-                            : Icons.timelapse_rounded,
-                        size: 16,
-                        color: completedCount >= 3
-                            ? AppColors.supportingGreen
-                            : AppColors.primary,
+                Row(
+                  children: [
+                    // Progress counter pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '$completedCount of 4 stages completed',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: completedCount >= 3
-                              ? AppColors.supportingGreen
-                              : AppColors.text,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            completedCount >= 3
+                                ? Icons.check_circle_rounded
+                                : Icons.timelapse_rounded,
+                            size: 16,
+                            color: completedCount >= 3
+                                ? AppColors.supportingGreen
+                                : AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$completedCount of 3 stages completed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: completedCount >= 3
+                                  ? AppColors.supportingGreen
+                                  : AppColors.text,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Embedded Start Button within the top Daily Check-in Card
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: onStart,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.surface,
+                      elevation: 2,
+                      shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.0),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isPartiallyDone ? Icons.play_arrow_rounded : Icons.arrow_forward_rounded,
+                          size: 20,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          buttonText,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           const Text(
             'Check-in Stages',
@@ -142,57 +180,42 @@ class CheckinStartWidget extends StatelessWidget {
               color: AppColors.text,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           // Stage 1: Cough
           _buildStageCard(
             stepNumber: '1',
             title: 'Cough Sound Recording',
-            duration: 'Max 15 seconds',
             description: 'Perform 3-5 distinct coughs into your phone microphone.',
             icon: Icons.sick_outlined,
             isCompleted: state.coughCompleted,
             accentColor: AppColors.primary,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Stage 2: Breathing
           _buildStageCard(
             stepNumber: '2',
             title: 'Breathing / Chest Sound',
-            duration: 'Max 30 seconds',
             description: 'Take deep, steady inhalations and exhalations.',
             icon: Icons.air_rounded,
             isCompleted: state.breathingCompleted,
             accentColor: AppColors.secondary,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Stage 3: Symptoms
           _buildStageCard(
             stepNumber: '3',
             title: 'Symptom & Lifestyle Log',
-            duration: '1-2 minutes',
             description: 'Rate breathlessness, cough severity, fever, and daily activity.',
             icon: Icons.fact_check_outlined,
             isCompleted: state.symptomsCompleted,
             accentColor: Colors.amber.shade800,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 22),
 
-          // Stage 4: Diagnosis (Optional)
-          _buildStageCard(
-            stepNumber: '4',
-            title: 'Diagnosis (Optional)',
-            duration: '< 1 minute',
-            description: 'Report a known respiratory diagnosis or skip this step.',
-            icon: Icons.medical_information_outlined,
-            isCompleted: state.diagnosisCompleted,
-            accentColor: Colors.teal.shade700,
-          ),
-          const SizedBox(height: 32),
-
-          // Start Button
+          // Main Bottom Action Button
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -203,7 +226,7 @@ class CheckinStartWidget extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
+                  blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -214,7 +237,7 @@ class CheckinStartWidget extends StatelessWidget {
                 backgroundColor: Colors.transparent,
                 foregroundColor: AppColors.surface,
                 shadowColor: Colors.transparent,
-                minimumSize: const Size(double.infinity, 56),
+                minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.0),
                 ),
@@ -224,7 +247,7 @@ class CheckinStartWidget extends StatelessWidget {
                 children: [
                   Icon(
                     isPartiallyDone ? Icons.play_arrow_rounded : Icons.arrow_forward_rounded,
-                    size: 22,
+                    size: 20,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -235,20 +258,21 @@ class CheckinStartWidget extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Disclaimer
           const Center(
             child: Text(
-              'LungSense Wellness is for wellness tracking, not medical diagnosis.',
+              'LungSense Wellness supports wellness tracking and does not provide a medical diagnosis.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 11,
                 color: AppColors.textSecondary,
+                height: 1.3,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -257,14 +281,13 @@ class CheckinStartWidget extends StatelessWidget {
   Widget _buildStageCard({
     required String stepNumber,
     required String title,
-    required String duration,
     required String description,
     required IconData icon,
     required bool isCompleted,
     required Color accentColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -276,8 +299,8 @@ class CheckinStartWidget extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: isCompleted
                   ? AppColors.supportingGreen.withValues(alpha: 0.12)
@@ -288,7 +311,7 @@ class CheckinStartWidget extends StatelessWidget {
               child: Icon(
                 isCompleted ? Icons.check_circle_rounded : icon,
                 color: isCompleted ? AppColors.supportingGreen : accentColor,
-                size: 24,
+                size: 22,
               ),
             ),
           ),
@@ -326,16 +349,7 @@ class CheckinStartWidget extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  duration,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: accentColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   description,
                   style: const TextStyle(

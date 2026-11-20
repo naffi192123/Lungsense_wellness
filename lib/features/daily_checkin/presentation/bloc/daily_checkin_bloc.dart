@@ -1,5 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../features/dashboard/data/datasources/score_remote_data_source.dart';
+import '../../../../features/dashboard/presentation/bloc/wellness_bloc.dart';
+import '../../../../features/dashboard/presentation/bloc/wellness_event.dart';
+import '../../../../features/analytics/presentation/bloc/analytics_bloc.dart';
+import '../../../../features/analytics/presentation/bloc/analytics_event.dart';
 import '../../../../features/onboarding/domain/entities/wellness_entities.dart';
 import '../../../../features/onboarding/domain/repositories/wellness_repository.dart';
 import 'daily_checkin_enums.dart';
@@ -202,6 +207,12 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
           wellnessRepository.getBaselineStatus(),
         ]);
         latestScore = results[0] as ScoreHistoryEntity?;
+      } catch (_) {}
+
+      // Immediately notify global WellnessBloc and AnalyticsBloc so the Dashboard updates in real time
+      try {
+        sl<WellnessBloc>().add(const WellnessFetchDataEvent());
+        sl<AnalyticsBloc>().add(const AnalyticsLoadEvent());
       } catch (_) {}
 
       // 4. Completed

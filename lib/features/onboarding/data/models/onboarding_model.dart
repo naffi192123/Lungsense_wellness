@@ -3,8 +3,9 @@ import '../../domain/entities/onboarding_data.dart';
 /// Data layer model representing onboarding profile variables.
 class OnboardingModel extends OnboardingData {
   const OnboardingModel({
-    required super.fullName,
-    required super.dateOfBirth,
+    super.fullName = '',
+    super.age,
+    super.dateOfBirth = '',
     required super.gender,
     required super.height,
     required super.weight,
@@ -23,6 +24,7 @@ class OnboardingModel extends OnboardingData {
   factory OnboardingModel.fromEntity(OnboardingData entity) {
     return OnboardingModel(
       fullName: entity.fullName,
+      age: entity.age,
       dateOfBirth: entity.dateOfBirth,
       gender: entity.gender,
       height: entity.height,
@@ -43,6 +45,7 @@ class OnboardingModel extends OnboardingData {
   Map<String, dynamic> toJson() {
     return {
       'fullName': fullName,
+      'age': age,
       'dateOfBirth': dateOfBirth,
       'gender': gender,
       'height': height,
@@ -63,6 +66,7 @@ class OnboardingModel extends OnboardingData {
   factory OnboardingModel.fromJson(Map<String, dynamic> json) {
     return OnboardingModel(
       fullName: json['fullName'] as String? ?? '',
+      age: (json['age'] as num?)?.toInt(),
       dateOfBirth: json['dateOfBirth'] as String? ?? '',
       gender: json['gender'] as String? ?? '',
       height: (json['height'] as num?)?.toDouble() ?? 0.0,

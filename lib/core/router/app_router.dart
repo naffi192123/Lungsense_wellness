@@ -147,9 +147,9 @@ abstract class AppRouter {
           final initialTab = int.tryParse(tabStr ?? '') ?? 0;
           return MultiBlocProvider(
             providers: [
-              BlocProvider(create: (context) => sl<WellnessBloc>()),
+              BlocProvider.value(value: sl<WellnessBloc>()),
               BlocProvider(create: (context) => sl<AuthBloc>()),
-              BlocProvider(create: (context) => sl<AnalyticsBloc>()),
+              BlocProvider.value(value: sl<AnalyticsBloc>()),
             ],
             child: DashboardPage(initialTab: initialTab),
           );
@@ -162,8 +162,8 @@ abstract class AppRouter {
           providers: [
             BlocProvider(create: (context) => sl<DailyCheckinBloc>()),
             BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
-            BlocProvider(create: (context) => sl<WellnessBloc>()),
-            BlocProvider(create: (context) => sl<AnalyticsBloc>()),
+            BlocProvider.value(value: sl<WellnessBloc>()),
+            BlocProvider.value(value: sl<AnalyticsBloc>()),
           ],
           child: const DailyCheckinPage(),
         ),
@@ -171,16 +171,16 @@ abstract class AppRouter {
       GoRoute(
         path: dailyLogPath,
         name: dailyLogName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<WellnessBloc>(),
+        builder: (context, state) => BlocProvider.value(
+          value: sl<WellnessBloc>(),
           child: const DailyLogPage(),
         ),
       ),
       GoRoute(
         path: audioAnalysisPath,
         name: audioAnalysisName,
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<WellnessBloc>(),
+        builder: (context, state) => BlocProvider.value(
+          value: sl<WellnessBloc>(),
           child: const AudioAnalysisPage(),
         ),
       ),
@@ -209,7 +209,7 @@ abstract class AppRouter {
           return MultiBlocProvider(
             providers: [
               BlocProvider(create: (context) => sl<AudioRecordingBloc>()),
-              BlocProvider(create: (context) => sl<WellnessBloc>()),
+              BlocProvider.value(value: sl<WellnessBloc>()),
             ],
             child: RecordPage(initialTab: initialTab),
           );
