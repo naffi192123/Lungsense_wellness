@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/cough_recording_icon.dart';
 import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_event.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
@@ -217,11 +218,13 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                   color: themeColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  _isCough ? Icons.sick_outlined : Icons.air_rounded,
-                  color: themeColor,
-                  size: 26,
-                ),
+                child: _isCough
+                    ? CoughRecordingIcon(size: 26, color: themeColor)
+                    : Icon(
+                        Icons.air_rounded,
+                        color: themeColor,
+                        size: 26,
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -420,10 +423,17 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
               ),
             ],
           ),
-          child: Icon(
-            _isCough ? Icons.sick_outlined : Icons.air_rounded,
-            size: 50,
-            color: isRecording ? themeColor : AppColors.textSecondary,
+          child: Center(
+            child: _isCough
+                ? CoughRecordingIcon(
+                    size: 56,
+                    color: isRecording ? themeColor : AppColors.textSecondary,
+                  )
+                : Icon(
+                    Icons.air_rounded,
+                    size: 50,
+                    color: isRecording ? themeColor : AppColors.textSecondary,
+                  ),
           ),
         ),
       ],

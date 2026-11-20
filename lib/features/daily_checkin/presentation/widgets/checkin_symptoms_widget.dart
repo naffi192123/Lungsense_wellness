@@ -241,7 +241,7 @@ class _CheckinSymptomsWidgetState extends State<CheckinSymptomsWidget> {
           _buildSymptomCard(
             title: 'Cough Severity',
             subtitle: 'Frequency and intensity of dry or productive coughing',
-            icon: Icons.sick_outlined,
+            icon: Icons.mic,
             currentScore: _coughSeverity,
             onChanged: (val) => setState(() => _coughSeverity = val),
             customDescriptions: const {

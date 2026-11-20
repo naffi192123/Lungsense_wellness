@@ -231,7 +231,7 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
-                            isCough ? Icons.sick_outlined : Icons.air_rounded,
+                            isCough ? Icons.mic : Icons.air_rounded,
                             color: themeColor,
                             size: 26,
                           ),
@@ -559,7 +559,7 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
         ),
         const SizedBox(height: 12),
-        _buildSymptomRow('Cough Severity', log.coughSeverity.toInt(), Icons.sick_outlined),
+        _buildSymptomRow('Cough Severity', log.coughSeverity.toInt(), Icons.mic),
         _buildSymptomRow('Breathlessness', log.breathlessness.toInt(), Icons.air_rounded),
         _buildSymptomRow('Chest Tightness', log.chestTightness.toInt(), Icons.compress_rounded),
         _buildSymptomRow('Chest Discomfort Breathing', log.chestDiscomfortBreathing.toInt(), Icons.medical_services_outlined),

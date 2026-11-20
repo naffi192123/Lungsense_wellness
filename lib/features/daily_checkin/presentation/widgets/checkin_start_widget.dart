@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/cough_recording_icon.dart';
 import '../bloc/daily_checkin_state.dart';
 
 class CheckinStartWidget extends StatelessWidget {
@@ -187,7 +188,7 @@ class CheckinStartWidget extends StatelessWidget {
             stepNumber: '1',
             title: 'Cough Sound Recording',
             description: 'Perform 3-5 distinct coughs into your phone microphone.',
-            icon: Icons.sick_outlined,
+            customIcon: const CoughRecordingIcon(size: 22, color: AppColors.primary),
             isCompleted: state.coughCompleted,
             accentColor: AppColors.primary,
           ),
@@ -282,7 +283,8 @@ class CheckinStartWidget extends StatelessWidget {
     required String stepNumber,
     required String title,
     required String description,
-    required IconData icon,
+    IconData? icon,
+    Widget? customIcon,
     required bool isCompleted,
     required Color accentColor,
   }) {
@@ -308,11 +310,18 @@ class CheckinStartWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Icon(
-                isCompleted ? Icons.check_circle_rounded : icon,
-                color: isCompleted ? AppColors.supportingGreen : accentColor,
-                size: 22,
-              ),
+              child: isCompleted
+                  ? const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppColors.supportingGreen,
+                      size: 22,
+                    )
+                  : (customIcon ??
+                      Icon(
+                        icon,
+                        color: accentColor,
+                        size: 22,
+                      )),
             ),
           ),
           const SizedBox(width: 14),

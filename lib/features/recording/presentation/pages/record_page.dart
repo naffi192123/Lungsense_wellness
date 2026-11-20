@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/cough_recording_icon.dart';
 import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../dashboard/presentation/bloc/wellness_event.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
@@ -415,11 +416,13 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                   color: themeColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  isCough ? Icons.sick_outlined : Icons.air_rounded,
-                  color: themeColor,
-                  size: 26,
-                ),
+                child: isCough
+                    ? CoughRecordingIcon(size: 26, color: themeColor)
+                    : Icon(
+                        Icons.air_rounded,
+                        color: themeColor,
+                        size: 26,
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -734,10 +737,17 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               ),
             ],
           ),
-          child: Icon(
-            _selectedTabIndex == 0 ? Icons.sick_outlined : Icons.air_rounded,
-            size: 54,
-            color: isRecording ? AppColors.primary : AppColors.textSecondary,
+          child: Center(
+            child: _selectedTabIndex == 0
+                ? CoughRecordingIcon(
+                    size: 60,
+                    color: isRecording ? AppColors.primary : AppColors.textSecondary,
+                  )
+                : Icon(
+                    Icons.air_rounded,
+                    size: 54,
+                    color: isRecording ? AppColors.primary : AppColors.textSecondary,
+                  ),
           ),
         ),
       ],
@@ -1210,11 +1220,13 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                         color: themeColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(
-                        isCough ? Icons.sick_outlined : Icons.air_rounded,
-                        color: themeColor,
-                        size: 24,
-                      ),
+                      child: isCough
+                          ? CoughRecordingIcon(size: 24, color: themeColor)
+                          : Icon(
+                              Icons.air_rounded,
+                              color: themeColor,
+                              size: 24,
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

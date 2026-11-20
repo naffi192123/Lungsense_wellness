@@ -389,7 +389,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 title: 'Cough Score',
                 score: state.coughScore,
                 timestamp: scoreTime,
-                icon: Icons.sick_outlined,
+                icon: Icons.mic,
                 color: AppColors.primary,
               ),
             ),
@@ -769,7 +769,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 16),
                 _buildRecordingOptionTile(
-                  icon: Icons.sick_outlined,
+                  icon: Icons.mic,
                   color: AppColors.primary,
                   title: 'Record Cough Sounds',
                   subtitle: '12-15 seconds voluntary cough analysis',
@@ -1065,7 +1065,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ? AppColors.supportingGreen
                 : (resolvedScore >= 60 ? AppColors.secondary : AppColors.error))
             : AppColors.textSecondary;
-        final iconData = isCough ? Icons.sick_outlined : Icons.air_rounded;
+        final iconData = isCough ? Icons.mic : Icons.air_rounded;
         final titleText = isCough ? 'Cough Recording' : 'Breathing Session';
 
         return Container(

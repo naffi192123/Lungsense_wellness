@@ -117,7 +117,7 @@ class CheckinReviewWidget extends StatelessWidget {
           // 1. Cough Recording Card
           _buildSummaryCard(
             title: 'Cough Sound Recording',
-            icon: Icons.sick_outlined,
+            icon: Icons.mic,
             accentColor: AppColors.primary,
             onEdit: () => onReRecord(CheckinStep.cough),
             editLabel: 'Re-record',

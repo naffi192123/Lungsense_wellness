@@ -27,7 +27,7 @@ class _CheckinProgressHeaderState extends State<CheckinProgressHeader> {
 
   // ---- step definitions (order matches display order) ---------------------
   static const _steps = [
-    _StepDef(label: 'Cough',     step: CheckinStep.cough,     icon: Icons.sick_outlined),
+    _StepDef(label: 'Cough',     step: CheckinStep.cough,     icon: Icons.mic),
     _StepDef(label: 'Breathing', step: CheckinStep.breathing,  icon: Icons.air_rounded),
     _StepDef(label: 'Symptoms',  step: CheckinStep.symptoms,   icon: Icons.fact_check_outlined),
     _StepDef(label: 'Diagnosis', step: CheckinStep.diagnosis,  icon: Icons.medical_information_outlined),
