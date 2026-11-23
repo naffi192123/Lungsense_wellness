@@ -187,7 +187,7 @@ class CheckinStartWidget extends StatelessWidget {
           _buildStageCard(
             stepNumber: '1',
             title: 'Cough Sound Recording',
-            description: 'Perform 3-5 distinct coughs into your phone microphone.',
+            description: 'Cough naturally 3–5 times, pausing briefly between each cough.',
             customIcon: const CoughRecordingIcon(size: 22, color: AppColors.primary),
             isCompleted: state.coughCompleted,
             accentColor: AppColors.primary,

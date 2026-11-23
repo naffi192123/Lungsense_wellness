@@ -241,24 +241,24 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                         color: AppColors.text,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _isCough
-                            ? 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s'
-                            : 'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: themeColor,
+                    if (!_isCough) ...[
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'REQUIRED: ${widget.minDurationSeconds}s – ${widget.maxDurationSeconds}s',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: themeColor,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -273,27 +273,31 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
-                          children: _isCough
-                              ? const [
-                                  TextSpan(text: 'Please produce '),
-                                  TextSpan(
-                                    text: '3 to 5 deliberate, voluntary coughs ',
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-                                  ),
-                                  TextSpan(text: 'clearly into your phone\'s microphone.'),
-                                ]
-                              : const [
+            child: _isCough
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Expanded(
+                        child: Text(
+                          'Cough naturally 3–5 times, pausing briefly between each cough.',
+                          style: TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                          Expanded(
+                            child: RichText(
+                              text: const TextSpan(
+                                style: TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
+                                children: [
                                   TextSpan(text: 'Take '),
                                   TextSpan(
                                     text: 'slow, steady, deep breaths ',
@@ -301,28 +305,26 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
                                   ),
                                   TextSpan(text: 'through your mouth or hold phone close to chest.'),
                                 ],
-                        ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Expanded(
-                      child: Text(
-                        _isCough
-                            ? 'Hold your phone ~15–20 cm (6–8 inches) away in a quiet room.'
-                            : 'Ensure a quiet environment without background noise or talking.',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+                      const SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                          const Expanded(
+                            child: Text(
+                              'Ensure a quiet environment without background noise or talking.',
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -676,7 +678,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
               _buildBulletPoint('Hold your phone roughly 15-20 cm away from your mouth.'),
               _buildBulletPoint('Ensure background noise (fans, TV, traffic) is minimized.'),
               _buildBulletPoint(_isCough
-                  ? 'Perform 3-5 distinct, deliberate voluntary coughs during the session.'
+                  ? 'Cough naturally 3–5 times, pausing briefly between each cough.'
                   : 'Take deep, controlled inhalations and exhalations through mouth.'),
             ],
           ),
