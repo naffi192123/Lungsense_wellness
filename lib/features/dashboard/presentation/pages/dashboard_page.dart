@@ -713,7 +713,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     // Check if check-in steps are logged for today
-    final hasTodayLog = state.dailyLogs.any((l) => _isSameDay(l.date.toLocal(), now));
+    final hasTodayLog = state.dailyLogs.any((l) => _isSameDay(l.timestamp.toLocal(), now));
     final hasTodayCough = state.audioAnalyses.any((a) =>
         a.type.toLowerCase().contains('cough') && _isSameDay(a.timestamp.toLocal(), now));
     final hasTodayBreathing = state.audioAnalyses.any((a) =>
