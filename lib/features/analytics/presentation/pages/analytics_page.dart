@@ -473,7 +473,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ],
 
             // 1. Top Row: 3 Summary Cards
-            _buildSummaryCards(validHistory),
+            _buildSummaryCards(
+              validHistory,
+              isBaselineActive: isBaselineActive,
+              baselineValue: baselineValue,
+              effectiveSessionCount: effectiveSessionCount,
+            ),
             const SizedBox(height: 16),
 
             // 2. Lung Wellness Trend Card (Includes Trend Graph + Personal Baseline Panel)
@@ -500,7 +505,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               baselineValue: baselineValue,
               validScoresChronological: validScoresChronological,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
+
+            // 4. Subtle Disclaimer
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'The Lung Wellness Score tracks changes over time and does not provide a medical diagnosis.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF94A3B8),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
 
           ],
         ),
@@ -542,25 +564,75 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // 1. Top Row: 3 Summary Cards
   // ─────────────────────────────────────────────────────────
 
-  Widget _buildSummaryCards(List<ScoreHistoryEntity> validHistory) {
+  Widget _buildSummaryCards(
+    List<ScoreHistoryEntity> validHistory, {
+    required bool isBaselineActive,
+    required double? baselineValue,
+    required int effectiveSessionCount,
+  }) {
     final validScores = validHistory
         .map((e) => e.lungWellnessScore ?? e.score.toDouble())
         .toList();
 
     final String latest;
-    final String average;
-    final String peak;
+    final String sevenDayAvg;
+    final String changeFromBaseline;
+    final String changeSubtitle;
+    final Color changeColor;
+    final Color changeBgColor;
+    final IconData changeIcon;
 
     if (validScores.isEmpty) {
       latest = '--';
-      average = '--';
-      peak = '--';
+      sevenDayAvg = '--';
+      changeFromBaseline = '--';
+      changeSubtitle = isBaselineActive ? 'vs baseline' : 'Needs 7 sessions';
+      changeColor = const Color(0xFF64748B);
+      changeBgColor = const Color(0xFFF1F5F9);
+      changeIcon = Icons.track_changes_rounded;
     } else {
+      // 1. Latest Score (whole number)
       latest = validScores.first.round().toString();
-      final avg = validScores.reduce((a, b) => a + b) / validScores.length;
-      average = avg.toStringAsFixed(1);
-      final hi = validScores.reduce((a, b) => a > b ? a : b);
-      peak = hi.round().toString();
+
+      // 2. 7-Day Average (sessions in last 7 days or up to last 7 sessions, whole number)
+      final now = DateTime.now();
+      final last7Days = validHistory.where((e) {
+        return now.difference(e.timestamp).inDays <= 7;
+      }).toList();
+      final recentEntities = last7Days.isNotEmpty ? last7Days : validHistory.take(7).toList();
+      final recentScores = recentEntities
+          .map((e) => e.lungWellnessScore ?? e.score.toDouble())
+          .toList();
+      final avg = recentScores.reduce((a, b) => a + b) / recentScores.length;
+      sevenDayAvg = avg.round().toString();
+
+      // 3. Change from Baseline (once established, whole number)
+      if (isBaselineActive && baselineValue != null) {
+        final baseRound = baselineValue.round();
+        final latestRound = validScores.first.round();
+        final diff = latestRound - baseRound;
+        changeFromBaseline = diff >= 0 ? '+$diff' : '$diff';
+        changeSubtitle = 'Baseline: $baseRound';
+        if (diff > 0) {
+          changeColor = const Color(0xFF16A34A);
+          changeBgColor = const Color(0xFFE8F8EE);
+          changeIcon = Icons.trending_up_rounded;
+        } else if (diff < 0) {
+          changeColor = const Color(0xFF0284C7);
+          changeBgColor = const Color(0xFFE0F2FE);
+          changeIcon = Icons.trending_down_rounded;
+        } else {
+          changeColor = const Color(0xFF64748B);
+          changeBgColor = const Color(0xFFF1F5F9);
+          changeIcon = Icons.trending_flat_rounded;
+        }
+      } else {
+        changeFromBaseline = '--';
+        changeSubtitle = 'Building ($effectiveSessionCount/7)';
+        changeColor = const Color(0xFF64748B);
+        changeBgColor = const Color(0xFFF1F5F9);
+        changeIcon = Icons.tune_rounded;
+      }
     }
 
     return Row(
@@ -575,26 +647,26 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             icon: Icons.speed_rounded,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _buildMetricCard(
-            title: 'AVERAGE SCORE',
-            value: average,
-            subtitle: 'Across all sessions',
+            title: '7-DAY AVERAGE',
+            value: sevenDayAvg,
+            subtitle: 'Recent 7 days',
             color: const Color(0xFF0284C7), // Blue / Cyan
             bgColor: const Color(0xFFE0F2FE),
             icon: Icons.bar_chart_rounded,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _buildMetricCard(
-            title: 'PEAK SCORE',
-            value: peak,
-            subtitle: 'Highest score',
-            color: const Color(0xFFEA580C), // Orange
-            bgColor: const Color(0xFFFFF7ED),
-            icon: Icons.star_rounded,
+            title: 'CHANGE FROM BASELINE',
+            value: changeFromBaseline,
+            subtitle: changeSubtitle,
+            color: changeColor,
+            bgColor: changeBgColor,
+            icon: changeIcon,
           ),
         ),
       ],
@@ -1358,10 +1430,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     // ACTIVE State: >= 7 sessions (Compact 2-Column Reference Design)
     final baseline = baselineValue ?? 76.9;
     final latest = latestScore ?? baseline;
-    final diff = latest - baseline;
-    final bool isHigher = diff > 0.049;
-    final bool isLower = diff < -0.049;
-    final diffStr = isHigher ? '+${diff.toStringAsFixed(1)}' : diff.toStringAsFixed(1);
+    final baseRound = baseline.round();
+    final latestRound = latest.round();
+    final diff = latestRound - baseRound;
+    final bool isHigher = diff > 0;
+    final bool isLower = diff < 0;
+    final diffStr = isHigher ? '+$diff' : '$diff';
     final diffColor = isHigher
         ? const Color(0xFF16A34A)
         : isLower
@@ -1487,7 +1561,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        baseline.toStringAsFixed(1),
+                        baseline.round().toString(),
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -1786,11 +1860,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     painter: _DonutChartPainter(
                       counts: [count80_100, count60_79, count40_59, count20_39, count0_19],
                       colors: const [
-                        Color(0xFF65C43B), // Green (80-100)
-                        Color(0xFF00B4D8), // Cyan (60-79)
-                        Color(0xFFFBBF24), // Yellow (40-59)
-                        Color(0xFFF97316), // Orange (20-39)
-                        Color(0xFFEF4444), // Red (0-19)
+                        Color(0xFF1E293B), // Slate 800 (80-100)
+                        Color(0xFF475569), // Slate 600 (60-79)
+                        Color(0xFF64748B), // Slate 500 (40-59)
+                        Color(0xFF94A3B8), // Slate 400 (20-39)
+                        Color(0xFFCBD5E1), // Slate 300 (0-19)
                       ],
                       total: total,
                     ),
@@ -1827,15 +1901,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 Expanded(
                   child: Column(
                     children: [
-                      _buildDonutLegendRow(color: const Color(0xFF65C43B), label: '80 – 100', count: count80_100, total: total),
+                      _buildDonutLegendRow(color: const Color(0xFF1E293B), label: '80 – 100', count: count80_100, total: total),
                       const SizedBox(height: 8),
-                      _buildDonutLegendRow(color: const Color(0xFF00B4D8), label: '60 – 79', count: count60_79, total: total),
+                      _buildDonutLegendRow(color: const Color(0xFF475569), label: '60 – 79', count: count60_79, total: total),
                       const SizedBox(height: 8),
-                      _buildDonutLegendRow(color: const Color(0xFFFBBF24), label: '40 – 59', count: count40_59, total: total),
+                      _buildDonutLegendRow(color: const Color(0xFF64748B), label: '40 – 59', count: count40_59, total: total),
                       const SizedBox(height: 8),
-                      _buildDonutLegendRow(color: const Color(0xFFF97316), label: '20 – 39', count: count20_39, total: total),
+                      _buildDonutLegendRow(color: const Color(0xFF94A3B8), label: '20 – 39', count: count20_39, total: total),
                       const SizedBox(height: 8),
-                      _buildDonutLegendRow(color: const Color(0xFFEF4444), label: '0 – 19', count: count0_19, total: total),
+                      _buildDonutLegendRow(color: const Color(0xFFCBD5E1), label: '0 – 19', count: count0_19, total: total),
                     ],
                   ),
                 ),
@@ -2038,25 +2112,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       }
     }
 
-    // 3. Personal Best Insight
-    final String perfTitle;
+    // 3. Your Recent Pattern (replacing Personal Best)
+    final String perfTitle = 'Your Recent Pattern';
     final String perfMessage;
     final int latest = validScoresChronological.isNotEmpty
         ? validScoresChronological.last.round()
         : 0;
-    final int peak = validScoresChronological.isNotEmpty
-        ? validScoresChronological.reduce((a, b) => a > b ? a : b).round()
-        : 0;
 
-    if (count < 2) {
-      perfTitle = 'Personal Best';
-      perfMessage = 'Complete more sessions to track your highest personal score.';
-    } else if (latest >= peak) {
-      perfTitle = 'Personal Best';
-      perfMessage = 'Your latest score ($latest) is your highest so far!';
+    if (!isBaselineActive || baselineValue == null) {
+      if (count < 2) {
+        perfMessage = 'Complete more check-in sessions to establish your baseline and uncover patterns.';
+      } else {
+        perfMessage = 'Complete 7 sessions to compare your recent scores against an established baseline.';
+      }
     } else {
-      perfTitle = 'Personal Best';
-      perfMessage = 'Your peak score so far is $peak (latest: $latest).';
+      final int baseRound = baselineValue.round();
+      final int diff = latest - baseRound;
+      if (diff > 0) {
+        perfMessage = 'Your latest score ($latest) is $diff points above your established baseline ($baseRound).';
+      } else if (diff < 0) {
+        perfMessage = 'Your latest score ($latest) is ${diff.abs()} points below your established baseline ($baseRound).';
+      } else {
+        perfMessage = 'Your latest score ($latest) matches your established baseline ($baseRound).';
+      }
     }
 
     return Container(
@@ -2130,12 +2208,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ),
           const SizedBox(height: 10),
 
-          // Item 3: Personal Best
+          // Item 3: Your Recent Pattern
           _buildInsightItem(
-            cardBg: const Color(0xFFFEF2F2),
-            icon: Icons.favorite_rounded,
-            iconColor: const Color(0xFFEF4444),
-            iconBg: const Color(0xFFFEE2E2),
+            cardBg: const Color(0xFFF0FDF4),
+            icon: Icons.track_changes_rounded,
+            iconColor: const Color(0xFF0F766E),
+            iconBg: const Color(0xFFCCFBF1),
             title: perfTitle,
             subtitle: perfMessage,
           ),
@@ -2358,7 +2436,7 @@ class _LungWellnessTrendPainter extends CustomPainter {
       final textSpan = TextSpan(
         children: [
           TextSpan(
-            text: '${baselineValue!.toStringAsFixed(1)}\n',
+            text: '${baselineValue!.round()}\n',
             style: const TextStyle(
               color: Color(0xFFEA580C),
               fontWeight: FontWeight.bold,

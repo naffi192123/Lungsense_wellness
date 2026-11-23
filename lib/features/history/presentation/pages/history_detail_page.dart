@@ -652,7 +652,7 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
                   ),
                   child: Center(
                     child: Text(
-                      '${score.score}',
+                      '${(score.lungWellnessScore ?? score.score.toDouble()).round()}',
                       style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ),
@@ -695,7 +695,7 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.text),
                   ),
                   Text(
-                    '${entry.value}',
+                    '${entry.value is num ? (entry.value as num).round() : entry.value}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
                   ),
                 ],

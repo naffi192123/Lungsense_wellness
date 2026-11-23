@@ -278,9 +278,9 @@ class _DashboardPageState extends State<DashboardPage> {
             : (displayScoreVal >= 60 ? AppColors.secondary : AppColors.error))
         : AppColors.textSecondary;
 
-    // Formatting lung_wellness_score to 1 decimal place if fractional, else int
+    // Display score as whole number
     final scoreStr = hasScore
-        ? (lungWellnessScore % 1 == 0 ? lungWellnessScore.toInt().toString() : lungWellnessScore.toStringAsFixed(1))
+        ? lungWellnessScore.round().toString()
         : '--';
 
     final String messageText;
@@ -456,12 +456,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final String displayValue;
     if (hasBaseline) {
-      if (baselineVal % 1 == 0) {
-        displayValue = baselineVal.toInt().toString();
-      } else {
-        final fixed = baselineVal.toStringAsFixed(2);
-        displayValue = fixed.endsWith('0') ? baselineVal.toStringAsFixed(1) : fixed;
-      }
+      displayValue = baselineVal.round().toString();
     } else {
       displayValue = '';
     }

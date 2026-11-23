@@ -23,9 +23,7 @@ class CheckinCompletionWidget extends StatelessWidget {
     final hasScore = lungWellnessScore != null && lungWellnessScore > 0;
     final displayScoreVal = hasScore ? lungWellnessScore : 0.0;
     final scoreStr = hasScore
-        ? (lungWellnessScore % 1 == 0
-            ? lungWellnessScore.toInt().toString()
-            : lungWellnessScore.toStringAsFixed(1))
+        ? lungWellnessScore.round().toString()
         : '--';
 
     final statusText = hasScore
