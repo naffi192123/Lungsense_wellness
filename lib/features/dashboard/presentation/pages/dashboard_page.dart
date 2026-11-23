@@ -219,7 +219,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                   // Continuous Auto-Scrolling Daily Tips Section
                   const Text(
-                    'Daily Respiratory Tips',
+                    'Daily Respiratory Wellness Tips',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
                   ),
                   const SizedBox(height: 12),
@@ -436,7 +436,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final statusText = hasBaseline
         ? (state.baselineStatusText ?? 'Active')
-        : (state.baselineStatusText ?? 'Forming');
+        : (state.baselineStatusText == 'Forming' || state.baselineStatusText == null
+            ? 'Building'
+            : state.baselineStatusText!);
 
     final statusColor = hasBaseline
         ? AppColors.supportingGreen
@@ -449,9 +451,11 @@ class _DashboardPageState extends State<DashboardPage> {
       final rawMsg = state.baselineMessage;
       displayMessage = (rawMsg != null &&
               rawMsg.isNotEmpty &&
-              !rawMsg.toLowerCase().contains('trend'))
+              !rawMsg.toLowerCase().contains('trend') &&
+              !rawMsg.toLowerCase().contains('few sessions') &&
+              !rawMsg.toLowerCase().contains('available after'))
           ? rawMsg
-          : 'Baseline will be available after a few sessions.';
+          : 'Complete check-ins on at least seven separate days.';
     }
 
     final String displayValue;
@@ -589,7 +593,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final statusText = customStatusText ??
         (hasScore
             ? (score >= 80 ? 'Optimal' : (score >= 60 ? 'Fair' : 'Attention'))
-            : 'No logs yet');
+            : 'Not recorded today');
 
     final statusColor = hasScore
         ? (score >= 80 ? AppColors.supportingGreen : (score >= 60 ? AppColors.secondary : AppColors.error))
@@ -635,25 +639,37 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
               const SizedBox(width: 6),
-              Text(
-                statusText,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
+              Expanded(
+                child: Text(
+                  statusText,
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: statusColor),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            customSubtitle ?? _formatScoreTimestamp(hasScore ? timestamp : null),
-            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
-            overflow: TextOverflow.ellipsis,
-          ),
+          if (hasScore && timestamp != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              customSubtitle ?? _formatScoreTimestamp(timestamp),
+              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ] else if (customSubtitle != null && customSubtitle.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              customSubtitle,
+              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
     );
   }
 
   String _formatScoreTimestamp(DateTime? timestamp) {
-    if (timestamp == null) return 'No data yet';
+    if (timestamp == null) return 'Not recorded today';
     final now = DateTime.now();
     final isToday = now.year == timestamp.year && now.month == timestamp.month && now.day == timestamp.day;
     final isYesterday = now.subtract(const Duration(days: 1)).year == timestamp.year &&

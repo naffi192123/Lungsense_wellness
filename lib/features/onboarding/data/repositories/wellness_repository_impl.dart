@@ -435,7 +435,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
         return await scoreRemoteDataSource!.getBaselineStatus();
       } catch (_) {}
     }
-    return {'status': 'initializing', 'message': 'Baseline will be available after a few sessions.'};
+    return {'status': 'initializing', 'message': 'Complete check-ins on at least seven separate days.'};
   }
 
   @override

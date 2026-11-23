@@ -35,7 +35,7 @@ void main() {
 
     test('returns user-friendly fallback message when baseline is initializing', () async {
       const jsonResponse =
-          '{"session_count":1,"status":"initializing","message":"Baseline will be available after a few sessions."}';
+          '{"session_count":1,"status":"initializing","message":"Complete check-ins on at least seven separate days."}';
 
       when(() => mockApiClient.get('/score/baseline')).thenAnswer(
         (_) async => http.Response(jsonResponse, 200),
@@ -45,7 +45,7 @@ void main() {
 
       expect(result['status'], equals('initializing'));
       expect(result['baseline_mean'], isNull);
-      expect(result['message'], equals('Baseline will be available after a few sessions.'));
+      expect(result['message'], equals('Complete check-ins on at least seven separate days.'));
     });
 
     test('returns graceful fallback when API returns empty body', () async {
@@ -56,7 +56,7 @@ void main() {
       final result = await dataSource.getBaselineStatus();
 
       expect(result['status'], equals('initializing'));
-      expect(result['message'], equals('Baseline will be available after a few sessions.'));
+      expect(result['message'], equals('Complete check-ins on at least seven separate days.'));
     });
 
     test('returns graceful fallback when API returns null body', () async {
@@ -67,7 +67,7 @@ void main() {
       final result = await dataSource.getBaselineStatus();
 
       expect(result['status'], equals('initializing'));
-      expect(result['message'], equals('Baseline will be available after a few sessions.'));
+      expect(result['message'], equals('Complete check-ins on at least seven separate days.'));
     });
 
     test('returns graceful fallback on server error or network exception', () async {
@@ -78,7 +78,7 @@ void main() {
       final result = await dataSource.getBaselineStatus();
 
       expect(result['status'], equals('initializing'));
-      expect(result['message'], equals('Baseline will be available after a few sessions.'));
+      expect(result['message'], equals('Complete check-ins on at least seven separate days.'));
     });
   });
 }

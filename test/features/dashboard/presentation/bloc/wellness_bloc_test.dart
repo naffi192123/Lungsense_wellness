@@ -65,13 +65,13 @@ void main() {
         baselineStatus: {
           'session_count': 1,
           'status': 'initializing',
-          'message': 'Baseline will be available after a few sessions.',
+          'message': 'Complete check-ins on at least seven separate days.',
         },
       );
 
       expect(stateInitializing.baselineValue, isNull);
-      expect(stateInitializing.baselineStatusText, equals('Forming'));
-      expect(stateInitializing.baselineMessage, equals('Baseline will be available after a few sessions.'));
+      expect(stateInitializing.baselineStatusText, equals('Building'));
+      expect(stateInitializing.baselineMessage, equals('Complete check-ins on at least seven separate days.'));
     });
 
     test('WellnessState.baselineValue returns null when baselineStatus is null or empty', () {

@@ -125,7 +125,7 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
             response.body.trim().startsWith('<')) {
           return {
             'status': 'initializing',
-            'message': 'Baseline will be available after a few sessions.',
+            'message': 'Complete check-ins on at least seven separate days.',
           };
         }
         final decoded = jsonDecode(response.body);
@@ -134,12 +134,12 @@ class ScoreRemoteDataSourceImpl implements ScoreRemoteDataSource {
       }
       return {
         'status': 'initializing',
-        'message': 'Baseline will be available after a few sessions.',
+        'message': 'Complete check-ins on at least seven separate days.',
       };
     } catch (_) {
       return {
         'status': 'initializing',
-        'message': 'Baseline will be available after a few sessions.',
+        'message': 'Complete check-ins on at least seven separate days.',
       };
     }
   }

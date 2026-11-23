@@ -137,7 +137,7 @@ void main() {
       baselineStatus: const {
         'session_count': 1,
         'status': 'initializing',
-        'message': 'Baseline will be available after a few sessions.',
+        'message': 'Complete check-ins on at least seven separate days.',
       },
     );
 
@@ -150,9 +150,9 @@ void main() {
     // Verify Baseline card header is present
     expect(find.text('Baseline'), findsOneWidget);
     // Verify friendly message is displayed
-    expect(find.text('Baseline will be available after a few sessions.'), findsOneWidget);
-    // Verify Forming status is displayed
-    expect(find.text('Forming'), findsOneWidget);
+    expect(find.text('Complete check-ins on at least seven separate days.'), findsOneWidget);
+    // Verify Building status is displayed
+    expect(find.text('Building'), findsOneWidget);
     // Verify placeholder numbers or N/A are NOT displayed for baseline
     expect(find.text('0'), findsNothing);
     expect(find.text('N/A'), findsNothing);

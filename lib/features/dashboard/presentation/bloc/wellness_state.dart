@@ -78,13 +78,13 @@ class WellnessState extends Equatable {
     return null;
   }
 
-  /// Lifecycle status string from GET /score/baseline (e.g. 'Active', 'Forming').
+  /// Lifecycle status string from GET /score/baseline (e.g. 'Active', 'Building').
   String? get baselineStatusText {
     if (baselineStatus == null) return null;
     final status = baselineStatus!['status']?.toString();
     if (status != null && status.trim().isNotEmpty) {
       final trimmed = status.trim();
-      if (trimmed.toLowerCase() == 'initializing') return 'Forming';
+      if (trimmed.toLowerCase() == 'initializing' || trimmed.toLowerCase() == 'forming') return 'Building';
       return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
     }
     return null;
