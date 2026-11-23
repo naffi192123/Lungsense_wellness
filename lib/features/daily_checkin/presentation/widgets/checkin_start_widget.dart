@@ -198,7 +198,7 @@ class CheckinStartWidget extends StatelessWidget {
           _buildStageCard(
             stepNumber: '2',
             title: 'Breathing / Chest Sound',
-            description: 'Take deep, steady inhalations and exhalations.',
+            description: 'Take five slow, steady breaths through your mouth.',
             icon: Icons.air_rounded,
             isCompleted: state.breathingCompleted,
             accentColor: AppColors.secondary,

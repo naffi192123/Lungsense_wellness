@@ -432,31 +432,13 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                     Text(
                       isCough
                           ? 'Voluntary Cough Recording'
-                          : 'Deep Breathing Recording',
+                          : 'Breathing Sound Recording',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                         color: AppColors.text,
                       ),
                     ),
-                    if (!isCough) ...[
-                      const SizedBox(height: 3),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'REQUIRED: ${_minDurationSeconds}s – ${_maxDurationSeconds}s',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: themeColor,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -487,39 +469,51 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                          Expanded(
-                            child: RichText(
-                              text: const TextSpan(
-                                style: TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
-                                children: [
-                                  TextSpan(text: 'Take '),
-                                  TextSpan(
-                                    text: 'slow, steady, deep breaths ',
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
-                                  ),
-                                  TextSpan(text: 'through your mouth or hold phone close to chest.'),
-                                ],
+                      const Text(
+                        'Before You Record',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _buildInstructionBullet('Sit upright in a quiet place.', themeColor),
+                      const SizedBox(height: 4),
+                      _buildInstructionBullet('Hold your phone 15–20 cm from your mouth.', themeColor),
+                      const SizedBox(height: 4),
+                      _buildInstructionBullet('Keep the microphone uncovered.', themeColor),
+                      const SizedBox(height: 4),
+                      _buildInstructionBullet('Take five slow, steady breaths through your mouth.', themeColor),
+                      const SizedBox(height: 4),
+                      _buildInstructionBullet('Stop if you feel dizzy or uncomfortable.', themeColor),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.info_outline_rounded, size: 14, color: themeColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'For longitudinal monitoring, consistency in breathing method, phone distance, and number of breaths is more valuable than a longer recording.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: themeColor,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                          const Expanded(
-                            child: Text(
-                              'Ensure a quiet environment without background noise or talking.',
-                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -993,8 +987,23 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               _buildBulletPoint('Ensure background noise (fans, TV, traffic) is minimized.'),
               _buildBulletPoint(_selectedTabIndex == 0
                   ? 'Cough naturally 3–5 times, pausing briefly between each cough.'
-                  : 'Take deep, controlled inhalations and exhalations through mouth.'),
+                  : 'Take five slow, steady breaths through your mouth.'),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInstructionBullet(String text, Color bulletColor) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('• ', style: TextStyle(color: bulletColor, fontWeight: FontWeight.bold, fontSize: 14)),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12, color: AppColors.text, height: 1.3),
           ),
         ),
       ],

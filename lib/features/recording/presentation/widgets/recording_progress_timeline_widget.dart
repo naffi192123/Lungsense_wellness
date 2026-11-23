@@ -70,7 +70,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     final isMinReached = displayElapsed >= minDurationSeconds;
     final ticks = _generateTicks(effectiveMax);
     final isCough = recordingType.toLowerCase().contains('cough');
-    final typeLabel = isCough ? 'Voluntary Cough Audio' : 'Deep Breathing Audio';
+    final typeLabel = isCough ? 'Voluntary Cough Audio' : 'Breathing Recording';
 
     Color statusColor;
     String statusText;
