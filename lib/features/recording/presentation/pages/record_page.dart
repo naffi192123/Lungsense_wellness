@@ -454,16 +454,14 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
               border: Border.all(color: AppColors.border),
             ),
             child: isCough
-                ? Row(
+                ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('• ', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                      const Expanded(
-                        child: Text(
-                          'Cough naturally 3–5 times, pausing briefly between each cough.',
-                          style: TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.35),
-                        ),
-                      ),
+                      _buildInstructionBullet('Cough naturally 3–5 times, pausing briefly between each cough.', themeColor),
+                      const SizedBox(height: 4),
+                      _buildInstructionBullet('Hold your phone approximately 15–20 cm from your mouth.', themeColor),
+                      const SizedBox(height: 4),
+                      _buildInstructionBullet('Record in a quiet environment.', themeColor),
                     ],
                   )
                 : Column(
@@ -939,59 +937,21 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
   Widget _buildEnvironmentTipsAndPicker(BuildContext context, AudioRecordingState state) {
     final bloc = context.read<AudioRecordingBloc>();
 
-    return Column(
-      children: [
-        // Upload from Device File Button
-        OutlinedButton.icon(
-          onPressed: () {
-            _audioPlayerService.stop();
-            bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
-          },
-          icon: const Icon(Icons.file_upload_outlined, size: 18, color: AppColors.primary),
-          label: const Text(
-            'Import Recorded Audio File',
-            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
-          ),
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: AppColors.primary),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Tips Card
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.tips_and_updates_outlined, size: 18, color: AppColors.primary),
-                  SizedBox(width: 8),
-                  Text(
-                    'Optimal Recording Guidelines',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _buildBulletPoint('Hold your phone roughly 15-20 cm away from your mouth.'),
-              _buildBulletPoint('Ensure background noise (fans, TV, traffic) is minimized.'),
-              _buildBulletPoint(_selectedTabIndex == 0
-                  ? 'Cough naturally 3–5 times, pausing briefly between each cough.'
-                  : 'Take five slow, steady breaths through your mouth.'),
-            ],
-          ),
-        ),
-      ],
+    return OutlinedButton.icon(
+      onPressed: () {
+        _audioPlayerService.stop();
+        bloc.add(AudioPickFileEvent(recordingType: _currentRecordingType));
+      },
+      icon: const Icon(Icons.file_upload_outlined, size: 18, color: AppColors.primary),
+      label: const Text(
+        'Import Recorded Audio File',
+        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: AppColors.primary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
     );
   }
 

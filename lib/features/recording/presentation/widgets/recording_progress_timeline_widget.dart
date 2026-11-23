@@ -46,10 +46,14 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
   }
 
   List<int> _generateTicks(int effectiveMax) {
-    final List<int> ticks = [];
+    final List<int> ticks = [0];
     final step = effectiveMax > 40 ? 10 : 5;
-    for (int t = 0; t <= effectiveMax; t += step) {
-      ticks.add(t);
+    for (int t = step; t < effectiveMax; t += step) {
+      // Only include intermediate tick if it is at least 3 seconds away from effectiveMax
+      // to prevent tick notch and label collision at the end of the timeline
+      if (effectiveMax - t >= 3) {
+        ticks.add(t);
+      }
     }
     if (!ticks.contains(effectiveMax)) {
       ticks.add(effectiveMax);
@@ -70,7 +74,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     final isMinReached = displayElapsed >= minDurationSeconds;
     final ticks = _generateTicks(effectiveMax);
     final isCough = recordingType.toLowerCase().contains('cough');
-    final typeLabel = isCough ? 'Voluntary Cough Audio' : 'Breathing Recording';
+    final String typeLabel = isCompleted ? 'Audio' : (isCough ? 'Voluntary Cough Audio' : 'Breathing Recording');
 
     Color statusColor;
     String statusText;
@@ -253,7 +257,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
 
                             // Filled LungSense Green gradient track
                             Container(
-                              width: totalWidth * currentFraction,
+                              width: (totalWidth * currentFraction).clamp(0.0, totalWidth),
                               height: trackHeight,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
