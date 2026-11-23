@@ -29,34 +29,34 @@ class CheckinReviewWidget extends StatelessWidget {
         state.errorMessage != null;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.assignment_turned_in_rounded,
                     color: AppColors.primary,
-                    size: 24,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,15 +65,15 @@ class CheckinReviewWidget extends StatelessWidget {
                         'Review Your Check-in',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 15,
                           color: AppColors.text,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      SizedBox(height: 1),
                       Text(
                         'Verify your captured data before finalizing.',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -83,25 +83,25 @@ class CheckinReviewWidget extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
           // Error Banner (if any)
           if (hasError) ...[
             Container(
-              padding: const EdgeInsets.all(14.0),
+              padding: const EdgeInsets.all(12.0),
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 22),
-                  const SizedBox(width: 10),
+                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       state.errorMessage!,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.text),
+                      style: const TextStyle(fontSize: 12, color: AppColors.text),
                     ),
                   ),
                   TextButton(
@@ -111,7 +111,7 @@ class CheckinReviewWidget extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
           ],
 
           // 1. Cough Recording Card
@@ -132,7 +132,7 @@ class CheckinReviewWidget extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // 2. Breathing Recording Card
           _buildSummaryCard(
@@ -152,7 +152,7 @@ class CheckinReviewWidget extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // 3. Symptoms Log Card
           _buildSummaryCard(
@@ -173,7 +173,7 @@ class CheckinReviewWidget extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // 4. Diagnosis Card (Optional)
           _buildSummaryCard(
@@ -194,21 +194,21 @@ class CheckinReviewWidget extends StatelessWidget {
                 _MetricItem('Notes', diagnosis.notes!.trim()),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
 
           // Complete Check-in Button
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.0),
+              borderRadius: BorderRadius.circular(14.0),
               gradient: const LinearGradient(
                 colors: [AppColors.primary, AppColors.supportingGreen],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -218,44 +218,61 @@ class CheckinReviewWidget extends StatelessWidget {
                 backgroundColor: Colors.transparent,
                 foregroundColor: AppColors.surface,
                 shadowColor: Colors.transparent,
-                minimumSize: const Size(double.infinity, 56),
+                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
+                minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(14.0),
                 ),
               ),
               child: isSubmitting
                   ? const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(
                             color: AppColors.surface,
                             strokeWidth: 2,
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Computing Wellness Score...',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Computing Wellness Score...',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
                         ),
                       ],
                     )
                   : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_rounded, size: 22),
-                        SizedBox(width: 8),
-                        Text(
-                          'Complete Check-in & Compute Score',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        Icon(Icons.check_circle_rounded, size: 20),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Complete Check-in & Compute Score',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
           const Center(
             child: Text(
               "Submit today's check-in to view your updated LungWellness Score.",
@@ -263,7 +280,7 @@ class CheckinReviewWidget extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 10),
         ],
       ),
     );
@@ -278,10 +295,10 @@ class CheckinReviewWidget extends StatelessWidget {
     required List<_MetricItem> metrics,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -290,20 +307,20 @@ class CheckinReviewWidget extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: accentColor, size: 20),
+                child: Icon(icon, color: accentColor, size: 18),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 13.5,
                     color: AppColors.text,
                   ),
                 ),
@@ -313,6 +330,8 @@ class CheckinReviewWidget extends StatelessWidget {
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -320,32 +339,32 @@ class CheckinReviewWidget extends StatelessWidget {
                     Text(
                       editLabel,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Icon(Icons.edit_rounded, size: 14, color: AppColors.primary),
+                    const Icon(Icons.edit_rounded, size: 13, color: AppColors.primary),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 12,
-            runSpacing: 8,
+            spacing: 8,
+            runSpacing: 6,
             children: metrics.map((m) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
                   color: m.isHighlight
                       ? AppColors.supportingGreen.withValues(alpha: 0.1)
                       : AppColors.background,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: m.isHighlight
                         ? AppColors.supportingGreen.withValues(alpha: 0.3)
@@ -358,7 +377,7 @@ class CheckinReviewWidget extends StatelessWidget {
                     Text(
                       '${m.label}: ',
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         color: m.isHighlight
                             ? AppColors.supportingGreen
                             : AppColors.textSecondary,
@@ -368,7 +387,7 @@ class CheckinReviewWidget extends StatelessWidget {
                     Text(
                       m.value,
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         color: m.isHighlight
                             ? AppColors.supportingGreen
                             : AppColors.text,

@@ -101,12 +101,12 @@ class _CheckinProgressHeaderState extends State<CheckinProgressHeader> {
     return Container(
       width: double.infinity,
       color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: SingleChildScrollView(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
         // Add symmetric padding so the first / last step can be centred too.
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: _buildStepRow(),
@@ -242,9 +242,9 @@ class _Connector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 24,
+      width: 18,
       height: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       color: isActive ? AppColors.primary : AppColors.border,
     );
   }
