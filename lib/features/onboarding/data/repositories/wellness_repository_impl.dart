@@ -215,7 +215,7 @@ class WellnessRepositoryImpl implements WellnessRepository {
             durationSeconds: durationSec,
             confidence: qScoreInt,
             lungsScore: qScoreInt,
-            insight: 'Acoustic parameters processed: Breathing Rate = ${breathingRateBpm != null ? '${breathingRateBpm.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${dominantFreq != null ? '${dominantFreq.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
+            insight: 'Acoustic parameters processed: Guided Breathing Rate = ${breathingRateBpm != null ? '${breathingRateBpm.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${dominantFreq != null ? '${dominantFreq.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
             intensity: 'Normal',
             breathingRate: (breathingRateBpm ?? 0).toInt(),
             breathingRateBpm: breathingRateBpm,

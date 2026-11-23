@@ -148,7 +148,7 @@ class CheckinReviewWidget extends StatelessWidget {
                 if (breathing.normalizedQualityScore != null)
                   _MetricItem('Quality', '${breathing.normalizedQualityScore!.toStringAsFixed(1)}%'),
                 if (breathing.breathingRateBpm != null)
-                  _MetricItem('Breathing Rate', '${breathing.breathingRateBpm!.toStringAsFixed(1)} BPM'),
+                  _MetricItem('Guided Breathing Rate', '${breathing.breathingRateBpm!.toStringAsFixed(1)} BPM'),
               ],
             ],
           ),
@@ -156,7 +156,7 @@ class CheckinReviewWidget extends StatelessWidget {
 
           // 3. Symptoms Log Card
           _buildSummaryCard(
-            title: 'Daily Symptoms Log',
+            title: 'Symptom Check-in',
             icon: Icons.fact_check_outlined,
             accentColor: Colors.amber.shade800,
             onEdit: () => onReRecord(CheckinStep.symptoms),
@@ -258,7 +258,7 @@ class CheckinReviewWidget extends StatelessWidget {
           const SizedBox(height: 16),
           const Center(
             child: Text(
-              'Finalizes your daily check-in session and calculates your updated score.',
+              "Submit today's check-in to view your updated LungWellness Score.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),

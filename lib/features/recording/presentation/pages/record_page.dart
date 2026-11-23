@@ -1176,7 +1176,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
       durationSeconds: job.durationSeconds,
       confidence: qScoreInt,
       lungsScore: qScoreInt,
-      insight: 'Acoustic parameters processed: Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
+      insight: 'Acoustic parameters processed: Guided Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
       intensity: 'Normal',
       breathingRate: (job.breathingRateBpm ?? 0).toInt(),
       breathingRateBpm: job.breathingRateBpm,
@@ -1328,7 +1328,7 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
                         ),
                       if (job.breathingRateBpm != null)
                         _buildPopupMetricRow(
-                          label: 'Breathing Rate',
+                          label: 'Guided Breathing Rate',
                           value: '${job.breathingRateBpm!.toStringAsFixed(1)} BPM',
                           icon: Icons.air_rounded,
                         ),

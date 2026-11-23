@@ -435,7 +435,7 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
           _FeatureItem('Quality Score', qualityStr, Icons.speed_rounded),
           if (isCough)
             _FeatureItem('Cough Events', item.coughEventCount != null ? '${item.coughEventCount}' : 'N/A', Icons.graphic_eq_rounded),
-          _FeatureItem('Breathing Rate', breathingRateStr, Icons.air_rounded),
+          _FeatureItem('Guided Breathing Rate', breathingRateStr, Icons.air_rounded),
           _FeatureItem('Breath Cycle', breathCycleStr, Icons.loop_rounded),
           _FeatureItem('Dominant Frequency', dominantFreqStr, Icons.waves_rounded),
           _FeatureItem('Classification', item.classification ?? (item.rhythm.isNotEmpty ? item.rhythm : 'Optimal'), Icons.insights_rounded),

@@ -378,7 +378,7 @@ class _AudioAnalysisPageState extends State<AudioAnalysisPage> {
       childAspectRatio: 2.2,
       children: [
         _buildDetailTile('Cough Intensity', 'Moderate', Icons.volume_up_outlined),
-        _buildDetailTile('Breathing Rate', '16 bpm', Icons.speed_rounded),
+        _buildDetailTile('Guided Breathing Rate', '16 bpm', Icons.speed_rounded),
         _buildDetailTile('Rhythm', 'Steady', Icons.sync_rounded),
         _buildDetailTile('Signal Quality', 'Excellent', Icons.check_circle_outline_rounded),
       ],

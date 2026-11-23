@@ -118,7 +118,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Daily Symptoms Log'),
+        title: const Text('Symptom Check-in'),
         centerTitle: false,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.text,
@@ -133,7 +133,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
           if (state.status == WellnessStatus.saveSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Daily log saved successfully!'),
+                content: Text('Symptom check-in saved successfully!'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -373,7 +373,7 @@ class _DailyLogPageState extends State<DailyLogPage> {
                                 Icon(Icons.save_rounded, size: 22),
                                 SizedBox(width: 8),
                                 Text(
-                                  'Save Daily Symptoms',
+                                  'Save Symptom Check-in',
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                 ),
                               ],

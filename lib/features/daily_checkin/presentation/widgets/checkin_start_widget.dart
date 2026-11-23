@@ -208,7 +208,7 @@ class CheckinStartWidget extends StatelessWidget {
           // Stage 3: Symptoms
           _buildStageCard(
             stepNumber: '3',
-            title: 'Symptom & Lifestyle Log',
+            title: 'Symptom Check-in',
             description: 'Rate breathlessness, cough severity, fever, and daily activity.',
             icon: Icons.fact_check_outlined,
             isCompleted: state.symptomsCompleted,

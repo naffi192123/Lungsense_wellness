@@ -360,7 +360,7 @@ class _CheckinSymptomsWidgetState extends State<CheckinSymptomsWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Step 3: Daily Symptoms Log',
+                  'Step 3: Symptom Check-in',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,

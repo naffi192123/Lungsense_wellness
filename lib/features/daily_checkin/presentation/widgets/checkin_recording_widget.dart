@@ -1019,7 +1019,7 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
       durationSeconds: job.durationSeconds,
       confidence: qScoreInt,
       lungsScore: qScoreInt,
-      insight: 'Acoustic parameters processed: Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
+      insight: 'Acoustic parameters processed: Guided Breathing Rate = ${job.breathingRateBpm != null ? '${job.breathingRateBpm!.toStringAsFixed(1)} BPM' : 'N/A'}, Dominant Frequency = ${job.dominantFrequencyHz != null ? '${job.dominantFrequencyHz!.toStringAsFixed(1)} Hz' : 'N/A'}, Classification = $classification.',
       intensity: 'Normal',
       breathingRate: (job.breathingRateBpm ?? 0).toInt(),
       breathingRateBpm: job.breathingRateBpm,

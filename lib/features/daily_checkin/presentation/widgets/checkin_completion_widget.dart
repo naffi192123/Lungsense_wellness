@@ -174,7 +174,7 @@ class CheckinCompletionWidget extends StatelessWidget {
                 const SizedBox(height: 8),
                 _buildCheckRow('Breathing Audio Recorded & Processed'),
                 const SizedBox(height: 8),
-                _buildCheckRow('Daily Symptoms & Metrics Logged'),
+                _buildCheckRow('Symptom Check-in Completed'),
                 const SizedBox(height: 8),
                 _buildCheckRow('Lung Wellness Score Computed & Synced'),
               ],

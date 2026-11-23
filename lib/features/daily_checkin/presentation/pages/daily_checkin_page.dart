@@ -57,7 +57,7 @@ class DailyCheckinPage extends StatelessWidget {
       case CheckinStep.breathing:
         return 'Breathing Recording';
       case CheckinStep.symptoms:
-        return 'Daily Symptoms';
+        return 'Symptom Check-in';
       case CheckinStep.diagnosis:
         return 'Diagnosis (Optional)';
       case CheckinStep.review:
