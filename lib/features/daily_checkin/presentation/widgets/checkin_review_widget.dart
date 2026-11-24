@@ -259,7 +259,7 @@ class CheckinReviewWidget extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              'Complete Check-in & Compute Score',
+                              'Submit Check-in',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,

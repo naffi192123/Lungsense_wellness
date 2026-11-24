@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -47,11 +46,20 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
 
   List<int> _generateTicks(int effectiveMax) {
     final List<int> ticks = [0];
-    final step = effectiveMax > 40 ? 10 : 5;
+    final int step;
+    if (effectiveMax > 50) {
+      step = 15;
+    } else if (effectiveMax > 25) {
+      step = 10;
+    } else {
+      step = 5;
+    }
+    final minEndGap = (step * 0.6).round(); // 3 for step 5, 6 for step 10, 9 for step 15
+
     for (int t = step; t < effectiveMax; t += step) {
-      // Only include intermediate tick if it is at least 3 seconds away from effectiveMax
+      // Only include intermediate tick if it is at least minEndGap seconds away from effectiveMax
       // to prevent tick notch and label collision at the end of the timeline
-      if (effectiveMax - t >= 3) {
+      if (effectiveMax - t >= minEndGap) {
         ticks.add(t);
       }
     }
@@ -74,7 +82,7 @@ class RecordingProgressTimelineWidget extends StatelessWidget {
     final isMinReached = displayElapsed >= minDurationSeconds;
     final ticks = _generateTicks(effectiveMax);
     final isCough = recordingType.toLowerCase().contains('cough');
-    final String typeLabel = isCompleted ? 'Audio' : (isCough ? 'Voluntary Cough Audio' : 'Breathing Recording');
+    final String typeLabel = isCompleted ? 'Audio only' : (isCough ? 'Voluntary Cough Audio' : 'Breathing Recording');
 
     Color statusColor;
     String statusText;
