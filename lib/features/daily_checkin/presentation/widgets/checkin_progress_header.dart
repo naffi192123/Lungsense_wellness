@@ -23,14 +23,13 @@ class _CheckinProgressHeaderState extends State<CheckinProgressHeader> {
   final ScrollController _scrollController = ScrollController();
 
   // One GlobalKey per visible step so we can call Scrollable.ensureVisible.
-  final List<GlobalKey> _stepKeys = List.generate(4, (_) => GlobalKey());
+  final List<GlobalKey> _stepKeys = List.generate(3, (_) => GlobalKey());
 
   // ---- step definitions (order matches display order) ---------------------
   static const _steps = [
     _StepDef(label: 'Cough',     step: CheckinStep.cough,     icon: Icons.mic),
     _StepDef(label: 'Breathing', step: CheckinStep.breathing,  icon: Icons.air_rounded),
     _StepDef(label: 'Symptoms',  step: CheckinStep.symptoms,   icon: Icons.fact_check_outlined),
-    _StepDef(label: 'Diagnosis', step: CheckinStep.diagnosis,  icon: Icons.medical_information_outlined),
   ];
 
   @override
@@ -83,8 +82,6 @@ class _CheckinProgressHeaderState extends State<CheckinProgressHeader> {
         return widget.state.breathingCompleted;
       case CheckinStep.symptoms:
         return widget.state.symptomsCompleted;
-      case CheckinStep.diagnosis:
-        return widget.state.diagnosisCompleted;
       default:
         return false;
     }

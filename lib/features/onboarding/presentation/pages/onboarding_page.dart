@@ -8,6 +8,8 @@ import '../bloc/onboarding_bloc.dart';
 import '../bloc/onboarding_event.dart';
 import '../bloc/onboarding_state.dart';
 import '../../domain/entities/onboarding_data.dart';
+import '../../../diagnosis/data/datasources/diagnosis_remote_data_source.dart';
+import '../../../diagnosis/domain/entities/diagnosis_entity.dart';
 
 /// Multi-step Onboarding screen that collects profile data.
 class OnboardingPage extends StatefulWidget {
@@ -37,6 +39,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final _notesController = TextEditingController();
   String _selectedSmokingStatus = '';
   final Set<String> _selectedConditionIds = {};
+  String _selectedDiagnosis = 'No diagnosis';
+  List<String> _diagnosisOptions = ['No diagnosis'];
+  bool _isLoadingDiagnosis = false;
+  bool _hasPreFilledDiagnosis = false;
 
   late final OnboardingBloc _bloc;
 
@@ -46,6 +52,62 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _bloc = sl<OnboardingBloc>();
     _bloc.add(const OnboardingLoadConditionsEvent());
     _bloc.add(const OnboardingLoadDraftEvent());
+    _loadDiagnosisData();
+  }
+
+  Future<void> _loadDiagnosisData() async {
+    setState(() {
+      _isLoadingDiagnosis = true;
+    });
+
+    try {
+      final dataSource = sl<DiagnosisRemoteDataSource>();
+      final results = await Future.wait([
+        dataSource.getDiagnosisOptions(),
+        dataSource.getLatestDiagnosis(),
+      ]);
+
+      final options = results[0] as List<String>;
+      final latest = results[1] as DiagnosisEntity?;
+
+      if (!mounted) return;
+
+      final optionsList = List<String>.from(options);
+      if (!optionsList.any((o) => o.toLowerCase() == 'no diagnosis')) {
+        optionsList.insert(0, 'No diagnosis');
+      }
+
+      String selected = 'No diagnosis';
+      bool hasPreFilled = false;
+
+      if (latest != null && latest.diagnosis.isNotEmpty) {
+        if (!optionsList.contains(latest.diagnosis)) {
+          optionsList.add(latest.diagnosis);
+        }
+        selected = latest.diagnosis;
+        hasPreFilled = true;
+        if (latest.notes != null && latest.notes!.isNotEmpty && _notesController.text.isEmpty) {
+          _notesController.text = latest.notes!;
+        }
+      }
+
+      setState(() {
+        _diagnosisOptions = optionsList;
+        _isLoadingDiagnosis = false;
+        if (_selectedDiagnosis == 'No diagnosis') {
+          _selectedDiagnosis = selected;
+          _hasPreFilledDiagnosis = hasPreFilled;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingDiagnosis = false;
+        if (!_diagnosisOptions.contains('No diagnosis')) {
+          _diagnosisOptions = ['No diagnosis', 'Asthma', 'COPD', 'Chronic Bronchitis', 'Allergies', 'Other'];
+        }
+      });
+    }
   }
 
   @override
@@ -98,8 +160,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     _selectedSmokingStatus = data.smokingStatus;
-    if (_notesController.text != data.otherNotes) {
-      _notesController.text = data.otherNotes;
+    if (data.diagnosis.isNotEmpty && data.diagnosis != 'No diagnosis') {
+      _selectedDiagnosis = data.diagnosis;
+      if (!_diagnosisOptions.contains(_selectedDiagnosis)) {
+        _diagnosisOptions.add(_selectedDiagnosis);
+      }
+    }
+    final incomingNotes = data.diagnosisNotes ?? data.otherNotes;
+    if (_notesController.text != incomingNotes && incomingNotes.isNotEmpty) {
+      _notesController.text = incomingNotes;
     }
     _selectedConditionIds.clear();
     _selectedConditionIds.addAll(data.selectedConditionIds);
@@ -111,6 +180,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ? DateTime(DateTime.now().year - age, 1, 1).toIso8601String().split('T').first
         : baseData.dateOfBirth;
 
+    final notes = _notesController.text.trim();
     return baseData.copyWith(
       age: age,
       dateOfBirth: dob,
@@ -122,7 +192,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
       exerciseDays: int.tryParse(_exerciseController.text.trim()),
       smokingStatus: _selectedSmokingStatus,
       selectedConditionIds: _selectedConditionIds.toList(),
-      otherNotes: _notesController.text.trim(),
+      otherNotes: notes,
+      diagnosis: _selectedDiagnosis,
+      diagnosisNotes: notes.isNotEmpty ? notes : null,
     );
   }
 
@@ -622,65 +694,147 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
           const SizedBox(height: 24),
 
-          // Dynamic Medical Conditions Chip Box
-          _buildLabel('Existing Conditions'),
-          const SizedBox(height: 12),
-          if (state.status == OnboardingStatus.loading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(color: AppColors.primary),
+          // Select a diagnosis
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildLabel('Select a diagnosis'),
+              if (_hasPreFilledDiagnosis && _selectedDiagnosis != 'No diagnosis')
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.supportingGreen.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.history_rounded, size: 12, color: AppColors.supportingGreen),
+                      SizedBox(width: 4),
+                      Text(
+                        'Previously reported',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.supportingGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_isLoadingDiagnosis)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
               ),
             )
-          else if (state.conditions.isEmpty)
-            Text(
-              'No conditions listed in database.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            )
           else
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: state.conditions.map((condition) {
-                final isSelected = _selectedConditionIds.contains(condition.id);
-                return FilterChip(
-                  label: Text(condition.name),
-                  selected: isSelected,
-                  selectedColor: AppColors.primary.withOpacity(0.12),
-                  checkmarkColor: AppColors.primary,
-                  backgroundColor: AppColors.surface,
-                  labelStyle: TextStyle(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppColors.primary : AppColors.text,
+            DropdownButtonFormField<String>(
+              value: _diagnosisOptions.contains(_selectedDiagnosis)
+                  ? _selectedDiagnosis
+                  : (_diagnosisOptions.isNotEmpty ? _diagnosisOptions.first : 'No diagnosis'),
+              isExpanded: true,
+              decoration: InputDecoration(
+                hintText: 'Select a diagnosis',
+                hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                filled: true,
+                fillColor: AppColors.background,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+                suffixIcon: _selectedDiagnosis != 'No diagnosis'
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.textSecondary),
+                        tooltip: 'Reset to No diagnosis',
+                        onPressed: () {
+                          setState(() {
+                            _selectedDiagnosis = 'No diagnosis';
+                            _hasPreFilledDiagnosis = false;
+                          });
+                        },
+                      )
+                    : null,
+              ),
+              items: _diagnosisOptions.map((option) {
+                final isSelected = option == _selectedDiagnosis;
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(
+                    option,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.text,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  side: BorderSide(
-                    color: isSelected ? AppColors.primary : AppColors.border,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  onSelected: (selected) {
-                    setState(() {
-                      if (selected) {
-                        _selectedConditionIds.add(condition.id);
-                      } else {
-                        _selectedConditionIds.remove(condition.id);
-                      }
-                    });
-                  },
                 );
               }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    _selectedDiagnosis = val;
+                  });
+                }
+              },
             ),
           const SizedBox(height: 24),
 
-          // Other Health Notes
-          _buildLabel('Other Health Notes'),
+          // Additional Notes (Optional)
+          _buildLabel('Additional Notes (Optional)'),
+          const SizedBox(height: 4),
+          const Text(
+            'Add any context, prescribed treatments, or clinical notes.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 8),
           TextFormField(
             controller: _notesController,
             maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: 'Enter any other health concerns or notes...',
+            maxLength: 2000,
+            decoration: InputDecoration(
+              hintText: 'e.g. Diagnosed by specialist 2 years ago, taking daily inhaler...',
+              hintStyle: TextStyle(
+                color: AppColors.textSecondary.withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
+              filled: true,
+              fillColor: AppColors.background,
+              contentPadding: const EdgeInsets.all(14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
             ),
           ),
         ],

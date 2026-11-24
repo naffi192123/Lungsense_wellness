@@ -4,7 +4,6 @@ enum CheckinStep {
   cough,
   breathing,
   symptoms,
-  diagnosis,
   review,
   completing,
   completed,

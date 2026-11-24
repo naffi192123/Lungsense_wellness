@@ -18,6 +18,8 @@ class OnboardingModel extends OnboardingData {
     required super.smokingStatus,
     required super.selectedConditionIds,
     required super.otherNotes,
+    super.diagnosis = 'No diagnosis',
+    super.diagnosisNotes,
   });
 
   /// Factory helper to build model records from raw Domain entity profiles.
@@ -38,6 +40,8 @@ class OnboardingModel extends OnboardingData {
       smokingStatus: entity.smokingStatus,
       selectedConditionIds: entity.selectedConditionIds,
       otherNotes: entity.otherNotes,
+      diagnosis: entity.diagnosis,
+      diagnosisNotes: entity.diagnosisNotes,
     );
   }
 
@@ -59,6 +63,8 @@ class OnboardingModel extends OnboardingData {
       'smokingStatus': smokingStatus,
       'selectedConditionIds': selectedConditionIds,
       'otherNotes': otherNotes,
+      'diagnosis': diagnosis,
+      'diagnosisNotes': diagnosisNotes,
     };
   }
 
@@ -80,6 +86,8 @@ class OnboardingModel extends OnboardingData {
       smokingStatus: json['smokingStatus'] as String? ?? '',
       selectedConditionIds: List<String>.from(json['selectedConditionIds'] ?? []),
       otherNotes: json['otherNotes'] as String? ?? '',
+      diagnosis: json['diagnosis'] as String? ?? 'No diagnosis',
+      diagnosisNotes: json['diagnosisNotes'] as String?,
     );
   }
 }

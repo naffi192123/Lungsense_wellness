@@ -621,24 +621,6 @@ class _CheckinRecordingWidgetState extends State<CheckinRecordingWidget> {
     );
   }
 
-  Widget _buildBulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, height: 1.3),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPlaybackPanel(BuildContext context, AudioRecordingReady state) {
     final bloc = context.read<AudioRecordingBloc>();
     final int displayDuration = state.durationSeconds > 0 ? state.durationSeconds : _duration.inSeconds;

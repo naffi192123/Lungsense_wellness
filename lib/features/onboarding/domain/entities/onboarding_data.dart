@@ -22,6 +22,8 @@ class OnboardingData extends Equatable {
   final String smokingStatus;
   final List<String> selectedConditionIds;
   final String otherNotes;
+  final String diagnosis;
+  final String? diagnosisNotes;
 
   const OnboardingData({
     this.fullName = '',
@@ -39,6 +41,8 @@ class OnboardingData extends Equatable {
     required this.smokingStatus,
     required this.selectedConditionIds,
     required this.otherNotes,
+    this.diagnosis = 'No diagnosis',
+    this.diagnosisNotes,
   });
 
   /// Factory for empty initial onboarding state.
@@ -59,6 +63,8 @@ class OnboardingData extends Equatable {
       smokingStatus: '',
       selectedConditionIds: [],
       otherNotes: '',
+      diagnosis: 'No diagnosis',
+      diagnosisNotes: null,
     );
   }
 
@@ -79,6 +85,8 @@ class OnboardingData extends Equatable {
     String? smokingStatus,
     List<String>? selectedConditionIds,
     String? otherNotes,
+    String? diagnosis,
+    String? diagnosisNotes,
   }) {
     return OnboardingData(
       fullName: fullName ?? this.fullName,
@@ -96,6 +104,8 @@ class OnboardingData extends Equatable {
       smokingStatus: smokingStatus ?? this.smokingStatus,
       selectedConditionIds: selectedConditionIds ?? this.selectedConditionIds,
       otherNotes: otherNotes ?? this.otherNotes,
+      diagnosis: diagnosis ?? this.diagnosis,
+      diagnosisNotes: diagnosisNotes ?? this.diagnosisNotes,
     );
   }
 
@@ -116,5 +126,7 @@ class OnboardingData extends Equatable {
         smokingStatus,
         selectedConditionIds,
         otherNotes,
+        diagnosis,
+        diagnosisNotes,
       ];
 }

@@ -113,6 +113,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<OnboardingRepository>(() => OnboardingRepositoryImpl(
         remoteDataSource: sl(),
         localDataSource: sl(),
+        diagnosisRemoteDataSource: sl<DiagnosisRemoteDataSource>(),
       ));
   sl.registerLazySingleton<WellnessRepository>(() => WellnessRepositoryImpl(
         checkInBox: checkInBox,

@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../diagnosis/data/datasources/diagnosis_remote_data_source.dart';
 import '../../domain/entities/medical_condition_entity.dart';
 import '../../domain/entities/onboarding_data.dart';
 import '../../domain/repositories/onboarding_repository.dart';
@@ -12,10 +13,12 @@ import '../models/onboarding_model.dart';
 class OnboardingRepositoryImpl implements OnboardingRepository {
   final OnboardingRemoteDataSource remoteDataSource;
   final OnboardingLocalDataSource localDataSource;
+  final DiagnosisRemoteDataSource? diagnosisRemoteDataSource;
 
   OnboardingRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
+    this.diagnosisRemoteDataSource,
   });
 
   @override
@@ -24,6 +27,21 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
       final model = OnboardingModel.fromEntity(data);
       // Save directly to the backend
       await remoteDataSource.saveOnboarding(model: model, userId: '');
+
+      // Sync diagnosis if selected or notes provided
+      if (diagnosisRemoteDataSource != null && data.diagnosis.isNotEmpty) {
+        try {
+          await diagnosisRemoteDataSource!.createDiagnosis(
+            diagnosis: data.diagnosis,
+            notes: (data.diagnosisNotes != null && data.diagnosisNotes!.trim().isNotEmpty)
+                ? data.diagnosisNotes!.trim()
+                : null,
+          );
+        } catch (_) {
+          // If server rejects 'No diagnosis' or temporary network issue, do not block profile save
+        }
+      }
+
       // Clear draft on successful remote save
       await localDataSource.clearDraft();
       return const Right(null);
