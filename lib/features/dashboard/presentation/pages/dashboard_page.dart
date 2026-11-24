@@ -855,55 +855,15 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Your daily score is up to date. You can add extra audio recordings or retake check-in if needed:',
+                  'Your daily score is up to date. You can retake check-in if needed.',
                   style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.35),
                 ),
                 const SizedBox(height: 16),
                 _buildRecordingOptionTile(
-                  icon: Icons.mic,
-                  color: AppColors.primary,
-                  title: 'Record Cough Sounds',
-                  subtitle: '12-15 seconds voluntary cough analysis',
-                  onTap: () async {
-                    final wellnessBloc = context.read<WellnessBloc>();
-                    final analyticsBloc = context.read<AnalyticsBloc>();
-                    Navigator.pop(bottomSheetContext);
-                    await context.push('/record?type=cough');
-                    if (mounted) {
-                      wellnessBloc.add(const WellnessFetchDataEvent());
-                      analyticsBloc.add(const AnalyticsLoadEvent());
-                      if (sl.isRegistered<HistoryBloc>()) {
-                        sl<HistoryBloc>().add(const HistoryRefreshEvent());
-                      }
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildRecordingOptionTile(
-                  icon: Icons.air_rounded,
-                  color: AppColors.supportingGreen,
-                  title: 'Record Breathing Sounds',
-                  subtitle: '25-30 seconds deep respiratory analysis',
-                  onTap: () async {
-                    final wellnessBloc = context.read<WellnessBloc>();
-                    final analyticsBloc = context.read<AnalyticsBloc>();
-                    Navigator.pop(bottomSheetContext);
-                    await context.push('/record?type=breathing');
-                    if (mounted) {
-                      wellnessBloc.add(const WellnessFetchDataEvent());
-                      analyticsBloc.add(const AnalyticsLoadEvent());
-                      if (sl.isRegistered<HistoryBloc>()) {
-                        sl<HistoryBloc>().add(const HistoryRefreshEvent());
-                      }
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildRecordingOptionTile(
                   icon: Icons.replay_rounded,
-                  color: AppColors.textSecondary,
+                  color: AppColors.supportingGreen,
                   title: 'Retake Full Daily Check-in',
-                  subtitle: 'Repeat all 3 steps to update today\'s score',
+                  subtitle: "Repeat all 3 steps to update today's score.",
                   onTap: () async {
                     Navigator.pop(bottomSheetContext);
                     await _openDailyCheckin();
@@ -986,14 +946,14 @@ class _DashboardPageState extends State<DashboardPage> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isCompleted
-                ? AppColors.supportingGreen.withValues(alpha: 0.35)
+                ? AppColors.supportingGreen.withValues(alpha: 0.25)
                 : AppColors.border,
-            width: isCompleted ? 1.4 : 1.0,
+            width: isCompleted ? 1.2 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
               color: isCompleted
-                  ? AppColors.supportingGreen.withValues(alpha: 0.08)
+                  ? AppColors.supportingGreen.withValues(alpha: 0.06)
                   : AppColors.text.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 3),
@@ -1002,23 +962,57 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         child: Row(
           children: [
-            // Status Icon Circle Badge
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isCompleted
-                    ? AppColors.supportingGreen.withValues(alpha: 0.12)
-                    : AppColors.primary.withValues(alpha: 0.10),
+            // Left Icon Badge
+            if (isCompleted)
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.supportingGreen,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                ),
+                child: const Icon(
+                  Icons.health_and_safety_rounded,
+                  color: AppColors.primary,
+                  size: 26,
+                ),
               ),
-              child: Icon(
-                isCompleted ? Icons.check_circle_rounded : Icons.health_and_safety_rounded,
-                color: isCompleted ? AppColors.supportingGreen : AppColors.primary,
-                size: 26,
+
+            // Vertical Divider (completed state) or spacing (pending state)
+            if (isCompleted) ...[
+              const SizedBox(width: 12),
+              Container(
+                width: 1.2,
+                height: 44,
+                color: AppColors.border,
               ),
-            ),
-            const SizedBox(width: 14),
+              const SizedBox(width: 12),
+            ] else
+              const SizedBox(width: 14),
 
             // Content Information
             Expanded(
@@ -1026,34 +1020,20 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      const Flexible(
-                        child: Text(
-                          'Daily Check-in',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: AppColors.text,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isCompleted) ...[
-                        const SizedBox(width: 5),
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          size: 15,
-                          color: AppColors.supportingGreen,
-                        ),
-                      ],
-                    ],
+                  const Text(
+                    'Daily Check-in',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.text,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 3),
                   Text(
                     isCompleted ? 'All 3 steps completed today' : 'Daily Check-in Pending',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: isCompleted ? AppColors.supportingGreen : AppColors.secondary,
                     ),
@@ -1066,7 +1046,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         ? 'Tap to add more recordings anytime'
                         : "Complete 3 steps to get today's score.",
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 11.5,
                       color: AppColors.textSecondary,
                       height: 1.25,
                     ),
@@ -1080,46 +1060,30 @@ class _DashboardPageState extends State<DashboardPage> {
 
             // Action Button
             Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isCompleted ? 12 : 16,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
                 vertical: 8,
               ),
               decoration: BoxDecoration(
-                color: isCompleted ? AppColors.supportingGreen : AppColors.primary,
+                color: isCompleted ? const Color(0xFF7CB342) : AppColors.primary,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: (isCompleted ? AppColors.supportingGreen : AppColors.primary)
+                    color: (isCompleted ? const Color(0xFF7CB342) : AppColors.primary)
                         .withValues(alpha: 0.25),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: isCompleted
-                  ? const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add_rounded, color: Colors.white, size: 15),
-                        SizedBox(width: 3),
-                        Text(
-                          'Record More',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    )
-                  : const Text(
-                      'Start',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
+              child: Text(
+                isCompleted ? 'Record' : 'Start',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),

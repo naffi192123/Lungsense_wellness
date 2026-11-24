@@ -89,7 +89,7 @@ void main() {
       expect(find.text('Daily Check-in Pending'), findsOneWidget);
       expect(find.text("Complete 3 steps to get today's score."), findsOneWidget);
       expect(find.text('Start'), findsOneWidget);
-      expect(find.text('Record More'), findsNothing);
+      expect(find.text('Record'), findsNothing);
       expect(find.text('All 3 steps completed today'), findsNothing);
     });
 
@@ -145,7 +145,7 @@ void main() {
       // Must still show Pending because symptom check-in is incomplete
       expect(find.text('Daily Check-in Pending'), findsOneWidget);
       expect(find.text('Start'), findsOneWidget);
-      expect(find.text('Record More'), findsNothing);
+      expect(find.text('Record'), findsNothing);
     });
 
     testWidgets('displays Pending state when activities are from yesterday, not today', (tester) async {
@@ -220,7 +220,7 @@ void main() {
 
       expect(find.text('Daily Check-in Pending'), findsOneWidget);
       expect(find.text('Start'), findsOneWidget);
-      expect(find.text('Record More'), findsNothing);
+      expect(find.text('Record'), findsNothing);
     });
 
     testWidgets('displays Completed state when ALL THREE activities are complete today', (tester) async {
@@ -295,10 +295,95 @@ void main() {
 
       expect(find.text('Daily Check-in'), findsWidgets);
       expect(find.text('All 3 steps completed today'), findsOneWidget);
-      expect(find.text('Record More'), findsOneWidget);
+      expect(find.text('Record'), findsOneWidget);
       expect(find.text('Tap to add more recordings anytime'), findsOneWidget);
       expect(find.text('Daily Check-in Pending'), findsNothing);
       expect(find.text('Start'), findsNothing);
+    });
+
+    testWidgets('tapping Record in Completed state opens bottom sheet with retake option only', (tester) async {
+      final now = DateTime.now();
+      final completedState = WellnessState(
+        status: WellnessStatus.success,
+        dailyLogs: [
+          DailyLogEntity(
+            id: 'l1',
+            checkinDate: '2026-11-24',
+            breathlessness: 0,
+            activityLimitation: 0,
+            changeFromUsual: 0,
+            fever: 0,
+            chestTightness: 0,
+            chestDiscomfortBreathing: 0,
+            wheezing: 0,
+            coughSeverity: 0,
+            mucus: 0,
+            sleepDisruption: 0,
+            chestPain: 0,
+            smokedToday: false,
+            exerciseMinutes: 30,
+            sleepHours: 8,
+            waterIntakeLiters: 2,
+            timestamp: now,
+          ),
+        ],
+        audioAnalyses: [
+          AudioAnalysisEntity(
+            id: 'c1',
+            title: 'Cough Recording',
+            type: 'Cough',
+            status: 'complete',
+            duration: 15,
+            confidence: 85,
+            lungsScore: 85,
+            insight: '',
+            intensity: '',
+            breathingRate: 0,
+            rhythm: '',
+            signalQuality: '',
+            backgroundNoise: '',
+            timestamp: now,
+            tags: const [],
+          ),
+          AudioAnalysisEntity(
+            id: 'b1',
+            title: 'Breathing Recording',
+            type: 'Breathing',
+            status: 'complete',
+            duration: 30,
+            confidence: 90,
+            lungsScore: 90,
+            insight: '',
+            intensity: '',
+            breathingRate: 16,
+            rhythm: '',
+            signalQuality: '',
+            backgroundNoise: '',
+            timestamp: now,
+            tags: const [],
+          ),
+        ],
+      );
+
+      when(() => mockWellnessBloc.state).thenReturn(completedState);
+      when(() => mockWellnessBloc.stream).thenAnswer((_) => wellnessStateController.stream);
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+
+      // Tap 'Record'
+      await tester.tap(find.text('Record'));
+      await tester.pumpAndSettle();
+
+      // Verify bottom sheet contents
+      expect(find.text('Check-in Complete for Today'), findsOneWidget);
+      expect(find.text('Your daily score is up to date. You can retake check-in if needed.'), findsOneWidget);
+      expect(find.text('Retake Full Daily Check-in'), findsOneWidget);
+      expect(find.text("Repeat all 3 steps to update today's score."), findsOneWidget);
+
+      // Verify removed options are NOT present
+      expect(find.text('Record Cough Sounds'), findsNothing);
+      expect(find.text('Record Breathing Sounds'), findsNothing);
     });
   });
 }
