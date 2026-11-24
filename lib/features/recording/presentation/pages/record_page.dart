@@ -391,15 +391,15 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: themeColor.withValues(alpha: 0.35), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: themeColor.withValues(alpha: 0.08),
-            blurRadius: 12,
+            blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
@@ -408,114 +408,76 @@ class _RecordPageState extends State<RecordPage> with SingleTickerProviderStateM
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: themeColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: isCough
-                    ? CoughRecordingIcon(size: 26, color: themeColor)
-                    : Icon(
-                        Icons.air_rounded,
-                        color: themeColor,
-                        size: 26,
-                      ),
+                child: Icon(
+                  Icons.info_outline_rounded,
+                  color: themeColor,
+                  size: 18,
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isCough
-                          ? 'Voluntary Cough Recording'
-                          : 'Breathing Sound Recording',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: AppColors.text,
-                      ),
-                    ),
-                  ],
+              const SizedBox(width: 8),
+              const Text(
+                'Before You Record',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: isCough
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildInstructionBullet('Cough naturally 3–5 times, pausing briefly between each cough.', themeColor),
-                      const SizedBox(height: 4),
-                      _buildInstructionBullet('Hold your phone approximately 15–20 cm from your mouth.', themeColor),
-                      const SizedBox(height: 4),
-                      _buildInstructionBullet('Record in a quiet environment.', themeColor),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Before You Record',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
+          const SizedBox(height: 10),
+          if (isCough) ...[
+            _buildInstructionBullet('Cough naturally 3–5 times, pausing briefly between each cough.', themeColor),
+            const SizedBox(height: 4),
+            _buildInstructionBullet('Hold your phone approximately 15–20 cm from your mouth.', themeColor),
+            const SizedBox(height: 4),
+            _buildInstructionBullet('Record in a quiet environment.', themeColor),
+          ] else ...[
+            _buildInstructionBullet('Sit upright in a quiet place.', themeColor),
+            const SizedBox(height: 4),
+            _buildInstructionBullet('Hold your phone 15–20 cm from your mouth.', themeColor),
+            const SizedBox(height: 4),
+            _buildInstructionBullet('Keep the microphone uncovered.', themeColor),
+            const SizedBox(height: 4),
+            _buildInstructionBullet('Take five slow, steady breaths through your mouth.', themeColor),
+            const SizedBox(height: 4),
+            _buildInstructionBullet('Stop if you feel dizzy or uncomfortable.', themeColor),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: themeColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 14, color: themeColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'For longitudinal monitoring, consistency in breathing method, phone distance, and number of breaths is more valuable than a longer recording.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: themeColor,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(height: 6),
-                      _buildInstructionBullet('Sit upright in a quiet place.', themeColor),
-                      const SizedBox(height: 4),
-                      _buildInstructionBullet('Hold your phone 15–20 cm from your mouth.', themeColor),
-                      const SizedBox(height: 4),
-                      _buildInstructionBullet('Keep the microphone uncovered.', themeColor),
-                      const SizedBox(height: 4),
-                      _buildInstructionBullet('Take five slow, steady breaths through your mouth.', themeColor),
-                      const SizedBox(height: 4),
-                      _buildInstructionBullet('Stop if you feel dizzy or uncomfortable.', themeColor),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: themeColor.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.info_outline_rounded, size: 14, color: themeColor),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'For longitudinal monitoring, consistency in breathing method, phone distance, and number of breaths is more valuable than a longer recording.',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: themeColor,
-                                  height: 1.35,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-          ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

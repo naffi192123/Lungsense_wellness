@@ -214,52 +214,7 @@ class CheckinStartWidget extends StatelessWidget {
             isCompleted: state.symptomsCompleted,
             accentColor: Colors.amber.shade800,
           ),
-          const SizedBox(height: 22),
-
-          // Main Bottom Action Button
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.0),
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.supportingGreen],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: onStart,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: AppColors.surface,
-                shadowColor: Colors.transparent,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isPartiallyDone ? Icons.play_arrow_rounded : Icons.arrow_forward_rounded,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    buttonText,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
 
           // Disclaimer
           const Center(
