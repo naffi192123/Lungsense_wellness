@@ -16,6 +16,14 @@ class WellnessBloc extends Bloc<WellnessEvent, WellnessState> {
     on<WellnessFetchScoreEvent>(_onFetchScore);
     on<WellnessSaveDailyLogEvent>(_onSaveDailyLog);
     on<WellnessSaveAudioAnalysisEvent>(_onSaveAudioAnalysis);
+    on<WellnessClearDataEvent>(_onClearData);
+  }
+
+  Future<void> _onClearData(WellnessClearDataEvent event, Emitter<WellnessState> emit) async {
+    try {
+      await _repository.clearAllData();
+    } catch (_) {}
+    emit(WellnessState.initial());
   }
 
   /// Full data fetch: score + logs + recordings + history + baseline.

@@ -111,7 +111,7 @@ void main() {
     // Verify Baseline card header is present
     expect(find.text('Baseline'), findsOneWidget);
     // Verify formatted baseline value is displayed
-    expect(find.text('78.1'), findsOneWidget);
+    expect(find.text('78'), findsOneWidget);
     // Verify Active status is displayed
     expect(find.text('Active'), findsOneWidget);
     // Verify message is displayed

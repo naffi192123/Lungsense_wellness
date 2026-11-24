@@ -20,6 +20,7 @@ import '../../features/recording/presentation/pages/audio_analysis_page.dart';
 import '../../features/recording/presentation/pages/record_page.dart';
 import '../../features/recording/presentation/bloc/audio_recording_bloc.dart';
 import '../../features/history/presentation/pages/history_detail_page.dart';
+import '../../features/history/presentation/bloc/history_bloc.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/change_password_page.dart';
 import '../../features/profile/presentation/pages/contact_us_page.dart';
@@ -150,6 +151,7 @@ abstract class AppRouter {
               BlocProvider.value(value: sl<WellnessBloc>()),
               BlocProvider(create: (context) => sl<AuthBloc>()),
               BlocProvider.value(value: sl<AnalyticsBloc>()),
+              BlocProvider.value(value: sl<HistoryBloc>()),
             ],
             child: DashboardPage(initialTab: initialTab),
           );

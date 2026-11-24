@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../recording/data/services/audio_player_service.dart';
 import '../../../onboarding/domain/entities/wellness_entities.dart';
+import '../../domain/entities/history_entry.dart';
 
 /// Screen displaying the complete, authentic details of a specific history log.
 class HistoryDetailPage extends StatefulWidget {
@@ -117,7 +118,9 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (widget.logType == 'audio' && widget.itemData is AudioAnalysisEntity)
+              if (widget.itemData is HistoryEntry)
+                _buildConsolidatedDetails(widget.itemData as HistoryEntry)
+              else if (widget.logType == 'audio' && widget.itemData is AudioAnalysisEntity)
                 _buildAudioDetails(widget.itemData as AudioAnalysisEntity)
               else if (widget.logType == 'checkin' && widget.itemData is DailyLogEntity)
                 _buildCheckInDetails(widget.itemData as DailyLogEntity)
@@ -133,6 +136,9 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
   }
 
   String _getTitle() {
+    if (widget.itemData is HistoryEntry) {
+      return (widget.itemData as HistoryEntry).title;
+    }
     switch (widget.logType) {
       case 'audio':
         return 'Recording Details';
@@ -711,6 +717,252 @@ class _HistoryDetailPageState extends State<HistoryDetailPage> {
     return const Center(
       child: Text('No detailed record found for this entry.', style: TextStyle(color: AppColors.textSecondary)),
     );
+  }
+
+  Widget _buildConsolidatedDetails(HistoryEntry entry) {
+    final isComplete = entry.overallStatus.toLowerCase() == 'complete';
+    final statusColor = isComplete ? AppColors.supportingGreen : AppColors.error;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Top Header Card
+        Container(
+          padding: const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.text.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.text),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDate(entry.latestTimestamp),
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isComplete ? Icons.check_circle_rounded : Icons.error_rounded,
+                          color: statusColor,
+                          size: 13,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          entry.overallStatus.toUpperCase(),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: statusColor, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (entry.activityId.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Activity ID: ${entry.activityId}',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontFamily: 'monospace'),
+                ),
+              ],
+              if (entry.errorMessage != null && entry.errorMessage!.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Error: ${entry.errorMessage}',
+                          style: const TextStyle(color: AppColors.error, fontSize: 12.5, height: 1.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // 2. Individual Records Sections
+        ...entry.records.map((record) => _buildRecordCard(record)),
+      ],
+    );
+  }
+
+  Widget _buildRecordCard(HistoryRecord record) {
+    final isCough = record.type.toLowerCase().contains('cough');
+    final isBreathing = record.type.toLowerCase().contains('breath');
+    final isSymptom = record.type.toLowerCase().contains('symptom');
+
+    final String typeTitle;
+    final IconData iconData;
+    final Color themeColor;
+
+    if (isCough) {
+      typeTitle = 'Cough Audio Analysis';
+      iconData = Icons.mic_rounded;
+      themeColor = AppColors.supportingGreen;
+    } else if (isBreathing) {
+      typeTitle = 'Breathing Sound Analysis';
+      iconData = Icons.air_rounded;
+      themeColor = AppColors.secondary;
+    } else if (isSymptom) {
+      typeTitle = 'Symptom Check-in Log';
+      iconData = Icons.fact_check_outlined;
+      themeColor = AppColors.primary;
+    } else {
+      typeTitle = '${record.type.isNotEmpty ? record.type[0].toUpperCase() + record.type.substring(1) : "Activity"} Record';
+      iconData = Icons.health_and_safety_outlined;
+      themeColor = AppColors.primary;
+    }
+
+    final isRecordComplete = record.status.toLowerCase() == 'complete';
+    final statusColor = isRecordComplete ? AppColors.supportingGreen : AppColors.error;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20.0),
+      padding: const EdgeInsets.all(18.0),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: themeColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(iconData, color: themeColor, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    typeTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.text),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  record.status.toUpperCase(),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: statusColor, fontSize: 10),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _formatDate(record.timestamp),
+            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          ),
+          if (record.error != null && record.error!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Failure detail: ${record.error}',
+                style: const TextStyle(color: AppColors.error, fontSize: 12),
+              ),
+            ),
+          ],
+          if (record.results != null && record.results!.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _buildResultsSection(record.type, record.results!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsSection(String type, Map<String, dynamic> results) {
+    if (type.toLowerCase().contains('symptom')) {
+      final symptomItems = <Widget>[];
+      results.forEach((key, val) {
+        if (val is num) {
+          final label = _formatComponentName(key);
+          symptomItems.add(_buildSymptomRow(label, val.toInt(), Icons.medical_services_outlined));
+        }
+      });
+      if (symptomItems.isNotEmpty) {
+        return Column(children: symptomItems);
+      }
+    }
+
+    final featureItems = <_FeatureItem>[];
+    results.forEach((key, val) {
+      if (val is! Map && val is! List) {
+        final title = _formatComponentName(key);
+        String strVal = val.toString();
+        if (val is double) {
+          strVal = val.toStringAsFixed(2);
+        }
+        featureItems.add(_FeatureItem(title, strVal, Icons.analytics_outlined));
+      }
+    });
+
+    if (featureItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return _buildFeatureGrid(featureItems);
   }
 
   Widget _buildSymptomRow(String name, int severity, IconData icon) {

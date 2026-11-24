@@ -39,3 +39,8 @@ class WellnessSaveAudioAnalysisEvent extends WellnessEvent {
   @override
   List<Object?> get props => [analysis];
 }
+
+/// Dispatched to clear in-memory and local wellness state on user logout.
+class WellnessClearDataEvent extends WellnessEvent {
+  const WellnessClearDataEvent();
+}

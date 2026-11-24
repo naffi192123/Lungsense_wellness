@@ -5,6 +5,8 @@ import '../../../../features/dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../../../features/dashboard/presentation/bloc/wellness_event.dart';
 import '../../../../features/analytics/presentation/bloc/analytics_bloc.dart';
 import '../../../../features/analytics/presentation/bloc/analytics_event.dart';
+import '../../../../features/history/presentation/bloc/history_bloc.dart';
+import '../../../../features/history/presentation/bloc/history_event.dart';
 import '../../../../features/onboarding/domain/entities/wellness_entities.dart';
 import '../../../../features/onboarding/domain/repositories/wellness_repository.dart';
 import 'daily_checkin_enums.dart';
@@ -191,10 +193,13 @@ class DailyCheckinBloc extends Bloc<DailyCheckinEvent, DailyCheckinState> {
         latestScore = results[0] as ScoreHistoryEntity?;
       } catch (_) {}
 
-      // Immediately notify global WellnessBloc and AnalyticsBloc so the Dashboard updates in real time
+      // Immediately notify global WellnessBloc, AnalyticsBloc, and HistoryBloc so the Dashboard updates in real time
       try {
         sl<WellnessBloc>().add(const WellnessFetchDataEvent());
         sl<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+        if (sl.isRegistered<HistoryBloc>()) {
+          sl<HistoryBloc>().add(const HistoryRefreshEvent());
+        }
       } catch (_) {}
 
       // 4. Completed

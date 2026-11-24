@@ -25,4 +25,7 @@ abstract class WellnessRepository {
 
   /// Fetch visual classification bands from the backend.
   Future<Map<String, dynamic>> getScoreBands();
+
+  /// Clear all account-specific cached data and boxes on logout.
+  Future<void> clearAllData();
 }

@@ -49,6 +49,10 @@ import '../../features/dashboard/presentation/bloc/wellness_bloc.dart';
 import '../../features/analytics/presentation/bloc/analytics_bloc.dart';
 import '../../features/diagnosis/data/datasources/diagnosis_remote_data_source.dart';
 import '../../features/daily_checkin/presentation/bloc/daily_checkin_bloc.dart';
+import '../../features/history/data/datasources/history_remote_data_source.dart';
+import '../../features/history/data/repositories/history_repository_impl.dart';
+import '../../features/history/domain/repositories/history_repository.dart';
+import '../../features/history/presentation/bloc/history_bloc.dart';
 
 /// Service Locator instance.
 final sl = GetIt.instance;
@@ -197,6 +201,17 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton(
     () => AnalyticsBloc(repository: sl()),
+  );
+
+  // History Feature
+  sl.registerLazySingleton<HistoryRemoteDataSource>(
+    () => HistoryRemoteDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<HistoryRepository>(
+    () => HistoryRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton(
+    () => HistoryBloc(repository: sl()),
   );
 
   sl.registerFactory(

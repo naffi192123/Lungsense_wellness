@@ -11,6 +11,11 @@ import '../../domain/usecases/confirm_reset_password_usecase.dart';
 import '../../domain/usecases/google_sign_in_usecase.dart';
 import '../../domain/usecases/observe_user_usecase.dart';
 import '../../domain/entities/user_entity.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
+import '../../../dashboard/presentation/bloc/wellness_event.dart';
+import '../../../history/presentation/bloc/history_bloc.dart';
+import '../../../history/presentation/bloc/history_event.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -122,6 +127,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(AuthLogoutEvent event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
+    // Clear all account-specific cached data and in-memory state
+    if (sl.isRegistered<WellnessBloc>()) {
+      sl<WellnessBloc>().add(const WellnessClearDataEvent());
+    }
+    if (sl.isRegistered<HistoryBloc>()) {
+      sl<HistoryBloc>().add(const HistoryClearEvent());
+    }
     final result = await _logoutUseCase(const NoParams());
     result.fold(
       (failure) => emit(AuthError(failure.message)),
@@ -156,6 +168,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (event.user != null) {
       emit(AuthAuthenticated(event.user!));
     } else {
+      // Clear account-specific cache on unauthenticated session
+      if (sl.isRegistered<WellnessBloc>()) {
+        sl<WellnessBloc>().add(const WellnessClearDataEvent());
+      }
+      if (sl.isRegistered<HistoryBloc>()) {
+        sl<HistoryBloc>().add(const HistoryClearEvent());
+      }
       emit(const AuthUnauthenticated());
     }
   }

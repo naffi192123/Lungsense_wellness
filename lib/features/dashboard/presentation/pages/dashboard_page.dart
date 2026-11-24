@@ -15,7 +15,10 @@ import '../../../analytics/presentation/pages/analytics_page.dart';
 import '../../../analytics/presentation/bloc/analytics_bloc.dart';
 import '../../../analytics/presentation/bloc/analytics_event.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
-import '../../../onboarding/domain/entities/wellness_entities.dart';
+import '../../../history/presentation/bloc/history_bloc.dart';
+import '../../../history/presentation/bloc/history_event.dart';
+import '../../../history/presentation/bloc/history_state.dart';
+import '../../../history/domain/entities/history_entry.dart';
 
 /// The central dashboard screen managing navigation tabs and real health metrics.
 class DashboardPage extends StatefulWidget {
@@ -28,13 +31,34 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   late int _currentTabIndex;
+  final List<int> _tabHistory = [0];
 
   @override
   void initState() {
     super.initState();
     _currentTabIndex = widget.initialTab;
+    _tabHistory.clear();
+    _tabHistory.add(widget.initialTab);
     // Full data fetch (score + logs + recordings + history) on app open
     context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+    if (sl.isRegistered<HistoryBloc>()) {
+      sl<HistoryBloc>().add(const HistoryFetchEvent());
+    }
+  }
+
+  void _handleBackNavigation() {
+    if (_tabHistory.length > 1) {
+      _tabHistory.removeLast();
+      setState(() {
+        _currentTabIndex = _tabHistory.last;
+      });
+    } else if (_currentTabIndex != 0) {
+      _tabHistory.clear();
+      _tabHistory.add(0);
+      setState(() {
+        _currentTabIndex = 0;
+      });
+    }
   }
 
   @override
@@ -42,50 +66,67 @@ class _DashboardPageState extends State<DashboardPage> {
     final List<Widget> tabs = [
       _buildHomeTab(),
       _buildRecordTabPlaceholder(),
-      const HistoryPage(),
+      HistoryPage(onBack: _handleBackNavigation),
       const AnalyticsPage(),
       const ProfilePage(),
     ];
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: tabs[_currentTabIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentTabIndex,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        onTap: (index) {
-          if (index == 1) {
-            // Capture bloc references before async gap to avoid BuildContext warning
-            final wellnessBloc = context.read<WellnessBloc>();
-            final analyticsBloc = context.read<AnalyticsBloc>();
-            context.push('/daily-checkin').then((_) {
-              if (mounted) {
-                // After check-in, fetch fresh data and refresh analytics
-                wellnessBloc.add(const WellnessFetchDataEvent());
-                analyticsBloc.add(const AnalyticsLoadEvent());
+    return PopScope(
+      canPop: _currentTabIndex == 0 && _tabHistory.length <= 1,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackNavigation();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: tabs[_currentTabIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentTabIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: AppColors.surface,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textSecondary,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontSize: 11),
+          onTap: (index) {
+            if (index == 1) {
+              // Capture bloc references before async gap to avoid BuildContext warning
+              final wellnessBloc = context.read<WellnessBloc>();
+              final analyticsBloc = context.read<AnalyticsBloc>();
+              final historyBloc = context.read<HistoryBloc>();
+              context.push('/daily-checkin').then((_) {
+                if (mounted) {
+                  // After check-in, fetch fresh data and refresh analytics & history
+                  wellnessBloc.add(const WellnessFetchDataEvent());
+                  analyticsBloc.add(const AnalyticsLoadEvent());
+                  historyBloc.add(const HistoryRefreshEvent());
+                }
+              });
+              return;
+            }
+            if (_currentTabIndex != index) {
+              _tabHistory.add(index);
+              setState(() {
+                _currentTabIndex = index;
+              });
+            }
+            if (index == 0) {
+              // Navigating to Home tab — lightweight score refresh + history refresh
+              context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+              if (sl.isRegistered<HistoryBloc>()) {
+                sl<HistoryBloc>().add(const HistoryRefreshEvent());
               }
-            });
-            return;
-          }
-          setState(() {
-            _currentTabIndex = index;
-          });
-          if (index == 0) {
-            // Navigating to Home tab — lightweight score refresh only
-            context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
-          } else if (index == 2) {
-            // History tab needs full data
-            context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-          } else if (index == 3) {
-            // Analytics tab — always fetch fresh analytics data
-            context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
-          }
-        },
+            } else if (index == 2) {
+              // History tab needs full data
+              context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
+              if (sl.isRegistered<HistoryBloc>()) {
+                sl<HistoryBloc>().add(const HistoryRefreshEvent());
+              }
+            } else if (index == 3) {
+              // Analytics tab — always fetch fresh analytics data
+              context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+            }
+          },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -114,8 +155,9 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHomeTab() {
     final authState = context.watch<AuthBloc>().state;
@@ -136,7 +178,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return BlocBuilder<WellnessBloc, WellnessState>(
       builder: (context, state) {
-        final recentAudio = state.audioAnalyses;
         final isLoading = state.status == WellnessStatus.loading ||
             state.status == WellnessStatus.scoreLoading;
 
@@ -144,8 +185,11 @@ class _DashboardPageState extends State<DashboardPage> {
           child: RefreshIndicator(
             color: AppColors.primary,
             onRefresh: () async {
-              // Pull-to-refresh always fetches latest score from GET /score/latest
+              // Pull-to-refresh fetches latest score and fresh history
               context.read<WellnessBloc>().add(const WellnessFetchScoreEvent());
+              if (sl.isRegistered<HistoryBloc>()) {
+                sl<HistoryBloc>().add(const HistoryRefreshEvent());
+              }
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -236,9 +280,12 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                       GestureDetector(
                         onTap: () {
-                          setState(() {
-                            _currentTabIndex = 2; // Jump to History tab
-                          });
+                          if (_currentTabIndex != 2) {
+                            _tabHistory.add(2);
+                            setState(() {
+                              _currentTabIndex = 2; // Jump to History tab
+                            });
+                          }
                         },
                         child: const Text(
                           'See all',
@@ -248,7 +295,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildRecentActivityList(recentAudio, state.dailyLogs, state),
+                  if (sl.isRegistered<HistoryBloc>())
+                    BlocBuilder<HistoryBloc, HistoryState>(
+                      bloc: sl<HistoryBloc>(),
+                      builder: (context, historyState) {
+                        return _buildRecentActivityList(historyState.recentActivities);
+                      },
+                    )
+                  else
+                    _buildRecentActivityList(const []),
                 ],
               ),
             ),
@@ -1029,12 +1084,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildRecentActivityList(
-    List<AudioAnalysisEntity> audioList,
-    List<DailyLogEntity> logList,
-    WellnessState state,
-  ) {
-    if (audioList.isEmpty && logList.isEmpty) {
+  Widget _buildRecentActivityList(List<HistoryEntry> items) {
+    if (items.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24.0),
@@ -1053,90 +1104,119 @@ class _DashboardPageState extends State<DashboardPage> {
       );
     }
 
-    final items = audioList.take(3).toList();
-
     return Column(
-      children: items.map((item) {
-        final isCough = item.type.toLowerCase().contains('cough');
-        final isBreathing = item.type.toLowerCase().contains('breath');
+      children: items.take(3).map((item) {
+        IconData iconData;
+        Color iconColor;
 
-        // Resolve score consistently from single reliable data source (state component scores)
-        int? resolvedScore;
-        if (isCough) {
-          resolvedScore = state.coughScore ?? (item.lungsScore > 0 ? item.lungsScore : null);
-        } else if (isBreathing) {
-          resolvedScore = state.breathingScore ?? (item.lungsScore > 0 ? item.lungsScore : null);
+        if (item.hasCough && item.hasBreathing) {
+          iconData = Icons.health_and_safety_outlined;
+          iconColor = AppColors.primary;
+        } else if (item.hasCough) {
+          iconData = Icons.mic_rounded;
+          iconColor = AppColors.primary;
+        } else if (item.hasBreathing) {
+          iconData = Icons.air_rounded;
+          iconColor = AppColors.secondary;
+        } else if (item.hasSymptom) {
+          iconData = Icons.fact_check_outlined;
+          iconColor = AppColors.supportingGreen;
         } else {
-          resolvedScore = item.lungsScore > 0 ? item.lungsScore : null;
+          iconData = Icons.history_rounded;
+          iconColor = AppColors.textSecondary;
+        }
+
+        final isComplete = item.overallStatus.toLowerCase() == 'complete';
+        final statusColor = isComplete ? AppColors.supportingGreen : AppColors.error;
+
+        // Resolve score from record results if available
+        int? resolvedScore;
+        for (final r in item.records) {
+          if (r.results != null) {
+            final raw = r.results!['score'] ??
+                r.results!['quality_score'] ??
+                r.results!['lung_wellness_score'];
+            if (raw is num && raw > 0) {
+              final s = raw.round();
+              resolvedScore = s <= 1 ? (raw * 100).round() : s;
+              break;
+            }
+          }
         }
 
         final hasItemScore = resolvedScore != null && resolvedScore > 0;
-        final iconColor = hasItemScore
+        final displayColor = hasItemScore
             ? (resolvedScore >= 80
                 ? AppColors.supportingGreen
                 : (resolvedScore >= 60 ? AppColors.secondary : AppColors.error))
-            : AppColors.textSecondary;
-        final iconData = isCough ? Icons.mic : Icons.air_rounded;
-        final titleText = isCough ? 'Cough Recording' : 'Breathing Session';
+            : statusColor;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12.0),
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: iconColor.withValues(alpha: 0.12),
-                      child: Icon(iconData, color: iconColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            titleText,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _formatShortTime(item.timestamp),
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+        return GestureDetector(
+          onTap: () {
+            context.push('/history-details', extra: {
+              'logType': 'consolidated',
+              'itemData': item,
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12.0),
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16.0),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: iconColor.withValues(alpha: 0.12),
+                        child: Icon(iconData, color: iconColor, size: 20),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatShortTime(item.latestTimestamp),
+                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      hasItemScore ? 'Score $resolvedScore' : (isComplete ? 'Completed' : 'Failed'),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: displayColor, fontSize: 13),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.records.length > 1 ? '${item.records.length} records' : (isComplete ? 'Processed' : 'Failed'),
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    hasItemScore ? 'Score $resolvedScore' : 'Processed',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: iconColor, fontSize: 13),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${item.duration}s',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         );
       }).toList(),

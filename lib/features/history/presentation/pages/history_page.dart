@@ -2,100 +2,115 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../dashboard/presentation/bloc/wellness_bloc.dart';
-import '../../../dashboard/presentation/bloc/wellness_state.dart';
+import '../../../../core/di/injection_container.dart';
+import '../bloc/history_bloc.dart';
+import '../bloc/history_event.dart';
+import '../bloc/history_state.dart';
+import '../../domain/entities/history_entry.dart';
 
-/// Screen listing real historical symptom check-ins, audio logs, and wellness scores.
+/// Screen listing consolidated historical activities (grouped by activity_id)
+/// fetched from the GET /history API endpoint.
 class HistoryPage extends StatelessWidget {
-  const HistoryPage({super.key});
+  final VoidCallback? onBack;
+
+  const HistoryPage({super.key, this.onBack});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WellnessBloc, WellnessState>(
-      builder: (context, state) {
-        // Aggregate all real history events
-        final List<_HistoryItemWrapper> allHistory = [];
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack(context);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header details with Back Navigation
+              _buildHeader(context),
 
-        for (var audio in state.audioAnalyses) {
-          final isComplete = audio.status.toLowerCase() == 'complete';
-          final isFailed = audio.status.toLowerCase() == 'failed';
-          final statusLabel = isComplete ? 'Completed' : (isFailed ? 'Failed' : 'Processing...');
+              // Content Area powered by History API
+              Expanded(
+                child: BlocBuilder<HistoryBloc, HistoryState>(
+                  bloc: sl.isRegistered<HistoryBloc>() ? sl<HistoryBloc>() : null,
+                  builder: (context, state) {
+                    if (state.status == HistoryStatus.loading && state.entries.isEmpty) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: AppColors.primary),
+                      );
+                    }
 
-          allHistory.add(_HistoryItemWrapper(
-            type: 'audio',
-            id: audio.id,
-            title: audio.title.isNotEmpty ? audio.title : '${audio.type} Recording',
-            subtitle: '${audio.duration}s session • $statusLabel',
-            timestamp: audio.timestamp,
-            score: isComplete ? audio.lungsScore : null,
-            data: audio,
-          ));
-        }
-
-        for (var log in state.dailyLogs) {
-          final cough = log.coughSeverity.toInt();
-          final breath = log.breathlessness.toInt();
-          allHistory.add(_HistoryItemWrapper(
-            type: 'checkin',
-            id: log.id,
-            title: 'Symptom Check-in',
-            subtitle: 'Cough: $cough/3 • Breathlessness: $breath/3',
-            timestamp: log.timestamp,
-            score: null,
-            data: log,
-          ));
-        }
-
-        for (var score in state.scoreHistory) {
-          allHistory.add(_HistoryItemWrapper(
-            type: 'score',
-            id: score.id,
-            title: 'Lung Wellness Score',
-            subtitle: 'Health Band: ${score.band.toUpperCase()}',
-            timestamp: score.timestamp,
-            score: score.score,
-            data: score,
-          ));
-        }
-
-        // Sort newest first
-        allHistory.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Header details
-                _buildHeader(context),
-
-                // Content Area
-                Expanded(
-                  child: allHistory.isEmpty
-                      ? _buildEmptyState(context)
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                          itemCount: allHistory.length,
-                          itemBuilder: (context, index) {
-                            return _buildTimelineItem(context, allHistory[index]);
+                    if (state.entries.isEmpty) {
+                      return RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: () async {
+                          if (sl.isRegistered<HistoryBloc>()) {
+                            sl<HistoryBloc>().add(const HistoryRefreshEvent());
+                          }
+                        },
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                child: _buildEmptyState(context),
+                              ),
+                            );
                           },
                         ),
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () async {
+                        if (sl.isRegistered<HistoryBloc>()) {
+                          sl<HistoryBloc>().add(const HistoryRefreshEvent());
+                        }
+                      },
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                        itemCount: state.entries.length,
+                        itemBuilder: (context, index) {
+                          return _buildTimelineItem(context, state.entries[index]);
+                        },
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  void _handleBack(BuildContext context) {
+    if (onBack != null) {
+      onBack!();
+    } else if (Navigator.of(context).canPop()) {
+      context.pop();
+    } else {
+      context.go('/dashboard?tab=0');
+    }
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text, size: 24),
+            onPressed: () => _handleBack(context),
+          ),
+          const SizedBox(width: 4),
           Text(
             'History',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -103,6 +118,7 @@ class HistoryPage extends StatelessWidget {
                   color: AppColors.text,
                 ),
           ),
+          const Spacer(),
           const Icon(Icons.notifications_none_rounded, color: AppColors.textSecondary, size: 24),
         ],
       ),
@@ -152,26 +168,43 @@ class HistoryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTimelineItem(BuildContext context, _HistoryItemWrapper item) {
+  Widget _buildTimelineItem(BuildContext context, HistoryEntry entry) {
     IconData icon;
     Color iconColor;
 
-    switch (item.type) {
-      case 'audio':
-        icon = Icons.mic_none_rounded;
-        iconColor = AppColors.primary;
-        break;
-      case 'checkin':
-        icon = Icons.fact_check_outlined;
-        iconColor = AppColors.supportingGreen;
-        break;
-      case 'score':
-        icon = Icons.insights_rounded;
-        iconColor = AppColors.secondary;
-        break;
-      default:
-        icon = Icons.history_rounded;
-        iconColor = AppColors.textSecondary;
+    if (entry.hasCough && entry.hasBreathing) {
+      icon = Icons.health_and_safety_outlined;
+      iconColor = AppColors.primary;
+    } else if (entry.hasCough) {
+      icon = Icons.mic_none_rounded;
+      iconColor = AppColors.primary;
+    } else if (entry.hasBreathing) {
+      icon = Icons.air_rounded;
+      iconColor = AppColors.secondary;
+    } else if (entry.hasSymptom) {
+      icon = Icons.fact_check_outlined;
+      iconColor = AppColors.supportingGreen;
+    } else {
+      icon = Icons.history_rounded;
+      iconColor = AppColors.textSecondary;
+    }
+
+    final isComplete = entry.overallStatus.toLowerCase() == 'complete';
+    final statusColor = isComplete ? AppColors.supportingGreen : AppColors.error;
+
+    // Extract any score if available across records
+    int? score;
+    for (final r in entry.records) {
+      if (r.results != null) {
+        final rawScore = r.results!['score'] ??
+            r.results!['quality_score'] ??
+            r.results!['lung_wellness_score'];
+        if (rawScore is num && rawScore > 0) {
+          final s = rawScore.round();
+          score = s <= 1 ? (rawScore * 100).round() : s;
+          break;
+        }
+      }
     }
 
     return Container(
@@ -192,7 +225,7 @@ class HistoryPage extends StatelessWidget {
           child: Icon(icon, color: iconColor, size: 22),
         ),
         title: Text(
-          item.title,
+          entry.title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.text),
         ),
         subtitle: Column(
@@ -200,13 +233,13 @@ class HistoryPage extends StatelessWidget {
           children: [
             const SizedBox(height: 2),
             Text(
-              item.subtitle,
+              entry.subtitle,
               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
-              _formatTimestamp(item.timestamp),
+              _formatTimestamp(entry.latestTimestamp),
               style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ],
@@ -214,7 +247,7 @@ class HistoryPage extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (item.score != null)
+            if (score != null) ...[
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -223,17 +256,31 @@ class HistoryPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${item.score}',
+                  '$score',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.supportingGreen),
                 ),
               ),
+            ] else ...[
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  entry.overallStatus.toUpperCase(),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: statusColor),
+                ),
+              ),
+            ],
             const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textSecondary),
           ],
         ),
         onTap: () {
           context.push('/history-details', extra: {
-            'logType': item.type,
-            'itemData': item.data,
+            'logType': 'consolidated',
+            'itemData': entry,
           });
         },
       ),
@@ -260,24 +307,4 @@ class HistoryPage extends StatelessWidget {
 
     return "$dateStr, $hour:$minuteStr $period";
   }
-}
-
-class _HistoryItemWrapper {
-  final String type;
-  final String id;
-  final String title;
-  final String subtitle;
-  final DateTime timestamp;
-  final int? score;
-  final dynamic data;
-
-  _HistoryItemWrapper({
-    required this.type,
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.timestamp,
-    this.score,
-    required this.data,
-  });
 }

@@ -455,6 +455,15 @@ class WellnessRepositoryImpl implements WellnessRepository {
     };
   }
 
+  @override
+  Future<void> clearAllData() async {
+    try {
+      await checkInBox.clear();
+      await recordingsBox.clear();
+      await scoreBox?.clear();
+    } catch (_) {}
+  }
+
   // Serializers with safe conversion helpers
   double _toDouble(dynamic val) {
     if (val == null) return 0.0;
