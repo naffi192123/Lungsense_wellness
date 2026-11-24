@@ -250,7 +250,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
                   ),
                   const SizedBox(height: 14),
-                  _buildQuickActionsGrid(state),
+                  if (sl.isRegistered<HistoryBloc>())
+                    BlocBuilder<HistoryBloc, HistoryState>(
+                      bloc: sl<HistoryBloc>(),
+                      builder: (context, historyState) {
+                        return _buildQuickActionsGrid(state, historyState);
+                      },
+                    )
+                  else
+                    _buildQuickActionsGrid(state),
                   const SizedBox(height: 24),
 
                   // Wellness Scorecard (Lungs Health Score Circular Dial Card)
@@ -753,39 +761,56 @@ class _DashboardPageState extends State<DashboardPage> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  bool _isCheckinCompletedToday(WellnessState state) {
+  bool _isCheckinCompletedToday(WellnessState state, [HistoryState? historyState]) {
     final now = DateTime.now();
 
-    // Check if score was computed today
-    final scoreEntity = state.latestScore ??
-        (state.scoreHistory.isNotEmpty ? state.scoreHistory.first : null);
-    if (scoreEntity != null) {
-      final double? scoreVal = scoreEntity.lungWellnessScore ??
-          (scoreEntity.score > 0 ? scoreEntity.score.toDouble() : null);
-      if (scoreVal != null && scoreVal > 0 && _isSameDay(scoreEntity.timestamp.toLocal(), now)) {
-        return true;
+    // 1. Check from WellnessState activity records
+    final hasTodayLog = state.dailyLogs.any((l) => _isSameDay(l.timestamp.toLocal(), now));
+    final hasTodayCough = state.audioAnalyses.any((a) =>
+        a.type.toLowerCase().contains('cough') &&
+        a.status.toLowerCase() == 'complete' &&
+        _isSameDay(a.timestamp.toLocal(), now));
+    final hasTodayBreathing = state.audioAnalyses.any((a) =>
+        a.type.toLowerCase().contains('breath') &&
+        a.status.toLowerCase() == 'complete' &&
+        _isSameDay(a.timestamp.toLocal(), now));
+
+    // 2. Check from HistoryState (GET /history API records)
+    bool historyHasCough = false;
+    bool historyHasBreathing = false;
+    bool historyHasSymptom = false;
+
+    if (historyState != null && historyState.entries.isNotEmpty) {
+      for (final entry in historyState.entries) {
+        for (final r in entry.records) {
+          if (_isSameDay(r.timestamp.toLocal(), now) && r.status.toLowerCase() == 'complete') {
+            final t = r.type.toLowerCase();
+            if (t.contains('cough')) historyHasCough = true;
+            if (t.contains('breath')) historyHasBreathing = true;
+            if (t.contains('symptom')) historyHasSymptom = true;
+          }
+        }
       }
     }
 
-    // Check if check-in steps are logged for today
-    final hasTodayLog = state.dailyLogs.any((l) => _isSameDay(l.timestamp.toLocal(), now));
-    final hasTodayCough = state.audioAnalyses.any((a) =>
-        a.type.toLowerCase().contains('cough') && _isSameDay(a.timestamp.toLocal(), now));
-    final hasTodayBreathing = state.audioAnalyses.any((a) =>
-        a.type.toLowerCase().contains('breath') && _isSameDay(a.timestamp.toLocal(), now));
+    final coughCompleted = hasTodayCough || historyHasCough;
+    final breathingCompleted = hasTodayBreathing || historyHasBreathing;
+    final symptomCompleted = hasTodayLog || historyHasSymptom;
 
-    if (hasTodayLog && (hasTodayCough || hasTodayBreathing)) {
-      return true;
-    }
-
-    return false;
+    // Display this state ONLY when all three activities have been successfully completed today
+    return coughCompleted && breathingCompleted && symptomCompleted;
   }
 
   Future<void> _openDailyCheckin() async {
+    final wellnessBloc = context.read<WellnessBloc>();
+    final analyticsBloc = context.read<AnalyticsBloc>();
     await context.push('/daily-checkin');
     if (mounted) {
-      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+      wellnessBloc.add(const WellnessFetchDataEvent());
+      analyticsBloc.add(const AnalyticsLoadEvent());
+      if (sl.isRegistered<HistoryBloc>()) {
+        sl<HistoryBloc>().add(const HistoryRefreshEvent());
+      }
     }
   }
 
@@ -840,11 +865,16 @@ class _DashboardPageState extends State<DashboardPage> {
                   title: 'Record Cough Sounds',
                   subtitle: '12-15 seconds voluntary cough analysis',
                   onTap: () async {
+                    final wellnessBloc = context.read<WellnessBloc>();
+                    final analyticsBloc = context.read<AnalyticsBloc>();
                     Navigator.pop(bottomSheetContext);
                     await context.push('/record?type=cough');
                     if (mounted) {
-                      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                      wellnessBloc.add(const WellnessFetchDataEvent());
+                      analyticsBloc.add(const AnalyticsLoadEvent());
+                      if (sl.isRegistered<HistoryBloc>()) {
+                        sl<HistoryBloc>().add(const HistoryRefreshEvent());
+                      }
                     }
                   },
                 ),
@@ -855,11 +885,16 @@ class _DashboardPageState extends State<DashboardPage> {
                   title: 'Record Breathing Sounds',
                   subtitle: '25-30 seconds deep respiratory analysis',
                   onTap: () async {
+                    final wellnessBloc = context.read<WellnessBloc>();
+                    final analyticsBloc = context.read<AnalyticsBloc>();
                     Navigator.pop(bottomSheetContext);
                     await context.push('/record?type=breathing');
                     if (mounted) {
-                      context.read<WellnessBloc>().add(const WellnessFetchDataEvent());
-                      context.read<AnalyticsBloc>().add(const AnalyticsLoadEvent());
+                      wellnessBloc.add(const WellnessFetchDataEvent());
+                      analyticsBloc.add(const AnalyticsLoadEvent());
+                      if (sl.isRegistered<HistoryBloc>()) {
+                        sl<HistoryBloc>().add(const HistoryRefreshEvent());
+                      }
                     }
                   },
                 ),
@@ -931,8 +966,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildQuickActionsGrid(WellnessState state) {
-    final isCompleted = _isCheckinCompletedToday(state);
+  Widget _buildQuickActionsGrid(WellnessState state, [HistoryState? historyState]) {
+    final isCompleted = _isCheckinCompletedToday(state, historyState);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -945,119 +980,127 @@ class _DashboardPageState extends State<DashboardPage> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(18.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFFE8F5E9),
-              Color(0xFFE0F2F1),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isCompleted
-                ? AppColors.supportingGreen.withValues(alpha: 0.45)
-                : AppColors.primary.withValues(alpha: 0.35),
-            width: 1.5,
+                ? AppColors.supportingGreen.withValues(alpha: 0.35)
+                : AppColors.border,
+            width: isCompleted ? 1.4 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: (isCompleted ? AppColors.supportingGreen : AppColors.primary).withValues(alpha: 0.1),
+              color: isCompleted
+                  ? AppColors.supportingGreen.withValues(alpha: 0.08)
+                  : AppColors.text.withValues(alpha: 0.03),
               blurRadius: 10,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
+            // Status Icon Circle Badge
             Container(
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: isCompleted
-                    ? const LinearGradient(
-                        colors: [AppColors.supportingGreen, Color(0xFF2E7D32)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : const LinearGradient(
-                        colors: [AppColors.primary, AppColors.supportingGreen],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isCompleted ? AppColors.supportingGreen : AppColors.primary).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                color: isCompleted
+                    ? AppColors.supportingGreen.withValues(alpha: 0.12)
+                    : AppColors.primary.withValues(alpha: 0.10),
               ),
               child: Icon(
                 isCompleted ? Icons.check_circle_rounded : Icons.health_and_safety_rounded,
-                color: Colors.white,
-                size: isCompleted ? 30 : 28,
+                color: isCompleted ? AppColors.supportingGreen : AppColors.primary,
+                size: 26,
               ),
             ),
             const SizedBox(width: 14),
+
+            // Content Information
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        isCompleted ? 'Daily Check-in Completed' : 'Daily Check-in',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: Color(0xFF1C2B3A),
+                      const Flexible(
+                        child: Text(
+                          'Daily Check-in',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppColors.text,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        isCompleted ? Icons.check_circle_outline_rounded : Icons.arrow_forward_rounded,
-                        size: 16,
-                        color: AppColors.supportingGreen,
-                      ),
+                      if (isCompleted) ...[
+                        const SizedBox(width: 5),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 15,
+                          color: AppColors.supportingGreen,
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    isCompleted ? 'All 3 steps completed today' : 'Cough • Breathing • Symptoms',
-                    style: const TextStyle(
-                      fontSize: 11.5,
+                    isCompleted ? 'All 3 steps completed today' : 'Daily Check-in Pending',
+                    style: TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.supportingGreen,
+                      color: isCompleted ? AppColors.supportingGreen : AppColors.secondary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     isCompleted
                         ? 'Tap to add more recordings anytime'
-                        : 'Complete 3 steps to get today’s score.',
+                        : "Complete 3 steps to get today's score.",
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF5C5870),
+                      color: AppColors.textSecondary,
+                      height: 1.25,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 10),
+
+            // Action Button
             Container(
-              padding: EdgeInsets.symmetric(horizontal: isCompleted ? 12 : 14, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompleted ? 12 : 16,
+                vertical: 8,
+              ),
               decoration: BoxDecoration(
                 color: isCompleted ? AppColors.supportingGreen : AppColors.primary,
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isCompleted ? AppColors.supportingGreen : AppColors.primary)
+                        .withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: isCompleted
                   ? const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.add_rounded, color: Colors.white, size: 16),
+                        Icon(Icons.add_rounded, color: Colors.white, size: 15),
                         SizedBox(width: 3),
                         Text(
                           'Record More',
